@@ -1,0 +1,32 @@
+{
+    "root": "libs/modules/logger",
+    "sourceRoot": "libs/modules/logger/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/modules/logger",
+                "main": "libs/modules/logger/src/index.ts",
+                "tsConfig": "libs/modules/logger/tsconfig.lib.json",
+                "assets": ["libs/modules/logger/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/modules/logger/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/modules/logger"],
+            "options": {
+                "jestConfig": "libs/modules/logger/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

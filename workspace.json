@@ -1,4 +1,13 @@
 {
-  "version": 2,
-  "projects": {}
+    "version": 2,
+    "projects": {
+        "app": "apps/app",
+        "interfaces": "libs/interfaces",
+        "modules-logger": "libs/modules/logger",
+        "modules-monitor": "libs/modules/monitor",
+        "producers-logger": "libs/producers/logger",
+        "server": "libs/server",
+        "utils": "libs/utils",
+        "watcher": "libs/watcher"
+    }
 }

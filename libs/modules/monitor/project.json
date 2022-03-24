@@ -1,0 +1,32 @@
+{
+    "root": "libs/modules/monitor",
+    "sourceRoot": "libs/modules/monitor/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/modules/monitor",
+                "main": "libs/modules/monitor/src/index.ts",
+                "tsConfig": "libs/modules/monitor/tsconfig.lib.json",
+                "assets": ["libs/modules/monitor/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/modules/monitor/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/modules/monitor"],
+            "options": {
+                "jestConfig": "libs/modules/monitor/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

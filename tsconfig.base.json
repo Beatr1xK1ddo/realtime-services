@@ -1,20 +1,30 @@
 {
-  "compileOnSave": false,
-  "compilerOptions": {
-    "rootDir": ".",
-    "sourceMap": true,
-    "declaration": false,
-    "moduleResolution": "node",
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "importHelpers": true,
-    "target": "es2015",
-    "module": "esnext",
-    "lib": ["es2017", "dom"],
-    "skipLibCheck": true,
-    "skipDefaultLibCheck": true,
-    "baseUrl": ".",
-    "paths": {}
-  },
-  "exclude": ["node_modules", "tmp"]
+    "compileOnSave": false,
+    "compilerOptions": {
+        "rootDir": ".",
+        "sourceMap": true,
+        "declaration": false,
+        "moduleResolution": "node",
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "target": "es2015",
+        "module": "esnext",
+        "lib": ["es2017", "dom"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": true,
+        "resolveJsonModule": true,
+        "baseUrl": ".",
+        "paths": {
+            "@socket/interfaces": ["libs/interfaces/src/index.ts"],
+            "@socket/modules/logger": ["libs/modules/logger/src/index.ts"],
+            "@socket/modules/monitor": ["libs/modules/monitor/src/index.ts"],
+            "@socket/producers/logger": ["libs/producers/logger/src/index.ts"],
+            "@socket/server": ["libs/server/src/index.ts"],
+            "@socket/utils": ["libs/utils/src/index.ts"],
+            "@socket/watcher": ["libs/watcher/src/index.ts"],
+            "config": ["config.json"]
+        }
+    },
+    "exclude": ["node_modules", "tmp"]
 }
