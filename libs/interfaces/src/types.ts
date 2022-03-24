@@ -23,13 +23,13 @@ export abstract class DataProducer {
 }
 
 export enum ELogTypes {
-    applog = 'applog',
-    syslog = 'syslog',
+    appLog = 'applog',
+    sysLog = 'syslog',
     all = 'all',
 }
 
-export type ISyslogMessage = {
-    type: ELogTypes.syslog;
+export type ISysLogMessage = {
+    type: ELogTypes.sysLog;
     message: string;
     created: number;
     appId: number;
@@ -39,11 +39,14 @@ export type ISyslogMessage = {
     nodeId: number;
 };
 
-export type IApplogMessage = {
-    type: ELogTypes.applog;
+export type IAppLogMessage = {
+    type: ELogTypes.appLog;
     message: string;
     created: number;
     nodeId: number;
 };
 
-export type ILogMessage = ISyslogMessage | IApplogMessage;
+export type ILogData = {
+    nodeId: number,
+    data: ISysLogMessage | IAppLogMessage,
+};

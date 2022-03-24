@@ -1,7 +1,7 @@
 import { readFileSync, existsSync, writeFileSync, appendFile } from 'fs';
 import * as _ from 'lodash';
 import * as shell from 'child_process';
-import * as conf from 'config';
+import * as conf from '../../../apps/nxt-realtime-producers/src/config.json';
 
 export default {
     currentTime() {

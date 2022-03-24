@@ -1,7 +1,7 @@
 import { IModule } from '@socket/interfaces';
 import { Socket, Namespace } from 'socket.io';
 import * as mysql from 'mysql';
-import * as conf from 'config';
+import * as conf from '../../../../apps/nxt-realtime-producers/src/config.json';
 import * as _ from 'lodash';
 import sqlQueries from './sql-queries';
 import { IAppTypeKeyes } from './types';
