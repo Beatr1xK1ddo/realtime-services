@@ -5,6 +5,7 @@
         "interfaces": "libs/interfaces",
         "modules-logger": "libs/modules/logger",
         "modules-monitor": "libs/modules/monitor",
+        "modules-tiranex": "libs/modules/tiranex",
         "producers-logger": "libs/producers/logger",
         "server": "libs/server",
         "utils": "libs/utils",

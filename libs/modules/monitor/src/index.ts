@@ -6,6 +6,7 @@ import * as _ from 'lodash';
 import sqlQueries from './sql-queries';
 import { IAppTypeKeyes } from './types';
 import Redis from 'ioredis';
+import util from '@socket/utils';
 
 export class Monitor implements IModule {
     public name: string;
@@ -14,6 +15,7 @@ export class Monitor implements IModule {
     private queries = sqlQueries;
     private url: string;
     private redis;
+    private lastRuntime?: number;
 
     constructor(name: string) {
         this.name = name;
@@ -78,24 +80,28 @@ export class Monitor implements IModule {
                 })
             );
         } else {
-            _.each(this.parseMonitorAlerts(alerts), (monitorApps, appType) => {
-                if (!this.queries[appType as IAppTypeKeyes]) return;
+            _.each(
+                this.parseMonitorAlerts(alerts as string[]),
+                (monitorApps, appType) => {
+                    if (!this.queries[appType as IAppTypeKeyes]) return;
 
-                _.each(monitorApps, async (monitorApp) => {
-                    try {
-                        const rows = await this.db?.query(
-                            this.queries[appType as IAppTypeKeyes].selectQuery,
-                            monitorApp
-                        );
+                    _.each(monitorApps, async (monitorApp) => {
+                        try {
+                            const rows = await this.db?.query(
+                                this.queries[appType as IAppTypeKeyes]
+                                    .selectQuery,
+                                monitorApp
+                            );
 
-                        if (rows && rows[0]) {
-                            this.handleErrors(monitorApp, rows[0]);
+                            if (rows && rows?.values?.[0]) {
+                                this.handleErrors(monitorApp, rows.values[0]);
+                            }
+                        } catch (e) {
+                            console.log('Oooops: ', e);
                         }
-                    } catch (e) {
-                        console.log('Oooops: ', e);
-                    }
-                });
-            });
+                    });
+                }
+            );
         }
 
         this.lastRuntime = util.currentTime();
@@ -111,8 +117,8 @@ export class Monitor implements IModule {
                 this.redis.get(`${app.cachePrefix}-last-cc-comeback`),
             ]);
 
-            const signalComebackTime = +results?.[0];
-            const signalStabilizeTime = +results?.[1];
+            const signalComebackTime = +results[0]!;
+            const signalStabilizeTime = +results[1]!;
 
             if (sqlRec.haltUntil) {
                 const query =
@@ -142,8 +148,8 @@ export class Monitor implements IModule {
                     this.redis.get(`${app.cachePrefix}-last-cc-error`),
                 ]);
 
-                const signalLostTime = +results[0];
-                const signalErrorTime = +results[1];
+                const signalLostTime = +results[0]!;
+                const signalErrorTime = +results[1]!;
 
                 if (signalLostTime) {
                     history = await util.getCache(app.uniqueID, () =>
@@ -174,7 +180,7 @@ export class Monitor implements IModule {
                         signalErrorTime,
                         history,
                         sqlRec,
-                        +results[0] + '/' + +results[1]
+                        +results[0]! + '/' + +results[1]!
                     );
                 }
             }
@@ -184,7 +190,7 @@ export class Monitor implements IModule {
     }
 
     parseMonitorAlerts(alerts: string[]) {
-        const result = {};
+        const result: any = {};
 
         _.each(alerts, (item: string) => {
             const data = item.split(';');
@@ -225,9 +231,9 @@ export class Monitor implements IModule {
 
     sendData(
         errorType: string,
-        errorTime: number,
-        errorHistory: any,
-        sqlRec: any,
+        errorTime: number | null,
+        errorHistory?: any,
+        sqlRec?: any,
         replyCount?: any
     ) {
         const data = {

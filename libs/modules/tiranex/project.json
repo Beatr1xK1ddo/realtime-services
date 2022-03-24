@@ -1,0 +1,34 @@
+{
+    "root": "libs/modules/tiranex",
+    "sourceRoot": "libs/modules/tiranex/src",
+    "projectType": "library",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/modules/tiranex",
+                "tsConfig": "libs/modules/tiranex/tsconfig.lib.json",
+                "packageJson": "libs/modules/tiranex/package.json",
+                "main": "libs/modules/tiranex/src/index.ts",
+                "assets": ["libs/modules/tiranex/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/modules/tiranex/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/modules/tiranex"],
+            "options": {
+                "jestConfig": "libs/modules/tiranex/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}
