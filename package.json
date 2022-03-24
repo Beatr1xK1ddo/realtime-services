@@ -9,7 +9,7 @@
     },
     "private": true,
     "dependencies": {
-        "@nrwl/js": "13.8.3",
+        "@nrwl/js": "13.9.4",
         "@socket.io/redis-adapter": "^7.1.0",
         "chokidar": "^3.5.3",
         "ioredis": "^5.0.0-beta.4",
