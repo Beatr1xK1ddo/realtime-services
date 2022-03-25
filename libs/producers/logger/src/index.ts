@@ -1,41 +1,45 @@
 import { FSWatcher, watch } from 'chokidar';
 import { basename } from 'path';
-import { DataProducer, ELogTypes, ILogMessage } from '@socket/interfaces';
+import { DataProducer, ELogTypes, ILogData } from '@socket/interfaces';
 import * as path from 'path';
 import { spawn } from 'child_process';
 import { IFile } from './types';
 import * as fs from 'fs';
 
-import * as conf from 'config';
-
 const sysLog = 'system.ts';
-
 const MSG_PER_SECONDS = 500;
 
-const { applogDir, syslogFile, excludeMessages } = conf.logAgent;
-
-const REGEX_APPLOG_TRASH = new RegExp(
-    `(${excludeMessages.applog.join('|')})`,
-    'i'
-);
-const REGEX_SYSLOG_TRASH = new RegExp(
-    `(${excludeMessages.syslog.join('|')})`,
-    'i'
-);
-
 export class LoggerProducer extends DataProducer {
-    private watcher: FSWatcher;
-    private path: string;
-    private mapFiles: Map<string, IFile> = new Map();
     private nodeId: number;
+    private appLogsPath: string;
+    private sysLogsPath: string;
+    private excludeAppLogRegexp: RegExp;
+    private excludeSysLogRegexp: RegExp;
+    private watcher: FSWatcher;
+    private mapFiles: Map<string, IFile> = new Map();
 
-    constructor(url: string, path: string, nodeId: number) {
+    constructor(
+        nodeId: number,
+        url: string,
+        appLogsPath: string,
+        sysLogsPath: string,
+        exclude: any
+    ) {
         super(url);
-        this.path = path;
-        this.watcher = watch(this.path, {
+        this.nodeId = nodeId;
+        this.appLogsPath = appLogsPath;
+        this.sysLogsPath = sysLogsPath;
+        this.excludeAppLogRegexp = new RegExp(
+            `(${exclude.applog.join('|')})`,
+            'i'
+        );
+        this.excludeSysLogRegexp = new RegExp(
+            `(${exclude.syslog.join('|')})`,
+            'i'
+        );
+        this.watcher = watch(this.appLogsPath, {
             ignoreInitial: true,
         });
-        this.nodeId = nodeId;
     }
 
     // init() {
@@ -47,9 +51,7 @@ export class LoggerProducer extends DataProducer {
     // }
     init() {
         this.socket.on('connect', this._watchAll.bind(this));
-
         this.socket.on('message', (jsonData) => this._onMessage(jsonData));
-
         this.socket.on('error', (error) => console.log('Ooops', error));
     }
 
@@ -82,14 +84,15 @@ export class LoggerProducer extends DataProducer {
 
     // private onMessage(message) {}
 
+    /*
     private converter(path: string) {
         const filename = basename(path);
         const fileDomains = filename.split('.');
-        let data: ILogMessage;
+        let data: ILogData;
 
         if (filename === sysLog) {
             data = {
-                type: ELogTypes.syslog,
+                type: ELogTypes.sysLog,
                 message: filename,
                 created: +new Date(),
                 appId: 1,
@@ -100,7 +103,7 @@ export class LoggerProducer extends DataProducer {
             };
         } else {
             data = {
-                type: ELogTypes.applog,
+                type: ELogTypes.appLog,
                 message: filename,
                 created: +new Date(),
                 nodeId: 1,
@@ -109,12 +112,13 @@ export class LoggerProducer extends DataProducer {
 
         return data;
     }
+*/
 
     isTrashData(data: string, filename: string) {
-        if (filename === syslogFile) {
-            return REGEX_SYSLOG_TRASH.test(data);
+        if (filename === this.sysLogsPath) {
+            return this.excludeSysLogRegexp.test(data);
         } else {
-            return REGEX_APPLOG_TRASH.test(data);
+            return this.excludeAppLogRegexp.test(data);
         }
     }
 
@@ -163,9 +167,9 @@ export class LoggerProducer extends DataProducer {
 
     _watchAll() {
         this._unwatchAll();
-        this._watch(syslogFile);
+        this._watch(this.sysLogsPath);
 
-        this.watcher = watch(applogDir, {
+        this.watcher = watch(this.appLogsPath, {
             persistent: true,
             awaitWriteFinish: {
                 stabilityThreshold: 200,
@@ -192,31 +196,37 @@ export class LoggerProducer extends DataProducer {
         const createdTime = Math.round(Date.now() / 1000);
 
         switch (info.type) {
-            case ELogTypes.applog:
+            case ELogTypes.appLog:
                 this.socket.emit('data', {
-                    type: info.type,
-                    message: msg,
-                    created: +createdTime,
-                    nodeId: +this.nodeId,
-                    appId: +info.appId,
-                    appType: info.appType,
-                    appName: info.appName,
-                    subType: info.subType,
+                    nodeId: this.nodeId,
+                    data: {
+                        type: info.type,
+                        message: msg,
+                        created: +createdTime,
+                        nodeId: +this.nodeId,
+                        appId: +info.appId,
+                        appType: info.appType,
+                        appName: info.appName,
+                        subType: info.subType,
+                    },
                 });
                 break;
-            case ELogTypes.syslog:
+            case ELogTypes.sysLog:
                 this.socket.emit('data', {
-                    type: info.type,
-                    message: msg,
-                    created: +createdTime,
-                    nodeId: +this.nodeId,
+                    nodeId: this.nodeId,
+                    data: {
+                        type: info.type,
+                        message: msg,
+                        created: +createdTime,
+                        nodeId: +this.nodeId,
+                    },
                 });
                 break;
         }
     }
 
     _unwatchAll() {
-        this.watcher && this.watcher.unwatch(applogDir);
+        this.watcher && this.watcher.unwatch(this.appLogsPath);
         this.mapFiles.forEach((item) => item.tail.kill('SIGINT'));
         this.mapFiles.clear();
     }
@@ -229,7 +239,7 @@ export class LoggerProducer extends DataProducer {
     }
 
     _parseFilename(filename: string) {
-        if (filename === sysLog) return { type: ELogTypes.syslog };
+        if (filename === sysLog) return { type: ELogTypes.sysLog };
 
         const [appType, appId, appName, subType] = path
             .basename(filename, '.log')
@@ -238,7 +248,7 @@ export class LoggerProducer extends DataProducer {
 
         if (appType && appId) {
             return {
-                type: ELogTypes.applog,
+                type: ELogTypes.appLog,
                 appId,
                 appType,
                 appName,

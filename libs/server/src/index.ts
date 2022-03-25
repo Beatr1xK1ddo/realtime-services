@@ -4,12 +4,13 @@ import { IModule } from '@socket/interfaces';
 
 export class NxtRealtimeServer {
     static namespaces: Map<string, Namespace> = new Map();
-    static http = createServer();
-    static io = new Server(NxtRealtimeServer.http, {
-        cors: {
-            origin: 'http://localhost:3001',
-        },
-    }).listen(3000);
+    private http;
+    private io;
+
+    constructor(port: number) {
+        this.http = createServer();
+        this.io = new Server(this.http).listen(port);
+    }
 
     reg(module: IModule) {
         if (NxtRealtimeServer.namespaces.has(module.name)) {
@@ -17,7 +18,7 @@ export class NxtRealtimeServer {
                 `Module with namespace: ${module.name} already exists`
             );
         }
-        const ioNamespace = NxtRealtimeServer.io.of(`/${module.name}`);
+        const ioNamespace = this.io.of(`/${module.name}`);
 
         NxtRealtimeServer.namespaces.set(module.name, ioNamespace);
 

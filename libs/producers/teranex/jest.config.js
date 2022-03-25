@@ -1,5 +1,5 @@
 module.exports = {
-    displayName: 'modules-tiranex',
+    displayName: 'producers-teranex',
     preset: '../../../jest.preset.js',
     globals: {
         'ts-jest': {
@@ -11,5 +11,5 @@ module.exports = {
         '^.+\\.[tj]sx?$': 'ts-jest',
     },
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
-    coverageDirectory: '../../../coverage/libs/modules/tiranex',
+    coverageDirectory: '../../../coverage/libs/producers/teranex',
 };

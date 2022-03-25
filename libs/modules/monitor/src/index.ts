@@ -1,7 +1,7 @@
 import { IModule } from '@socket/interfaces';
 import { Socket, Namespace } from 'socket.io';
 import * as mysql from 'mysql';
-import * as conf from 'config';
+import * as conf from '../config.json';
 import * as _ from 'lodash';
 import sqlQueries from './sql-queries';
 import { IAppTypeKeyes } from './types';
@@ -26,9 +26,8 @@ export class Monitor implements IModule {
     async init(io: Namespace) {
         try {
             this.io = io;
-            this.db = await this.connectDb();
-
             this.io.on('connection', this.onConnection.bind(this));
+            this.db = await this.connectDb();
         } catch (e) {
             console.log('Ooops, :', e);
         }
@@ -70,15 +69,13 @@ export class Monitor implements IModule {
             .catch((e: Error) => console.log(e));
 
         if (_.isEmpty(alerts)) {
-            this.client.send(
-                JSON.stringify({
-                    sender: this.name,
-                    data: {
-                        success: true,
-                        data: null,
-                    },
-                })
-            );
+            this.io?.send({
+                sender: this.name,
+                data: {
+                    success: true,
+                    data: null,
+                },
+            });
         } else {
             _.each(
                 this.parseMonitorAlerts(alerts as string[]),
@@ -255,15 +252,13 @@ export class Monitor implements IModule {
             lastCCErrors: replyCount || null,
         };
 
-        this.client.send(
-            JSON.stringify({
-                sender: this.name,
-                data: {
-                    success: true,
-                    data: data,
-                },
-            })
-        );
+        this.io?.send({
+            sender: this.name,
+            data: {
+                success: true,
+                data: data,
+            },
+        });
     }
 
     fetchHistory(sqlRec: any) {

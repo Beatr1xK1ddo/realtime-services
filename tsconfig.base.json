@@ -19,8 +19,10 @@
             "@socket/interfaces": ["libs/interfaces/src/index.ts"],
             "@socket/modules/logger": ["libs/modules/logger/src/index.ts"],
             "@socket/modules/monitor": ["libs/modules/monitor/src/index.ts"],
-            "@socket/modules/tiranex": ["libs/modules/tiranex/src/index.ts"],
             "@socket/producers/logger": ["libs/producers/logger/src/index.ts"],
+            "@socket/producers/teranex": [
+                "libs/producers/teranex/src/index.ts"
+            ],
             "@socket/server": ["libs/server/src/index.ts"],
             "@socket/utils": ["libs/utils/src/index.ts"],
             "@socket/watcher": ["libs/watcher/src/index.ts"],

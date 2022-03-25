@@ -1,12 +1,13 @@
-export * from './lib/modules-tiranex';
 import { IModule } from '@socket/interfaces';
 import { Namespace, Socket } from 'socket.io';
+import { TeranexDevice } from './device';
+import { IDevices } from './types';
 
-export class Tiranex implements IModule {
+export class Teranex implements IModule {
     public name: string;
     private io?: Namespace;
     private messages = [];
-    private devices = {};
+    private devices: IDevices = {};
     private blocked = false;
 
     constructor() {
@@ -36,7 +37,7 @@ export class Tiranex implements IModule {
             if (device.busy) return;
             device.busy = true;
 
-            const { ip, port, commands } = MSG.data;
+            const { commands } = MSG.data;
 
             let results = [];
             for (const cmd of commands) {
@@ -64,19 +65,24 @@ export class Tiranex implements IModule {
         }
     }
 
-    async _getDevice(DEVICE_ID) {
-        if (!this.devices[DEVICE_ID]) {
+    async _getDevice(DEVICE_ID): Promise<TeranexDevice> {
+        if (this.devices[DEVICE_ID]) {
+            return this.devices[DEVICE_ID];
+        }
+
+        try {
             const [ip, port] = DEVICE_ID.split(':');
-            const device = new Device(ip, port);
+            const device = new TeranexDevice(ip, port);
             await device.connect();
             await device.command('ping\r\n');
             this.devices[DEVICE_ID] = device;
+        } catch (e) {
+            console.log('Ooops: ', e);
         }
-
         return this.devices[DEVICE_ID];
     }
 
-    onMessage(data) {
+    onMessage(data: string) {
         return new Promise((resolve, reject) => {
             this.messages.push({
                 data,
@@ -95,21 +101,19 @@ export class Tiranex implements IModule {
         }
 
         try {
-            const res = await Promise.resolve(this.onMessage(data, sender));
+            const res = await Promise.resolve(this.onMessage(data));
 
-            this.io.emit('data', {
+            this.io.send({
                 receiver: sender,
                 data: res,
                 tag,
             });
         } catch (e) {
-            this.service.send(
-                JSON.stringify({
-                    receiver: sender,
-                    error: e,
-                    tag,
-                })
-            );
+            this.io.send({
+                receiver: sender,
+                error: e,
+                tag,
+            });
         }
     }
 }

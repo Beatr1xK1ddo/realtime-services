@@ -5,8 +5,10 @@
         "interfaces": "libs/interfaces",
         "modules-logger": "libs/modules/logger",
         "modules-monitor": "libs/modules/monitor",
-        "modules-tiranex": "libs/modules/tiranex",
+        "nxt-realtime-producers": "apps/nxt-realtime-producers",
+        "nxt-realtime-server": "apps/nxt-realtime-server",
         "producers-logger": "libs/producers/logger",
+        "producers-teranex": "libs/producers/teranex",
         "server": "libs/server",
         "utils": "libs/utils",
         "watcher": "libs/watcher"

@@ -1,0 +1,52 @@
+{
+    "root": "apps/nxt-realtime-producers",
+    "sourceRoot": "apps/nxt-realtime-producers/src",
+    "projectType": "application",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/node:webpack",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/apps/nxt-realtime-producers",
+                "main": "apps/nxt-realtime-producers/src/main.ts",
+                "tsConfig": "apps/nxt-realtime-producers/tsconfig.app.json",
+                "assets": ["apps/nxt-realtime-producers/src/assets"]
+            },
+            "configurations": {
+                "production": {
+                    "optimization": true,
+                    "extractLicenses": true,
+                    "inspect": false,
+                    "fileReplacements": [
+                        {
+                            "replace": "apps/nxt-realtime-producers/src/environments/environment.ts",
+                            "with": "apps/nxt-realtime-producers/src/environments/environment.prod.ts"
+                        }
+                    ]
+                }
+            }
+        },
+        "serve": {
+            "executor": "@nrwl/node:node",
+            "options": {
+                "buildTarget": "nxt-realtime-producers:build"
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["apps/nxt-realtime-producers/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/apps/nxt-realtime-producers"],
+            "options": {
+                "jestConfig": "apps/nxt-realtime-producers/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

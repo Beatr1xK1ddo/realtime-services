@@ -1,84 +1,77 @@
-import { Socket, Namespace } from 'socket.io';
+import { Namespace, Socket } from 'socket.io';
 import { Mongoose } from 'mongoose';
-import { ELogTypes, ILogMessage, IModule } from '@socket/interfaces';
+import { ELogTypes, ILogData, IModule } from '@socket/interfaces';
 
 export class Logger implements IModule {
     private dbURL =
-        'mongodb+srv://testing:qwerty!123456@cluster0.1qqgw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority';
+        'mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin';
     private db: Mongoose;
     public name: string;
     private io?: Namespace;
-    private clients: Map<ELogTypes, Set<Socket>> = new Map();
+    private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
 
     constructor(name: string) {
-        this.db = new Mongoose();
         this.name = name;
+        this.clients = new Map();
+        for (const name in ELogTypes) {
+            this.clients.set(name as ELogTypes, new Map());
+        }
+        this.db = new Mongoose();
     }
 
     async init(io: Namespace) {
         try {
             this.io = io;
-            await this.dbConnection();
-            this.io.on('connection', this.onConnection.bind(this));
+            this.io.on('connection', this.handleConnection.bind(this));
+            await this.initDbConnection();
         } catch (e) {
             console.log('Ooops, :', e);
         }
     }
 
-    private onConnection(socket: Socket) {
-        socket.on('unsubscribe', (room: ELogTypes) => {
-            this.clients.get(room)?.delete(socket);
+    private handleConnection(socket: Socket) {
+        socket.on('subscribe', (nodeId: number, logType: ELogTypes) => {
+            if (!this.clients.get(logType)!.has(nodeId)) {
+                this.clients.get(logType)!.set(nodeId, new Set());
+            }
+            this.clients.get(logType)!.get(nodeId)!.add(socket);
+        });
+        socket.on('unsubscribe', (nodeId: number, logType?: ELogTypes) => {
+            const unsubscribeLogTypes = logType
+                ? [logType]
+                : [ELogTypes.appLog, ELogTypes.sysLog, ELogTypes.all];
+            unsubscribeLogTypes.forEach((logType) => {
+                this.clients.get(logType)!.get(nodeId)?.delete(socket);
+            });
         });
 
-        socket.on('data', this.logHandler.bind(this));
+        socket.on('data', this.handleData.bind(this));
 
         socket.on('error', (error) => console.log('Ooops', error));
-
-        socket.on('subscribe', (room: ELogTypes) => {
-            const roomSet = this.clients.get(room);
-
-            if (roomSet?.has(socket)) {
-                return;
-            }
-
-            roomSet?.add(socket);
-
-            // if (roomSet) {
-            //     roomSet.add(socket);
-            // }
-
-            // this.clients.set(room, new Set([socket]));
-        });
     }
 
-    private async dbConnection() {
-        if (this.db.connection.readyState) {
-            return;
-        }
+    private async initDbConnection() {
+        if (this.db.connection.readyState) return;
 
         try {
-            this.db.connection.once('open', this.createCollections);
             await this.db.connect(this.dbURL);
+            for (const name in ELogTypes) {
+                this.db.connection.collection(name);
+            }
         } catch (error) {
             this.db.connection.close();
             console.log('Ooops: ', error);
         }
     }
 
-    private createCollections() {
-        for (const name in ELogTypes) {
-            this.db.connection.collection(name);
-            this.clients.set(name as ELogTypes, new Set());
+    private handleData(data: ILogData) {
+        const { nodeId, data: logData } = data;
+        const clients = this.clients.get(logData.type);
+        clients!.get(nodeId)?.forEach((socket) => socket.emit('data', data));
+
+        if (this.db.connection) {
+            this.collections[logData.type].insertOne(data);
         }
-    }
-
-    private logHandler(data: ILogMessage) {
-        const { type } = data;
-        this.clients
-            .get(type)
-            ?.forEach((socket) => socket.emit('message', data));
-
-        this.collections[type].insertOne(data);
     }
 
     get collections() {
