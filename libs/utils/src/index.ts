@@ -1,10 +1,29 @@
 import { readFileSync, existsSync, writeFileSync, appendFile } from 'fs';
 import * as _ from 'lodash';
 import * as shell from 'child_process';
-
+import * as ipRegex from 'ip-port-regex';
+import { v4 as uuidv4 } from 'uuid';
+import * as loadIniFile from 'read-ini-file';
+import * as url from 'url';
 import * as conf from '../config.json';
 
 export default {
+    isValidIP(ip) {
+        return ipRegex({ exact: true }).test(ip.split(':').shift());
+    },
+    getHostNodeID() {
+        return loadIniFile.sync(conf.hostConfigIni).instance_id;
+    },
+    generateToken() {
+        return uuidv4();
+    },
+    getReqQuery(req) {
+        const { query } = url.parse(req.url, true);
+        return query;
+    },
+    resolvePath(filepath) {
+        return __dirname + '/' + filepath;
+    },
     currentTime() {
         return Math.round(new Date().getTime() / 1000);
     },

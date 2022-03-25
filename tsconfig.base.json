@@ -17,6 +17,9 @@
         "baseUrl": ".",
         "paths": {
             "@socket/interfaces": ["libs/interfaces/src/index.ts"],
+            "@socket/modules/app-install": [
+                "libs/modules/app-install/src/index.ts"
+            ],
             "@socket/modules/logger": ["libs/modules/logger/src/index.ts"],
             "@socket/modules/monitor": ["libs/modules/monitor/src/index.ts"],
             "@socket/producers/logger": ["libs/producers/logger/src/index.ts"],

@@ -3,6 +3,7 @@
     "projects": {
         "app": "apps/app",
         "interfaces": "libs/interfaces",
+        "modules-app-install": "libs/modules/app-install",
         "modules-logger": "libs/modules/logger",
         "modules-monitor": "libs/modules/monitor",
         "nxt-realtime-producers": "apps/nxt-realtime-producers",
