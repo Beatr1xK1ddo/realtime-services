@@ -14,15 +14,11 @@
         "chokidar": "^3.5.3",
         "diff": "^5.0.0",
         "ioredis": "^5.0.0-beta.4",
-        "ip-port-regex": "^2.0.0",
         "lodash": "^4.17.21",
         "mongoose": "^6.2.7",
         "mysql": "^2.18.1",
-        "read-ini-file": "^3.0.1",
         "socket.io": "^4.4.1",
         "tslib": "^2.0.0",
-        "url": "^0.11.0",
-        "uuid": "^8.3.2",
         "yamljs": "^0.3.0"
     },
     "devDependencies": {
@@ -33,12 +29,14 @@
         "@nrwl/linter": "13.9.4",
         "@nrwl/node": "13.9.4",
         "@nrwl/workspace": "13.9.4",
+        "@types/diff": "^5.0.2",
         "@types/jest": "27.0.2",
         "@types/lodash": "^4.14.180",
         "@types/mysql": "^2.15.21",
         "@types/node": "^16.11.7",
         "@typescript-eslint/eslint-plugin": "~5.10.0",
         "@typescript-eslint/parser": "~5.10.0",
+        "bufferutil": "^4.0.6",
         "eslint": "~8.7.0",
         "eslint-config-prettier": "8.1.0",
         "eslint-plugin-prettier": "^4.0.0",
@@ -48,6 +46,7 @@
         "socket.io-client": "^4.4.1",
         "ts-jest": "27.0.5",
         "ts-node": "^10.7.0",
-        "typescript": "~4.5.2"
+        "typescript": "~4.5.2",
+        "utf-8-validate": "^5.0.9"
     }
 }

@@ -8,6 +8,9 @@
     "pingInterval": 300,
     "logDir": "../../var/log/",
     "cacheDir": "../../var/cache/",
+    "app_install": {
+        "logsDir": "/home/www/dv2/html/davinci/var/node_install_apps"
+    },
     "ssl": {
         "key": "../cert/nextologies.com.key",
         "crt": "../cert/ed1cf1e8c47efb33.crt",

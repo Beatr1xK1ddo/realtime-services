@@ -4,41 +4,47 @@ import { IModule } from '@socket/interfaces';
 import { Namespace, Socket } from 'socket.io';
 import * as path from 'path';
 import { IAppInstallFiles } from './types';
+import * as Diff from 'diff';
+
+// import * as config from '../config.json';
 
 export class AppInstall implements IModule {
     private watcher: FSWatcher;
     public name: string;
     private path: string;
+    private io?: Namespace;
     public files: Map<string, IAppInstallFiles> = new Map();
+    // private folder: string;
 
     constructor(name: string, path: string) {
         this.name = name;
         this.path = path;
         this.watcher = watch(this.path, {
             ignoreInitial: true,
+            awaitWriteFinish: {
+                stabilityThreshold: 200,
+                pollInterval: 100,
+            },
         });
+        // тут я оставил в комментариях его способ установления пути отслеживания файлов
+        // щас реализована моя через конструктор
+        // this.folder = config.app_install.logsDir;
     }
 
     init(io: Namespace) {
-        io.on('connection', this.onConnection);
+        this.io = io;
+        this.io.on('connection', this.onConnection);
     }
 
-    onConnection(socket: Socket) {
+    private onConnection(socket: Socket) {
         console.log(`WatcherSocket: ${socket.id} connected...`);
 
-        socket.on('message', (message: string) => {
-            console.log('Logger message: ', message);
-        });
+        this.run();
 
         socket.on('error', (error) => console.log(error));
     }
 
-    setPath(path: string) {
-        this.path = path;
-        this.watcher = watch(this.path);
-    }
-
-    run() {
+    private run() {
         this.watcher.on('add', (path) => {
             const nodeId = this.parseNodeId(path);
             if (nodeId) {
@@ -83,8 +89,8 @@ export class AppInstall implements IModule {
         return +path.parse(filepath).name.replace('node_', '');
     }
 
-    getDiffContent(filepath) {
-        return new Promise((resolve, reject) => {
+    getDiffContent(filepath: string) {
+        return new Promise((resolve) => {
             const { node, content: oldContent } = this.files.get(filepath);
             const newContent = readFileSync(filepath, 'utf8');
 
@@ -111,6 +117,16 @@ export class AppInstall implements IModule {
             }
 
             resolve(diffValue);
+        });
+    }
+
+    sendData(node, data) {
+        this.io.send({
+            sender: this.name,
+            data: {
+                node: node,
+                content: data,
+            },
         });
     }
 }
