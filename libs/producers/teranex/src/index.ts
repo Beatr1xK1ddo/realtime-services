@@ -1,26 +1,23 @@
-import { IModule } from '@socket/interfaces';
-import { Namespace, Socket } from 'socket.io';
+import { DataProducer } from '@socket/interfaces';
 import { TeranexDevice } from './device';
 import { IDevices } from './types';
 
-export class Teranex implements IModule {
-    public name: string;
-    private io?: Namespace;
+export class Teranex extends DataProducer {
     private messages = [];
     private devices: IDevices = {};
     private blocked = false;
 
-    constructor() {
+    constructor(url: string) {
+        super(url);
         setInterval(() => this._handleMessages());
     }
 
-    init(io: Namespace) {
-        this.io = io;
-        this.io.on('connection', this.onConnection);
-    }
+    init() {
+        this.socket.on('connect', () =>
+            console.log('Teranex producer is connected')
+        );
 
-    private onConnection(socket: Socket) {
-        socket.on('message', (data) => this._onMessage(data));
+        this.socket.on('error', (error) => console.log('Ooops: ', error));
     }
 
     async _handleMessages() {
@@ -103,13 +100,13 @@ export class Teranex implements IModule {
         try {
             const res = await Promise.resolve(this.onMessage(data));
 
-            this.io.send({
+            this.socket.send({
                 receiver: sender,
                 data: res,
                 tag,
             });
         } catch (e) {
-            this.io.send({
+            this.socket.send({
                 receiver: sender,
                 error: e,
                 tag,

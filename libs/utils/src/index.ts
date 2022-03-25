@@ -1,4 +1,6 @@
 import * as shell from 'child_process';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import * as conf from '../config.json';
 
 function exec(cmd: string): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -16,4 +18,50 @@ async function getNodeId(): Promise<number | null> {
     }
 }
 
-export { exec, getNodeId };
+function currentTime() {
+    return Math.round(new Date().getTime() / 1000);
+}
+
+async function getCache(key, saveCallback) {
+    let dataContent = null;
+
+    try {
+        const cacheFile = `${conf.logDir}${key}`;
+
+        let isExpired = false;
+
+        if (existsSync(cacheFile)) {
+            const { expires, data } = JSON.parse(
+                readFileSync(cacheFile, 'utf8')
+            );
+
+            if (+expires < this.currentTime()) {
+                isExpired = true;
+            } else {
+                dataContent = data;
+            }
+        } else {
+            isExpired = true;
+        }
+
+        if (isExpired) {
+            dataContent = await saveCallback();
+
+            setTimeout(() => {
+                writeFileSync(
+                    cacheFile,
+                    JSON.stringify({
+                        expires: this.currentTime() + 1800,
+                        data: dataContent || null,
+                    })
+                );
+            });
+        }
+    } catch (e) {
+        dataContent = null;
+    }
+
+    return Promise.resolve(dataContent || null);
+}
+
+export { exec, getNodeId, currentTime, getCache };

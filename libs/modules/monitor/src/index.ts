@@ -6,7 +6,7 @@ import * as _ from 'lodash';
 import sqlQueries from './sql-queries';
 import { IAppTypeKeyes } from './types';
 import Redis from 'ioredis';
-import util from '@socket/utils';
+import * as util from '@socket/utils';
 
 export class Monitor implements IModule {
     public name: string;

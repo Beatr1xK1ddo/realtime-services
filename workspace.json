@@ -6,6 +6,7 @@
         "modules-app-install": "libs/modules/app-install",
         "modules-logger": "libs/modules/logger",
         "modules-monitor": "libs/modules/monitor",
+        "modules-redis": "libs/modules/redis",
         "nxt-realtime-producers": "apps/nxt-realtime-producers",
         "nxt-realtime-server": "apps/nxt-realtime-server",
         "producers-logger": "libs/producers/logger",

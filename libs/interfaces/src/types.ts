@@ -47,6 +47,6 @@ export type IAppLogMessage = {
 };
 
 export type ILogData = {
-    nodeId: number,
-    data: ISysLogMessage | IAppLogMessage,
+    nodeId: number;
+    data: ISysLogMessage | IAppLogMessage;
 };
