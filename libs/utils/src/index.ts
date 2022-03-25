@@ -3,7 +3,6 @@ import * as _ from 'lodash';
 import * as shell from 'child_process';
 import * as ipRegex from 'ip-port-regex';
 import { v4 as uuidv4 } from 'uuid';
-import * as loadIniFile from 'read-ini-file';
 import * as url from 'url';
 import * as conf from '../config.json';
 
@@ -12,7 +11,15 @@ export default {
         return ipRegex({ exact: true }).test(ip.split(':').shift());
     },
     getHostNodeID() {
-        return loadIniFile.sync(conf.hostConfigIni).instance_id;
+        return new Promise((resolve, reject) => {
+            shell.exec(
+                `php ${conf.hostConfigIni} hostname`,
+                (error, stdout) => {
+                    if (error) reject(error);
+                    resolve(stdout);
+                }
+            );
+        });
     },
     generateToken() {
         return uuidv4();

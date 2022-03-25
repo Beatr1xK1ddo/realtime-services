@@ -27,5 +27,5 @@
             "depth": 43200
         }
     },
-    "hostConfigIni": "/root/dv_control_new.ini"
+    "hostConfigIni": "/usr/bin/php/root/dv_control_new.php"
 }

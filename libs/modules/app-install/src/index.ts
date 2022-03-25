@@ -3,13 +3,13 @@ import { readFileSync } from 'fs';
 import { IModule } from '@socket/interfaces';
 import { Namespace, Socket } from 'socket.io';
 import * as path from 'path';
+import { IAppInstallFiles } from './types';
 
-export class Watcher implements IModule {
-    static watchers: FSWatcher[] = [];
+export class AppInstall implements IModule {
     private watcher: FSWatcher;
     public name: string;
     private path: string;
-    public map: Map<string, Buffer> = new Map();
+    public files: Map<string, IAppInstallFiles> = new Map();
 
     constructor(name: string, path: string) {
         this.name = name;
@@ -17,7 +17,6 @@ export class Watcher implements IModule {
         this.watcher = watch(this.path, {
             ignoreInitial: true,
         });
-        Watcher.watchers.push(this.watcher);
     }
 
     init(io: Namespace) {
@@ -41,24 +40,37 @@ export class Watcher implements IModule {
 
     run() {
         this.watcher.on('add', (path) => {
-            this.map.set(path, readFileSync(path));
-            console.log(`File ${path} has been added`, this.map);
+            const nodeId = this.parseNodeId(path);
+            if (nodeId) {
+                this.files.set(path, {
+                    node: nodeId,
+                    content: readFileSync(path, 'utf8'),
+                });
+            }
+            console.log(`File ${path} has been added`, this.files);
         });
 
-        this.watcher.on('change', (path) => {
-            this.add(path);
-            console.log(`File ${path} has been changed`, this.map);
+        this.watcher.on('change', async (path) => {
+            if (this.files.has(path)) {
+                const diffContent = await this.getDiffContent(path);
+
+                if (diffContent) {
+                    const { node } = this.files.get(path);
+                    this.sendData(node, diffContent);
+                }
+            }
+            console.log(`File ${path} has been changed`, this.files);
         });
 
         this.watcher.on('unlink', (path) => {
-            this.map.delete(path);
-            console.log(`File ${path} has been removed`, this.map);
+            this.files.delete(path);
+            console.log(`File ${path} has been removed`, this.files);
         });
 
         this.watcher.on('ready', () => {
             console.log(
                 `Watcher: "${this.name}" ready to changes!!!`,
-                this.map
+                this.files
             );
         });
 
@@ -67,12 +79,38 @@ export class Watcher implements IModule {
         );
     }
 
-    add(path: string) {
-        if (this.map.has(path)) return;
-        this.map.set(path, readFileSync(path));
+    parseNodeId(filepath: string) {
+        return +path.parse(filepath).name.replace('node_', '');
     }
 
-    parseNodeId(filepath) {
-        return +path.parse(filepath).name.replace('node_', '');
+    getDiffContent(filepath) {
+        return new Promise((resolve, reject) => {
+            const { node, content: oldContent } = this.files.get(filepath);
+            const newContent = readFileSync(filepath, 'utf8');
+
+            const [oldC, newC] = Diff.diffChars(oldContent, newContent);
+
+            this.files.set(filepath, {
+                node: node,
+                content: newContent,
+            });
+
+            let diffValue = '';
+            if (newC) {
+                if (newC.added) {
+                    diffValue = newC.value;
+                }
+            } else {
+                if (oldC && oldC.added) {
+                    diffValue = oldC.value;
+                }
+            }
+
+            if (diffValue[diffValue.length - 1] === '\n') {
+                diffValue = diffValue.slice(0, -1);
+            }
+
+            resolve(diffValue);
+        });
     }
 }
