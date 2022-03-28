@@ -9,13 +9,15 @@ function exec(cmd: string): Promise<any> {
         });
     });
 }
-async function getNodeId(): Promise<number | null> {
+async function getNodeId(): Promise<number> {
+    let nodeId = null;
     try {
         const id = await exec('/usr/bin/php /root/dv_control_new.php hostname');
-        return Number.parseInt(id);
+        nodeId = Number.parseInt(id);
     } catch (e) {
-        return null;
+        console.warn("NXT|WARNING: Cannot get node id");
     }
+    return nodeId
 }
 
 function currentTime() {
