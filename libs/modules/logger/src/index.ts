@@ -30,7 +30,7 @@ export class Logger implements IModule {
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('subscribe', (nodeId: number, logType: ELogTypes) => {
+        socket.on('subscribe', ({nodeId, logType}: {nodeId: number, logType: ELogTypes}) => {
             if (!this.clients.get(logType)!.has(nodeId)) {
                 this.clients.get(logType)!.set(nodeId, new Set());
             }
@@ -65,6 +65,7 @@ export class Logger implements IModule {
     }
 
     private handleData(data: ILogData) {
+        console.log(data)
         const { nodeId, data: logData } = data;
         const clients = this.clients.get(logData.type);
         clients!.get(nodeId)?.forEach((socket) => socket.emit('data', data));
