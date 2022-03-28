@@ -7,6 +7,7 @@
         "modules-logger": "libs/modules/logger",
         "modules-monitor": "libs/modules/monitor",
         "modules-redis": "libs/modules/redis",
+        "modules-udp-player": "libs/modules/udp-player",
         "nxt-realtime-producers": "apps/nxt-realtime-producers",
         "nxt-realtime-server": "apps/nxt-realtime-server",
         "producers-logger": "libs/producers/logger",

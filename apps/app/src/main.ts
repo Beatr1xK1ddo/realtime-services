@@ -5,7 +5,7 @@ const socket = manager.socket('/logger');
 
 socket.on('connect', () => {
     console.log('client connected to Logger...');
-    socket.emit('subscribe', {nodeId: 1234134234, logType: "appLog"});
+    socket.emit('subscribe', { nodeId: 1234134234, logType: 'appLog' });
 });
 
 socket.on('data', (message) => {

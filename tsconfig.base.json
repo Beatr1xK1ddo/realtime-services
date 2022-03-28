@@ -23,6 +23,9 @@
             "@socket/modules/logger": ["libs/modules/logger/src/index.ts"],
             "@socket/modules/monitor": ["libs/modules/monitor/src/index.ts"],
             "@socket/modules/redis": ["libs/modules/redis/src/index.ts"],
+            "@socket/modules/udp-player": [
+                "libs/modules/udp-player/src/index.ts"
+            ],
             "@socket/producers/logger": ["libs/producers/logger/src/index.ts"],
             "@socket/producers/teranex": [
                 "libs/producers/teranex/src/index.ts"
