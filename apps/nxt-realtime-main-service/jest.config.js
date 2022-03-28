@@ -1,5 +1,5 @@
 module.exports = {
-    displayName: 'node-services',
+    displayName: 'nxt-realtime-main-service',
     preset: '../../jest.preset.js',
     globals: {
         'ts-jest': {
@@ -11,5 +11,5 @@ module.exports = {
         '^.+\\.[tj]s$': 'ts-jest',
     },
     moduleFileExtensions: ['ts', 'js', 'html'],
-    coverageDirectory: '../../coverage/apps/node-services',
+    coverageDirectory: '../../coverage/apps/nxt-realtime-main-service',
 };

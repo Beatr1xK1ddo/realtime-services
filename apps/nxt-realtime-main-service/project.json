@@ -1,17 +1,16 @@
 {
-    "root": "apps/node-services",
-    "sourceRoot": "apps/node-services/src",
+    "root": "apps/nxt-realtime-main-service",
+    "sourceRoot": "apps/nxt-realtime-main-service/src",
     "projectType": "application",
     "targets": {
         "build": {
             "executor": "@nrwl/node:webpack",
             "outputs": ["{options.outputPath}"],
             "options": {
-                "outputPath": "dist/apps/node-services",
-                "main": "apps/node-services/src/main.ts",
-                "tsConfig": "apps/node-services/tsconfig.app.json",
-                "assets": ["apps/node-services/src/assets"],
-                "webpackConfig": "apps/node-services/webpackConfig.js"
+                "outputPath": "dist/apps/nxt-realtime-main-service",
+                "main": "apps/nxt-realtime-main-service/src/main.ts",
+                "tsConfig": "apps/nxt-realtime-main-service/tsconfig.app.json",
+                "assets": ["apps/nxt-realtime-main-service/src/assets"]
             },
             "configurations": {
                 "production": {
@@ -21,8 +20,8 @@
                     "inspect": false,
                     "fileReplacements": [
                         {
-                            "replace": "apps/node-services/src/environments/environment.ts",
-                            "with": "apps/node-services/src/environments/environment.prod.ts"
+                            "replace": "apps/nxt-realtime-main-service/src/environments/environment.ts",
+                            "with": "apps/nxt-realtime-main-service/src/environments/environment.prod.ts"
                         }
                     ]
                 }
@@ -31,21 +30,21 @@
         "serve": {
             "executor": "@nrwl/node:node",
             "options": {
-                "buildTarget": "node-services:build"
+                "buildTarget": "nxt-realtime-main-service-server:build"
             }
         },
         "lint": {
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": ["apps/node-services/**/*.ts"]
+                "lintFilePatterns": ["apps/nxt-realtime-main-service/**/*.ts"]
             }
         },
         "test": {
             "executor": "@nrwl/jest:jest",
-            "outputs": ["coverage/apps/node-services"],
+            "outputs": ["coverage/apps/nxt-realtime-main-service"],
             "options": {
-                "jestConfig": "apps/node-services/jest.config.js",
+                "jestConfig": "apps/nxt-realtime-main-service/jest.config.js",
                 "passWithNoTests": true
             }
         }
