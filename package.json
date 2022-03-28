@@ -41,6 +41,7 @@
         "eslint-config-prettier": "8.1.0",
         "eslint-plugin-prettier": "^4.0.0",
         "jest": "27.2.3",
+        "node-loader": "^2.0.0",
         "nx": "13.9.4",
         "prettier": "^2.5.1",
         "socket.io-client": "^4.4.1",
