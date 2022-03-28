@@ -23,8 +23,8 @@ export abstract class DataProducer {
 }
 
 export enum ELogTypes {
-    appLog = 'applog',
-    sysLog = 'syslog',
+    appLog = 'appLog',
+    sysLog = 'sysLog',
     all = 'all',
 }
 
