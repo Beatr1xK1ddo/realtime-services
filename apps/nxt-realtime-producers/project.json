@@ -10,10 +10,12 @@
                 "outputPath": "dist/apps/nxt-realtime-producers",
                 "main": "apps/nxt-realtime-producers/src/main.ts",
                 "tsConfig": "apps/nxt-realtime-producers/tsconfig.app.json",
-                "assets": ["apps/nxt-realtime-producers/src/assets"]
+                "assets": ["apps/nxt-realtime-producers/src/assets"],
+                "webpackConfig": "apps/nxt-realtime-producers/webpackConfig.js"
             },
             "configurations": {
                 "production": {
+                    "externalDependencies": "none",
                     "optimization": true,
                     "extractLicenses": true,
                     "inspect": false,
