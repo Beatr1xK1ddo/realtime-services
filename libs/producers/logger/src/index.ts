@@ -1,13 +1,11 @@
-import { FSWatcher, watch } from 'chokidar';
-import { basename } from 'path';
-import { DataProducer, ELogTypes, ILogData } from '@socket/interfaces';
+import {FSWatcher, watch} from 'chokidar';
+import {DataProducer, ELogTypes} from '@socket/interfaces';
 import * as path from 'path';
-import { spawn } from 'child_process';
-import { IFile } from './types';
+import {spawn} from 'child_process';
+import {IFile} from './types';
 import * as fs from 'fs';
 
 const sysLog = 'system.ts';
-const MSG_PER_SECONDS = 500;
 
 export class LoggerProducer extends DataProducer {
     private nodeId: number;
@@ -141,17 +139,10 @@ export class LoggerProducer extends DataProducer {
 
             if (this.isTrashData(chunk, filename)) return;
 
-            if (file.counter < MSG_PER_SECONDS) {
-                if (chunk !== file.lastChunk) {
-                    this.sendLog(chunk, info);
-                }
-
-                file.lastChunk = chunk;
-            } else if (file.counter === MSG_PER_SECONDS) {
-                this.sendLog('Too many logs per second', info);
+            if (chunk !== file.lastChunk) {
+                this.sendLog(chunk, info);
             }
-
-            file.counter++;
+            file.lastChunk = chunk;
         });
 
         file.tail.stderr.on('data', (data) => {
@@ -176,6 +167,7 @@ export class LoggerProducer extends DataProducer {
                 pollInterval: 1000,
             },
         });
+        console.log("watch", this.watcher.getWatched());
 
         this.watcher
             .on('add', (fname) => this._watch(fname))
@@ -239,7 +231,8 @@ export class LoggerProducer extends DataProducer {
     }
 
     _parseFilename(filename: string) {
-        if (filename === sysLog) return { type: ELogTypes.sysLog };
+        console.log("watching file", filename)
+        if (filename === sysLog) return {type: ELogTypes.sysLog};
 
         const [appType, appId, appName, subType] = path
             .basename(filename, '.log')
@@ -256,7 +249,7 @@ export class LoggerProducer extends DataProducer {
             };
         }
 
-        return { type: null };
+        return {type: null};
     }
 
     debug(message: string) {
@@ -268,16 +261,17 @@ export class LoggerProducer extends DataProducer {
             fs.appendFile(
                 `${filename}`,
                 new Date().toISOString() + '  ' + message + '\n',
-                { mode: '777' },
+                {mode: '777'},
                 (err) => {
                     err && console.error(err.toString());
                 }
             );
-        } catch (e) {}
+        } catch (e) {
+        }
     }
 
     async _onMessage(req: any) {
-        const { sender, error, data, tag } = JSON.parse(req);
+        const {sender, error, data, tag} = JSON.parse(req);
 
         if (sender === 'service_manager') {
             console.error(error);
