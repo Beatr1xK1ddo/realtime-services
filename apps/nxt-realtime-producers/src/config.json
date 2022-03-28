@@ -14,6 +14,7 @@
         "ca": "../cert/gd_bundle-g2-g1.crt"
     },
     "logAgent": {
+        "serviceUrl": "http://qa.nextologies.com:1987/logger",
         "applogDir": "/home/dv2/data/logs/real--*.log",
         "syslogFile": "/var/log/syslog",
         "excludeMessages": {
