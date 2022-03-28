@@ -1,12 +1,16 @@
 export * from './lib/modules-udp-player';
 import { IModule } from '@socket/interfaces';
 import { Namespace, Socket } from 'socket.io';
-import { IUdpPlayer } from './types';
+import { IUdpPlayerData } from './types';
+import { parse } from 'url';
+import { spawn } from 'child_process';
+
+const MAX_BUFFER_SIZE = 65536;
 
 export class UdpPlayer implements IModule {
     public name: string;
     private io?: Namespace;
-    private streams: Map<string, IUdpPlayer>;
+    private streams: Map<string, IUdpPlayerData>;
 
     constructor(name: string) {
         this.name = name;
@@ -18,62 +22,70 @@ export class UdpPlayer implements IModule {
     }
 
     private onConnection(socket: Socket) {
+        const url = socket.request.url;
+        const { query } = parse(url, true);
+
+        if (!('udp' in query)) {
+            return;
+        }
+
+        if (!this.streams.has(query.udp as string)) {
+            const ffmpeg = spawn(
+                'ffmpeg',
+                `-i udp://@${query.udp}?fifo_size=1000000&overrun_nonfatal=1 -f mp4 -c:v copy -c:a aac -ac 2 -b:a 128k -ar 44100 -threads 0 -movflags frag_keyframe+empty_moov+default_base_moof -frag_duration 1000000 -min_frag_duration 1000000 pipe:1`.split(
+                    ' '
+                ),
+                { stdio: ['ignore', 'pipe', 'inherit'] }
+            );
+
+            ffmpeg.stdout.on('data', (data) => {
+                const newStream: IUdpPlayerData = {
+                    udp: query.udp as string,
+                    ffmpeg,
+                    clients: new Set(),
+                    initSeg: null,
+                    bufferArray: [],
+                };
+
+                newStream.bufferArray.push(data);
+
+                if (data.length >= MAX_BUFFER_SIZE) return;
+
+                const fmp4Data = Buffer.concat(newStream.bufferArray);
+
+                newStream.bufferArray = [];
+
+                newStream.clients.forEach((socket) => {
+                    // if (newStream.initSeg && !client.isInitSent) { у него было так,
+                    if (newStream.initSeg) {
+                        socket.send(newStream.initSeg);
+                    }
+
+                    socket.send(fmp4Data);
+                    // socket.isInitSent = true; и вот так
+                });
+
+                if (!newStream.initSeg) newStream.initSeg = fmp4Data;
+
+                ffmpeg.on('close', (code, signal) => {
+                    this.streams.delete(query.udp as string);
+                });
+
+                this.streams.set(query.udp as string, newStream);
+            });
+        }
+        const stream = this.streams.get(query.udp as string);
+
+        stream.clients.add(socket);
+
+        socket.on('disconnect', () => {
+            stream.clients.delete(socket);
+
+            if (!stream.clients.size) {
+                stream.ffmpeg.kill('SIGINT');
+            }
+        });
+
         socket.on('error', (error) => console.log('Ooops: ', error));
     }
-    // const { query: { udp } } = url.parse(req.url, true);
-
-    // if (!streams.has(udp)) {
-    //     const ffmpeg = child(
-    //         'ffmpeg',
-    //         `-i udp://@${udp}?fifo_size=1000000&overrun_nonfatal=1 -f mp4 -c:v copy -c:a aac -ac 2 -b:a 128k -ar 44100 -threads 0 -movflags frag_keyframe+empty_moov+default_base_moof -frag_duration 1000000 -min_frag_duration 1000000 pipe:1`.split(' '),
-    //         { stdio: ['ignore', 'pipe', 'inherit'] }
-    //     );
-
-    //     const newStream = {
-    //         udp,
-    //         ffmpeg,
-    //         clients: new Set,
-    //         initSeg: null,
-    //         bufferArray: []
-    //     };
-
-    //     ffmpeg.stdout.on('data', partData => {
-    //         newStream.bufferArray.push(partData);
-
-    //         if (partData.length >= MAX_BUFFER_SIZE) return;
-
-    //         const fmp4Data = Buffer.concat(newStream.bufferArray);
-    //         newStream.bufferArray = [];
-
-    //         newStream.clients.forEach(client => {
-    //             if (client.readyState === WebSocket.OPEN) {
-    //                 if (newStream.initSeg && !client.isInitSent) {
-    //                     client.send(newStream.initSeg);
-    //                 }
-
-    //                 client.send(fmp4Data);
-    //                 client.isInitSent = true;
-    //             }
-    //         });
-
-    //         if (!newStream.initSeg) newStream.initSeg = fmp4Data;
-    //     });
-
-    //     ffmpeg.on('close', (code, signal) => {
-    //         streams.delete(udp);
-    //     });
-
-    //     streams.set(udp, newStream);
-    // }
-
-    // const stream = streams.get(udp);
-    // stream.clients.add(client);
-
-    // client.on('close', (code, message) => {
-    //     stream.clients.delete(client);
-
-    //     if (!stream.clients.size) {
-    //         stream.ffmpeg.kill('SIGINT');
-    //     }
-    // });
 }
