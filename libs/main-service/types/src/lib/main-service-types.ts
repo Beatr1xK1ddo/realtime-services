@@ -1,7 +1,3 @@
-import {Namespace} from "socket.io";
-
-export interface IModule {
-    name: string;
-    init(io: Namespace): void;
+export function mainServiceTypes(): string {
+    return 'main-service-types';
 }
-
