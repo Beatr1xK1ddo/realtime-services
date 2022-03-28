@@ -1,0 +1,36 @@
+{
+    "root": "libs/main-service-modules/udp-player",
+    "sourceRoot": "libs/main-service-modules/udp-player/src",
+    "projectType": "library",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/main-service-modules/udp-player",
+                "tsConfig": "libs/main-service-modules/udp-player/tsconfig.lib.json",
+                "packageJson": "libs/main-service-modules/udp-player/package.json",
+                "main": "libs/main-service-modules/udp-player/src/index.ts",
+                "assets": ["libs/main-service-modules/udp-player/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": [
+                    "libs/main-service-modules/udp-player/**/*.ts"
+                ]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/main-service-modules/udp-player"],
+            "options": {
+                "jestConfig": "libs/main-service-modules/udp-player/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}
