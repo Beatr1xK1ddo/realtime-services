@@ -1,0 +1,36 @@
+{
+    "root": "libs/main-service-modules/app-install",
+    "sourceRoot": "libs/main-service-modules/app-install/src",
+    "projectType": "library",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/main-service-modules/app-install",
+                "tsConfig": "libs/main-service-modules/app-install/tsconfig.lib.json",
+                "packageJson": "libs/main-service-modules/app-install/package.json",
+                "main": "libs/main-service-modules/app-install/src/index.ts",
+                "assets": ["libs/main-service-modules/app-install/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": [
+                    "libs/main-service-modules/app-install/**/*.ts"
+                ]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/main-service-modules/app-install"],
+            "options": {
+                "jestConfig": "libs/main-service-modules/app-install/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

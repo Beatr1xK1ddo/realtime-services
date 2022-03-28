@@ -1,0 +1,54 @@
+{
+    "root": "apps/nxt-realtime-node-services",
+    "sourceRoot": "apps/nxt-realtime-node-services/src",
+    "projectType": "application",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/node:webpack",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/apps/nxt-realtime-node-services",
+                "main": "apps/nxt-realtime-node-services/src/main.ts",
+                "tsConfig": "apps/nxt-realtime-node-services/tsconfig.app.json",
+                "assets": ["apps/nxt-realtime-node-services/src/assets"],
+                "webpackConfig": "apps/nxt-realtime-node-services/webpackConfig.js"
+            },
+            "configurations": {
+                "production": {
+                    "externalDependencies": "none",
+                    "optimization": true,
+                    "extractLicenses": true,
+                    "inspect": false,
+                    "fileReplacements": [
+                        {
+                            "replace": "apps/nxt-realtime-node-services/src/environments/environment.ts",
+                            "with": "apps/nxt-realtime-node-services/src/environments/environment.prod.ts"
+                        }
+                    ]
+                }
+            }
+        },
+        "serve": {
+            "executor": "@nrwl/node:node",
+            "options": {
+                "buildTarget": "nxt-realtime-node-services:build"
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["apps/nxt-realtime-node-services/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/apps/nxt-realtime-node-services"],
+            "options": {
+                "jestConfig": "apps/nxt-realtime-node-services/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

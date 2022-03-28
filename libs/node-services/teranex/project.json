@@ -1,0 +1,34 @@
+{
+    "root": "libs/node-services/teranex",
+    "sourceRoot": "libs/node-services/teranex/src",
+    "projectType": "library",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/node-services/teranex",
+                "tsConfig": "libs/node-services/teranex/tsconfig.lib.json",
+                "packageJson": "libs/node-services/teranex/package.json",
+                "main": "libs/node-services/teranex/src/index.ts",
+                "assets": ["libs/node-services/teranex/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/node-services/teranex/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/node-services/teranex"],
+            "options": {
+                "jestConfig": "libs/node-services/teranex/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

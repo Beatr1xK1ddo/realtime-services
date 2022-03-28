@@ -1,19 +1,21 @@
 {
     "version": 2,
     "projects": {
-        "app": "apps/app",
-        "interfaces": "libs/interfaces",
-        "modules-app-install": "libs/modules/app-install",
-        "modules-logger": "libs/modules/logger",
-        "modules-monitor": "libs/modules/monitor",
-        "modules-redis": "libs/modules/redis",
-        "modules-udp-player": "libs/modules/udp-player",
-        "nxt-realtime-producers": "apps/nxt-realtime-producers",
-        "nxt-realtime-server": "apps/nxt-realtime-server",
-        "producers-logger": "libs/producers/logger",
-        "producers-teranex": "libs/producers/teranex",
-        "server": "libs/server",
-        "utils": "libs/utils",
-        "watcher": "libs/watcher"
+        "main-service-modules-app-install": "libs/main-service-modules/app-install",
+        "main-service-modules-logger": "libs/main-service-modules/logger",
+        "main-service-modules-monitor": "libs/main-service-modules/monitor",
+        "main-service-modules-redis": "libs/main-service-modules/redis",
+        "main-service-modules-types": "libs/main-service-modules/types",
+        "main-service-modules-udp-player": "libs/main-service-modules/udp-player",
+        "main-service-server": "libs/main-service/server",
+        "main-service-types": "libs/main-service/types",
+        "node-services-logger": "libs/node-services/logger",
+        "node-services-teranex": "libs/node-services/teranex",
+        "node-services-types": "libs/node-services/types",
+        "nxt-realtime-main-service": "apps/nxt-realtime-main-service",
+        "nxt-realtime-node-services": "apps/nxt-realtime-node-services",
+        "shared-types": "libs/shared/types",
+        "shared-utils": "libs/shared/utils",
+        "test-clients": "apps/test-clients"
     }
 }
