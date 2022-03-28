@@ -1,6 +1,6 @@
-import { createServer } from 'http';
-import { Namespace, Server } from 'socket.io';
-import { IModule } from '@socket/interfaces';
+import {createServer} from 'http';
+import {Namespace, Server} from 'socket.io';
+import {IModule} from '@socket/interfaces';
 
 export class NxtRealtimeServer {
     static namespaces: Map<string, Namespace> = new Map();
@@ -9,7 +9,7 @@ export class NxtRealtimeServer {
 
     constructor(port: number) {
         this.http = createServer();
-        this.io = new Server(this.http).listen(port);
+        this.io = new Server(this.http, {cors: {origin: '*'}}).listen(port);
     }
 
     reg(module: IModule) {
