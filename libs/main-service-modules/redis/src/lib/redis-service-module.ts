@@ -3,7 +3,7 @@ import { Namespace, Socket } from 'socket.io';
 import { EMessageActions } from './types';
 import Redis from 'ioredis';
 
-export class NxtRedis implements IMainServiceModule {
+export class RedisServiceModule implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private redis: Redis;
