@@ -31,6 +31,9 @@
             "@socket/main-service-modules-udp-player": [
                 "libs/main-service-modules/udp-player/src/index.ts"
             ],
+            "@socket/main-service-modules/teranex": [
+                "libs/main-service-modules/teranex/src/index.ts"
+            ],
             "@socket/main-service-modules/types": [
                 "libs/main-service-modules/types/src/index.ts"
             ],

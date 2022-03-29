@@ -3,7 +3,7 @@ import { Namespace, Socket } from 'socket.io';
 import { EMessageActions } from './types';
 import Redis from 'ioredis';
 
-export class RedisServiceModule implements IMainServiceModule {
+export class NxtRedis implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private redis: Redis;
@@ -23,7 +23,9 @@ export class RedisServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('message', this.onMessage.bind(this));
+        socket.on('message', (data) => {
+            console.log(data);
+        });
     }
 
     onMessage(msg: any) {

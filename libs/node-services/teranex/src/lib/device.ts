@@ -1,11 +1,11 @@
 import { Socket } from 'net';
-import { IDeviceMessage } from './types';
+import { IDeviceResponse } from '@socket/shared-types';
 
 export class TeranexDevice {
     private timeout = 2000;
     private ip: string;
     private port: number;
-    private response: IDeviceMessage;
+    private response: IDeviceResponse;
     private socket?: Socket;
     public busy = false;
 
