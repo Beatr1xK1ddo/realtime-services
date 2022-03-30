@@ -1,1 +1,1 @@
-export * from './lib/LoggerNodeService';
+export * from './lib/loggerNodeService';

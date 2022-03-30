@@ -1,10 +1,12 @@
-import { io, Socket } from 'socket.io-client';
+import {io, Socket} from 'socket.io-client';
 
 export abstract class NodeService {
-    protected socket: Socket;
+    protected nodeId: number;
     protected url: string;
+    protected socket: Socket;
 
-    constructor(url: string) {
+    constructor(nodeId: number, url: string) {
+        this.nodeId = nodeId;
         this.url = url;
         this.socket = io(this.url);
     }

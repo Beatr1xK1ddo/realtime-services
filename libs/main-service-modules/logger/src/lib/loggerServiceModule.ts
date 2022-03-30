@@ -2,7 +2,7 @@ import { Namespace, Socket } from 'socket.io';
 import { Mongoose } from 'mongoose';
 import { ELogTypes, ILogData, IMainServiceModule } from '@socket/shared-types';
 
-export class Logger implements IMainServiceModule {
+export class LoggerServiceModule implements IMainServiceModule {
     private dbURL =
         'mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin';
     private db: Mongoose;

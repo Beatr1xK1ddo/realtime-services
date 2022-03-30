@@ -30,7 +30,7 @@
         "serve": {
             "executor": "@nrwl/node:node",
             "options": {
-                "buildTarget": "nxt-realtime-main-service-server:build"
+                "buildTarget": "nxt-realtime-main-service:build"
             }
         },
         "lint": {
