@@ -1,0 +1,13 @@
+{
+  "name": "@socket/node-services-logger",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "typings": "./src/index.d.ts",
+  "dependencies": {},
+  "peerDependencies": {
+    "chokidar": "^3.5.3",
+    "@socket/shared-types": "0.0.1",
+    "socket.io": "^4.4.1"
+  }
+}

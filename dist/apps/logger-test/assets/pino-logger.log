@@ -1,0 +1,6 @@
+{"level":30,"time":1648557157416,"pid":39667,"hostname":"mbp-sasha","msg":"this is info msg"}
+{"level":40,"time":1648557157416,"pid":39667,"hostname":"mbp-sasha","msg":"this is warn msg"}
+{"level":50,"time":1648557157416,"pid":39667,"hostname":"mbp-sasha","msg":"this is error msg"}
+{"level":30,"time":1648557173471,"pid":39731,"hostname":"mbp-sasha","msg":"this is info msg"}
+{"level":40,"time":1648557173471,"pid":39731,"hostname":"mbp-sasha","msg":"this is warn msg"}
+{"level":50,"time":1648557173471,"pid":39731,"hostname":"mbp-sasha","msg":"this is error msg"}

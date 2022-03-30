@@ -1,0 +1,11 @@
+{
+  "name": "@socket/node-services-teranex",
+  "version": "0.0.1",
+  "main": "./src/index.js",
+  "typings": "./src/index.d.ts",
+  "dependencies": {},
+  "peerDependencies": {
+    "@socket/shared-types": "0.0.1",
+    "socket.io": "^4.4.1"
+  }
+}

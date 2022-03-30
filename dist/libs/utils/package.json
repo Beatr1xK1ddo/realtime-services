@@ -1,0 +1,14 @@
+{
+  "name": "@socket/utils",
+  "version": "0.0.1",
+  "main": "./src/index.js",
+  "typings": "./src/index.d.ts",
+  "dependencies": {},
+  "peerDependencies": {
+    "lodash": "^4.17.21",
+    "ip-port-regex": "^2.0.0",
+    "uuid": "^8.3.2",
+    "read-ini-file": "^3.0.1",
+    "url": "^0.11.0"
+  }
+}
