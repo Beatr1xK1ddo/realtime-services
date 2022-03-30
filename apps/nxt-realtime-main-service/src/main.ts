@@ -1,6 +1,10 @@
 import { MainServiceServer } from '@socket/main-service-server';
-import { Logger } from '@socket/main-service-modules-logger';
+import { LoggerServiceModule } from '@socket/main-service-modules-logger';
+import { TeranexServiceModule } from '@socket/main-service-modules/teranex';
 
 const server = new MainServiceServer(1987);
-const logger = new Logger('logger');
-server.registerModule(logger);
+const modules = [
+    new LoggerServiceModule('logger'),
+    new TeranexServiceModule('teranex'),
+];
+modules.forEach((module) => server.registerModule(module));

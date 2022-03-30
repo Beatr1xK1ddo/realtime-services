@@ -1,5 +1,5 @@
 import { TeranexDevice } from './device';
 
-export type IDevices = {
+export type ITeranexDevices = {
     [key: string]: TeranexDevice;
 };

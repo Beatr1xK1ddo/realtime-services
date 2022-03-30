@@ -22,6 +22,9 @@
             "syslog": ["cron", "postfix"]
         }
     },
+    "teranex": {
+        "serviceUrl": "http://qa.nextologies.com:1987/teranex"
+    },
     "live_monitor": {
         "history": {
             "bin": "/home/www/dv2/html/davinci/web/mline.php",

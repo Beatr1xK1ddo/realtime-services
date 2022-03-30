@@ -8,7 +8,6 @@ import * as fs from 'fs';
 const sysLog = 'system.ts';
 
 export class LoggerNodeService extends NodeService {
-    private nodeId: number;
     private appLogsPath: string;
     private sysLogsPath: string;
     private excludeAppLogRegexp: RegExp;
@@ -23,7 +22,7 @@ export class LoggerNodeService extends NodeService {
         sysLogsPath: string,
         exclude: any
     ) {
-        super(url);
+        super(nodeId, url);
         this.nodeId = nodeId;
         this.appLogsPath = appLogsPath;
         this.sysLogsPath = sysLogsPath;

@@ -1,4 +1,8 @@
-export type IClientMessage = {
+export type INodeInitEvent = { nodeId: number };
+export type IClientSubscribeEvent = { nodeId: number, ip: string, port: number };
+
+export type IClientCmdRequestEvent = {
+    nodeId: number;
     ip: string;
     port: number;
     commands: string[];
@@ -9,10 +13,12 @@ export type IDeviceResponse = {
     resolve: (value?: unknown) => void;
     reject: (reason?: unknown) => void;
 };
-export type IDeviceResponseData = {
-    data: string[];
+export type IDeviceResponseEvent = {
+    nodeId: number;
     ip: string;
     port: number;
+    data?: string[];
+    error?: string;
 };
 
 export type INodeMessage = {
