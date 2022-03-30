@@ -3,3 +3,7 @@ export enum EMessageActions {
     set = 'set',
     delete = 'delete',
 }
+
+export type IRedisResponse = {
+    test: number;
+};

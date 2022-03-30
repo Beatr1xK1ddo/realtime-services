@@ -46,7 +46,7 @@ export class TeranexService implements IMainServiceModule {
                 return;
             }
             const clients = this.clients.get(nodeId);
-            clients?.forEach((socket) => socket.emit('message', data));
+            clients?.forEach((socket) => socket.emit('response', data));
         });
 
         socket.on('subscribe', (ip: string, port: number) => {

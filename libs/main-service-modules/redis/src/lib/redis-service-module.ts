@@ -23,7 +23,15 @@ export class RedisServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('message', this.onMessage.bind(this));
+        socket.on('message', this.handleMessage.bind(this));
+    }
+
+    private async handleMessage(msg) {
+        try {
+            const result = await this.onMessage(msg);
+        } catch (e) {
+            console.log('11');
+        }
     }
 
     onMessage(msg: any) {
