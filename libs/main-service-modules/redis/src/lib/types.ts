@@ -6,7 +6,7 @@ export enum EMessageActions {
 
 export type IRedisResponse = {
     success: boolean;
-    message?: any;
+    data?: any;
     error?: Error;
 };
 

@@ -18,7 +18,7 @@ export class RedisServiceModule implements IMainServiceModule {
             this.io = io;
             this.io.on('connection', this.handleConnection.bind(this));
         } catch (e) {
-            console.log('Ooops, :', e);
+            console.log('Error inside RedisServiceModule.init :', e);
         }
     }
 
@@ -30,7 +30,7 @@ export class RedisServiceModule implements IMainServiceModule {
         try {
             const result = await this.onMessage(message);
             this.io.send({
-                message: result,
+                data: result,
                 success: true,
             } as IRedisResponse);
         } catch (e) {
@@ -41,13 +41,16 @@ export class RedisServiceModule implements IMainServiceModule {
         }
     }
 
-    onMessage(message: any) {
+    onMessage(message: IRedisRequest) {
         return new Promise(async (resolve, reject) => {
             if (
                 !message.action ||
                 !((message.action as string) in EMessageActions)
             ) {
-                reject('Unavailable action type');
+                reject({
+                    success: false,
+                    error: 'Unavailable action type',
+                });
                 return;
             }
 
@@ -82,19 +85,19 @@ export class RedisServiceModule implements IMainServiceModule {
                         );
 
                         stream.on('error', (error) =>
-                            console.log('Ooops: ', error)
+                            console.log(
+                                'Error while EMessageActions.delete action',
+                                error
+                            )
                         );
                         break;
                 }
             } catch (e) {
-                reject('Redis connection issue');
+                reject(e);
                 return;
             }
 
-            resolve({
-                success: true,
-                data: resp,
-            });
+            resolve(resp);
         });
     }
 }
