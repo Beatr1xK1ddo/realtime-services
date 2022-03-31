@@ -47,10 +47,7 @@ export class RedisServiceModule implements IMainServiceModule {
                 !message.action ||
                 !((message.action as string) in EMessageActions)
             ) {
-                reject({
-                    success: false,
-                    error: 'Unavailable action type',
-                });
+                reject(new Error('Unavailable action type'));
                 return;
             }
 
