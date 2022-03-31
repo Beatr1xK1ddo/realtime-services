@@ -54,7 +54,7 @@ export class TeranexDevice {
                 reject,
                 data: '',
             };
-            this.socket.write(cmd, (error) => reject(error));
+            this.socket.write(cmd);
             setTimeout(() => resolve(this.response.data), timeout * 1000);
         });
     }
