@@ -84,7 +84,7 @@ export class TeranexNodeService extends NodeService {
     }
 
     clearDevice(deviceId: string) {
-        if (this.devices[deviceId]) {
+        if (!this.devices[deviceId]) {
             return;
         }
         this.devices[deviceId].destroy();
