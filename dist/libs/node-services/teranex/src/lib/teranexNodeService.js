@@ -18,7 +18,6 @@ class TeranexNodeService extends shared_types_1.NodeService {
     }
     handleRequest(data) {
         return (0, tslib_1.__awaiter)(this, void 0, void 0, function* () {
-            console.log('handle request ...');
             const { ip, port, commands } = data;
             const deviceId = `${ip}:${port}`;
             const device = yield this.getDevice(deviceId);
@@ -83,15 +82,15 @@ class TeranexNodeService extends shared_types_1.NodeService {
                 console.log('Ooops: ', e);
                 this.devices[deviceId] = null;
             }
-            console.log('getDevice this.devices', this.devices);
             return this.devices[deviceId];
         });
     }
     clearDevice(deviceId) {
         if (this.devices[deviceId]) {
-            this.devices[deviceId].destroy();
-            this.devices[deviceId] = null;
+            return;
         }
+        this.devices[deviceId].destroy();
+        this.devices[deviceId] = null;
     }
 }
 exports.TeranexNodeService = TeranexNodeService;

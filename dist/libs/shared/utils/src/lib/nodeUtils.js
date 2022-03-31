@@ -18,7 +18,7 @@ function getNodeId() {
     return (0, tslib_1.__awaiter)(this, void 0, void 0, function* () {
         let nodeId = null;
         try {
-            const id = yield exec('/usr/bin/php /root/dv_control_new.php hostname');
+            const id = yield exec('sudo /usr/bin/php /root/dv_control_new.php hostname');
             nodeId = Number.parseInt(id);
         }
         catch (e) {
