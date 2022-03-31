@@ -81,10 +81,13 @@ export class TeranexNodeService extends NodeService {
             console.log('Ooops: ', e);
             this.devices[deviceId] = null;
         }
+        console.log('getDevice this.devices', this.devices);
         return this.devices[deviceId];
     }
 
     clearDevice(deviceId: string) {
+        console.log('deviceId', deviceId);
+        console.log('this.devices', this.devices);
         this.devices[deviceId].destroy();
         this.devices[deviceId] = null;
     }
