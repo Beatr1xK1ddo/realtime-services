@@ -1,6 +1,6 @@
 import { IMainServiceModule } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
-import { EMessageActions } from './types';
+import { EMessageActions, IRedisRequest, IRedisResponse } from './types';
 import Redis from 'ioredis';
 
 export class RedisServiceModule implements IMainServiceModule {
@@ -23,12 +23,30 @@ export class RedisServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('message', this.onMessage.bind(this));
+        socket.on('message', this.handleMessage.bind(this));
     }
 
-    onMessage(msg: any) {
+    private async handleMessage(message: IRedisRequest) {
+        try {
+            const result = await this.onMessage(message);
+            this.io.send({
+                message: result,
+                success: true,
+            } as IRedisResponse);
+        } catch (e) {
+            this.io.send({
+                error: e,
+                success: false,
+            } as IRedisResponse);
+        }
+    }
+
+    onMessage(message: any) {
         return new Promise(async (resolve, reject) => {
-            if (!msg.action || !((msg.action as string) in EMessageActions)) {
+            if (
+                !message.action ||
+                !((message.action as string) in EMessageActions)
+            ) {
                 reject('Unavailable action type');
                 return;
             }
@@ -36,16 +54,16 @@ export class RedisServiceModule implements IMainServiceModule {
             let resp = null;
 
             try {
-                switch (msg.action.toLowerCase()) {
+                switch (message.action.toLowerCase()) {
                     case EMessageActions.get:
-                        resp = await this.redis.mget(msg.data);
+                        resp = await this.redis.mget(message.data);
                         break;
                     case EMessageActions.set:
-                        resp = await this.redis.mset(msg.data);
+                        resp = await this.redis.mset(message.data);
                         break;
                     case EMessageActions.delete:
                         const stream = this.redis.scanStream({
-                            match: msg.data,
+                            match: message.data,
                         });
 
                         stream.on('data', (keys) => {
