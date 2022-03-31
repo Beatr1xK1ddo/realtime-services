@@ -13,7 +13,9 @@ function exec(cmd: string): Promise<any> {
 async function getNodeId(): Promise<number> {
     let nodeId = null;
     try {
-        const id = await exec('/usr/bin/php /root/dv_control_new.php hostname');
+        const id = await exec(
+            'sudo /usr/bin/php /root/dv_control_new.php hostname'
+        );
         nodeId = Number.parseInt(id);
     } catch (e) {
         console.warn('NXT|WARNING: Cannot get node id');
