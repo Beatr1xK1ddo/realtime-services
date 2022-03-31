@@ -8,7 +8,10 @@ export abstract class NodeService {
     constructor(nodeId: number, url: string) {
         this.nodeId = nodeId;
         this.url = url;
-        this.socket = io(this.url);
+        this.socket = io(this.url, {
+            secure: true,
+            reconnection: true,
+        });
     }
 
     abstract init(): void;

@@ -30,23 +30,28 @@ export class TeranexDevice {
                 data: '',
             };
 
-            this.socket.connect({host: this.ip, port: this.port}, () => {
-                console.log("Teranex device connected: ", this.ip, this.port);
+            this.socket.connect({ host: this.ip, port: this.port }, () => {
+                console.log('Teranex device connected: ', this.ip, this.port);
                 resolve(true);
             });
 
             this.socket.on('data', (data) => {
-                console.log("Teranex device data: ", this.ip, this.port, data);
+                console.log('Teranex device data: ', this.ip, this.port, data);
                 this.response.data += data.toString();
             });
 
             this.socket.on('error', (err) => {
-                console.log("Teranex device error: ", this.ip, this.port, err);
+                console.log('Teranex device error: ', this.ip, this.port, err);
                 reject(err);
             });
 
             this.socket.on('timeout', () => {
-                console.log("Teranex device error: ", this.ip, this.port, "timeout");
+                console.log(
+                    'Teranex device error: ',
+                    this.ip,
+                    this.port,
+                    'timeout'
+                );
                 reject(Error('timeout'));
             });
         });
@@ -59,10 +64,15 @@ export class TeranexDevice {
                 reject,
                 data: '',
             };
-            console.log("Teranex device command: ", this.ip, this.port, cmd);
+            console.log('Teranex device command: ', this.ip, this.port, cmd);
             this.socket.write(cmd, (error) => {
                 if (error) {
-                    console.log("Teranex device socket write error: ", this.ip, this.port, error);
+                    console.log(
+                        'Teranex device socket write error: ',
+                        this.ip,
+                        this.port,
+                        error
+                    );
                     reject(error);
                 }
             });
@@ -72,6 +82,6 @@ export class TeranexDevice {
 
     destroy() {
         this.socket?.end();
-        console.log("Teranex device destroyed: ", this.ip, this.port);
+        console.log('Teranex device destroyed: ', this.ip, this.port);
     }
 }
