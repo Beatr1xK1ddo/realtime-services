@@ -18,7 +18,6 @@ export class TeranexNodeService extends NodeService {
     }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
-        console.log('handel request ....', data);
         const { ip, port, commands } = data;
         const deviceId = `${ip}:${port}`;
         const device = await this.getDevice(deviceId);
@@ -78,7 +77,7 @@ export class TeranexNodeService extends NodeService {
             await device.command('ping\r\n');
             this.devices[deviceId] = device;
         } catch (e) {
-            console.log('Ooops: ', e);
+            console.log('Get device error: ', e);
             this.devices[deviceId] = null;
         }
         return this.devices[deviceId];

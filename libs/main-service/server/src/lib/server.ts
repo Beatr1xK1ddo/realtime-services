@@ -1,6 +1,8 @@
-import { createServer } from 'http';
+import { createServer } from 'https';
 import { Namespace, Server } from 'socket.io';
 import { IMainServiceModule } from '@socket/shared-types';
+import * as config from './config.json';
+import { readFileSync } from 'fs';
 
 export class MainServiceServer {
     static namespaces: Map<string, Namespace> = new Map();
@@ -8,7 +10,10 @@ export class MainServiceServer {
     private io;
 
     constructor(port: number) {
-        this.http = createServer();
+        this.http = createServer({
+            key: readFileSync(config.ssl.key),
+            cert: readFileSync(config.ssl.crt),
+        });
         this.io = new Server(this.http, { cors: { origin: '*' } }).listen(port);
     }
 
