@@ -34,6 +34,9 @@
             "@socket/main-service-modules/hyperdeck": [
                 "libs/main-service-modules/hyperdeck/src/index.ts"
             ],
+            "@socket/main-service-modules/nextomeet": [
+                "libs/main-service-modules/nextomeet/src/index.ts"
+            ],
             "@socket/main-service-modules/teranex": [
                 "libs/main-service-modules/teranex/src/index.ts"
             ],
@@ -54,6 +57,9 @@
             ],
             "@socket/node-services/hyperdeck": [
                 "libs/node-services/hyperdeck/src/index.ts"
+            ],
+            "@socket/node-services/nextomeet": [
+                "libs/node-services/nextomeet/src/index.ts"
             ],
             "@socket/node-services/types": [
                 "libs/node-services/types/src/index.ts"

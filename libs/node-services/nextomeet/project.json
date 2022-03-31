@@ -1,0 +1,32 @@
+{
+    "root": "libs/node-services/nextomeet",
+    "sourceRoot": "libs/node-services/nextomeet/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/node-services/nextomeet",
+                "main": "libs/node-services/nextomeet/src/index.ts",
+                "tsConfig": "libs/node-services/nextomeet/tsconfig.lib.json",
+                "assets": ["libs/node-services/nextomeet/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/node-services/nextomeet/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/node-services/nextomeet"],
+            "options": {
+                "jestConfig": "libs/node-services/nextomeet/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}
