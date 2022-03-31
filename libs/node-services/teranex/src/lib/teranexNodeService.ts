@@ -18,6 +18,7 @@ export class TeranexNodeService extends NodeService {
     }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
+        console.log('handle request ...');
         const { ip, port, commands } = data;
         const deviceId = `${ip}:${port}`;
         const device = await this.getDevice(deviceId);

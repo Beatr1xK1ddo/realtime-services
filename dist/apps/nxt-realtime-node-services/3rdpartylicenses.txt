@@ -32,8 +32,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 @socket/shared-types
 
-@socket/shared-utils
-
 anymatch
 ISC
 The ISC License

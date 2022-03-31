@@ -1,8 +1,11 @@
-import { getNodeId } from '@socket/shared-utils';
+// import { getNodeId } from '@socket/shared-utils';
+
 import { LoggerNodeService } from '@socket/node-services-logger';
 import { TeranexNodeService } from '@socket/node-services-teranex';
 
 import * as config from './config.json';
+
+const nodeId = 356;
 
 const {
     logAgent: {
@@ -14,14 +17,11 @@ const {
     teranex: { serviceUrl: teranexServiceUrl },
 } = config;
 
-getNodeId().then((id) => {
-    if (id === null) return;
-    new LoggerNodeService(
-        id,
-        loggerServiceUrl,
-        applogDir,
-        syslogFile,
-        excludeMessages
-    ).init();
-    new TeranexNodeService(id, teranexServiceUrl).init();
-});
+new LoggerNodeService(
+    nodeId,
+    loggerServiceUrl,
+    applogDir,
+    syslogFile,
+    excludeMessages
+).init();
+new TeranexNodeService(nodeId, teranexServiceUrl).init();

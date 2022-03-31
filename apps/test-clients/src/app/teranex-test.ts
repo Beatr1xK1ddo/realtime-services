@@ -1,8 +1,8 @@
 import { Manager } from 'socket.io-client';
-import {IClientCmdRequestEvent} from "@socket/shared-types";
+import { IClientCmdRequestEvent } from '@socket/shared-types';
 
 const nodeId = 356;
-const ip = "127.0.0.1";
+const ip = '127.0.0.1';
 const port = 1345;
 
 export function teranexTestRun() {
@@ -14,7 +14,15 @@ export function teranexTestRun() {
         console.log('client subscribed...');
         socket.emit('subscribe', { nodeId, ip, port });
     });
-    socket.on('result', console.log);
+    socket.on('result', (data) => {
+        console.log('testing log from "result"');
+        console.log(data);
+    });
 
-    socket.emit("commands", {nodeId, ip, port, commands: ["TERANEX DEVICE\n\n"]} as IClientCmdRequestEvent);
+    socket.emit('commands', {
+        nodeId,
+        ip,
+        port,
+        commands: ['TERANEX DEVICE\n\n'],
+    } as IClientCmdRequestEvent);
 }

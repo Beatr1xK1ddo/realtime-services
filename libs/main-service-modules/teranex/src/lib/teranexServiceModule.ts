@@ -29,7 +29,6 @@ export class TeranexServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
-        console.log('qq all');
         socket.on('init', ({ nodeId }: INodeInitEvent) => {
             this.nodes.set(nodeId, socket);
         });
