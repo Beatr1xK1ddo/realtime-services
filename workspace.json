@@ -2,6 +2,7 @@
     "version": 2,
     "projects": {
         "main-service-modules-app-install": "libs/main-service-modules/app-install",
+        "main-service-modules-hyperdeck": "libs/main-service-modules/hyperdeck",
         "main-service-modules-logger": "libs/main-service-modules/logger",
         "main-service-modules-monitor": "libs/main-service-modules/monitor",
         "main-service-modules-redis": "libs/main-service-modules/redis",
@@ -10,6 +11,7 @@
         "main-service-modules-udp-player": "libs/main-service-modules/udp-player",
         "main-service-server": "libs/main-service/server",
         "main-service-types": "libs/main-service/types",
+        "node-services-hyperdeck": "libs/node-services/hyperdeck",
         "node-services-logger": "libs/node-services/logger",
         "node-services-teranex": "libs/node-services/teranex",
         "node-services-types": "libs/node-services/types",
