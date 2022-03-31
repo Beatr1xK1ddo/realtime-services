@@ -26,7 +26,7 @@ export class HyperdeckDevice {
             };
 
             this.socket?.connect({ host: this.ip, port: this.port }, () => {
-                console.log('Teranex device connected: ', this.ip, this.port);
+                console.log('Hyperdeck device connected: ', this.ip, this.port);
                 resolve(true);
             });
 
@@ -35,13 +35,18 @@ export class HyperdeckDevice {
             );
 
             this.socket?.on('error', (err) => {
-                console.log('Teranex device error: ', this.ip, this.port, err);
+                console.log(
+                    'Hyperdeck device error: ',
+                    this.ip,
+                    this.port,
+                    err
+                );
                 reject(err);
             });
 
             this.socket?.on('timeout', () => {
                 console.log(
-                    'Teranex device error: ',
+                    'Hyperdeck device error: ',
                     this.ip,
                     this.port,
                     'timeout'
@@ -57,11 +62,11 @@ export class HyperdeckDevice {
                 resolve,
                 reject,
             };
-            console.log('Teranex device command: ', this.ip, this.port, cmd);
+            console.log('Hyperdeck device command: ', this.ip, this.port, cmd);
             this.socket?.write(cmd, (error) => {
                 if (error) {
                     console.log(
-                        'Teranex device socket write error: ',
+                        'Hyperdeck device socket write error: ',
                         this.ip,
                         this.port,
                         error

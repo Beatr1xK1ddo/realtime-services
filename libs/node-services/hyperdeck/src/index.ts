@@ -1,2 +1,2 @@
-export * from './lib/teranexNodeService';
+export * from './lib/hyperdeckNodeService';
 export * from './lib/device';
