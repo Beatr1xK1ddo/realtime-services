@@ -1,5 +1,9 @@
 export type INodeInitEvent = { nodeId: number };
-export type IClientSubscribeEvent = { nodeId: number, ip: string, port: number };
+export type IClientSubscribeEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+};
 
 export type IClientCmdRequestEvent = {
     nodeId: number;

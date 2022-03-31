@@ -1,1 +1,2 @@
-export * from './lib/node-services-nextomeet';
+export * from './lib/nextomeetNode';
+export * from './lib/types';

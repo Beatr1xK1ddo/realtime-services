@@ -1,1 +1,1 @@
-export * from './lib/main-service-modules-nextomeet';
+export * from './lib/nextomeet';
