@@ -87,10 +87,9 @@ class TeranexNodeService extends shared_types_1.NodeService {
     }
     clearDevice(deviceId) {
         if (this.devices[deviceId]) {
-            return;
+            this.devices[deviceId].destroy();
+            this.devices[deviceId] = null;
         }
-        this.devices[deviceId].destroy();
-        this.devices[deviceId] = null;
     }
 }
 exports.TeranexNodeService = TeranexNodeService;
