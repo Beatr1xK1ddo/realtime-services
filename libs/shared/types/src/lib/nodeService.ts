@@ -24,6 +24,12 @@ export abstract class NodeService {
             loggerOptions?.level,
             loggerOptions?.path
         );
+        this.socket.on('disconnect', (reason) =>
+            this.logger.log.info(`NodeService transport disconnected ${reason}`)
+        );
+        this.logger.log.info(
+            `NodeService created on ${nodeId} for ${url} state ${this.socket.disconnected}`
+        );
     }
 
     abstract init(): void;

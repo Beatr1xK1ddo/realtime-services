@@ -14,8 +14,8 @@ export class MainServiceServer {
 
     constructor(port: number, loggerOptions?: Partial<IPinoOptions>) {
         this.https = createServer({
-            // key: readFileSync(config.ssl.key),
-            // cert: readFileSync(config.ssl.crt),
+            key: readFileSync(config.ssl.key),
+            cert: readFileSync(config.ssl.crt),
         });
         this.io = new Server(this.https, { cors: { origin: '*' } }).listen(
             port
@@ -28,6 +28,7 @@ export class MainServiceServer {
     }
 
     registerModule(module: IMainServiceModule) {
+        this.logger.log.info(`Registering module ${module.name}`);
         if (MainServiceServer.namespaces.has(module.name)) {
             this.logger.log.error(
                 `Module with namespace: ${module.name} already exists`

@@ -23,14 +23,14 @@ export function teranexTestRun(url: string) {
         socket.emit('subscribe', { nodeId, ip, port });
     });
     socket.on('result', (data) => {
-        console.log(`Teranex response ${data}`);
+        console.log(`Teranex response ${JSON.stringify(data)}`);
     });
 
     socket.emit('commands', {
         nodeId,
         ip,
         port,
-        // commands: ['TERANEX DEVICE\n\n'],
-        commands,
+        commands: ['TERANEX DEVICE\n\n'],
+        // commands,
     } as IClientCmdRequestEvent);
 }
