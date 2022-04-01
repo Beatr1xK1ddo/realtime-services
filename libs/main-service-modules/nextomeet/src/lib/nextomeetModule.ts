@@ -5,6 +5,7 @@ import {
     IClientNextomeetReqEvent,
     IClientNextomeetSubEvent,
 } from '@socket/shared-types';
+import { PinoLogger } from '@socket/shared-utils';
 import { Namespace, Socket } from 'socket.io';
 
 export class NextomeetModule implements IMainServiceModule {
@@ -12,6 +13,7 @@ export class NextomeetModule implements IMainServiceModule {
     public name: string;
     private nodes: Map<number, Socket>;
     private clients: Map<number, Set<Socket>>;
+    private logger = new PinoLogger();
 
     constructor(name: string) {
         this.name = name;
@@ -26,6 +28,7 @@ export class NextomeetModule implements IMainServiceModule {
 
     private handleConnection(socket: Socket) {
         socket.on('init', ({ nodeId }: INodeInitEvent) => {
+            this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
         socket.on('subscribe', ({ nodeId }: IClientNextomeetSubEvent) => {
@@ -35,9 +38,15 @@ export class NextomeetModule implements IMainServiceModule {
             } else {
                 this.clients.get(nodeId)?.add(socket);
             }
+            this.logger.log.info(
+                `Socket: "${socket.id}" subscribed to node: "${nodeId}"`
+            );
         });
         socket.on('unsubscribe', ({ nodeId }: IClientNextomeetSubEvent) => {
             const devicesSubscribers = this.clients.get(nodeId);
+            this.logger.log.info(
+                `Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`
+            );
             if (!devicesSubscribers) {
                 return;
             }
@@ -47,6 +56,9 @@ export class NextomeetModule implements IMainServiceModule {
             const { nodeId } = data;
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
+                this.logger.log.info(
+                    `Commands to node: "${nodeId}" requested to device`
+                );
                 nodeSocket.emit('request', data);
             }
         });
@@ -55,6 +67,10 @@ export class NextomeetModule implements IMainServiceModule {
             this.clients
                 .get(nodeId)
                 ?.forEach((socket) => socket.emit('result', data));
+            this.logger.log.info(
+                `Response was sent to clients with node: "${nodeId}"`
+            );
         });
+        socket.on('error', (error) => this.logger.log.error(error));
     }
 }

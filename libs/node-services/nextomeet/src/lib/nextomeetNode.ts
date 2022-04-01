@@ -9,10 +9,13 @@ import { exec } from 'child_process';
 export class NextomeetNodeService extends NodeService {
     init() {
         this.socket.on('connect', async () => {
+            this.logger.log.info('NextomeetNodeService connected');
             this.socket.emit('init', { nodeId: this.nodeId });
         });
         this.socket.on('request', this.handleRequest.bind(this));
-        this.socket.on('error', (error) => console.log('Ooops: ', error));
+        this.socket.on('error', (error) =>
+            this.logger.log.error('NextomeetNodeService error: ', error)
+        );
     }
 
     private handleRequest(data: IClientNextomeetReqEvent) {
@@ -24,12 +27,16 @@ export class NextomeetNodeService extends NodeService {
                     `/usr/bin/php /home/dv2/cron.php helpers restart nextomeet ${nextomeetId} "${userId}" ${sdiPort}`,
                     (err, stdout, stderr) => {
                         if (err || stderr) {
+                            this.logger.log.error(err || stderr);
                             this.socket.emit('response', {
                                 nodeId: this.nodeId,
                                 success: false,
                                 error: err || stderr,
                             } as IClientNextomeetResEvent);
                         } else {
+                            this.logger.log.info(
+                                'command complete successfuly success'
+                            );
                             this.socket.emit('response', {
                                 nodeId: this.nodeId,
                                 success: true,
@@ -40,6 +47,7 @@ export class NextomeetNodeService extends NodeService {
                 );
                 break;
             default:
+                this.logger.log.error(`Unavailable command: ${cmd}`);
                 this.socket.emit('response', {
                     nodeId: this.nodeId,
                     success: false,

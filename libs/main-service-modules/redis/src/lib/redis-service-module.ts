@@ -2,11 +2,13 @@ import { IMainServiceModule } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import { EMessageActions, IRedisRequest, IRedisResponse } from './types';
 import Redis from 'ioredis';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class RedisServiceModule implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private redis: Redis;
+    private logger = new PinoLogger();
 
     constructor(name: string, urlRedis: string) {
         this.name = name;
@@ -18,7 +20,7 @@ export class RedisServiceModule implements IMainServiceModule {
             this.io = io;
             this.io.on('connection', this.handleConnection.bind(this));
         } catch (e) {
-            console.log('Error inside RedisServiceModule.init :', e);
+            this.logger.log.error('Error inside RedisServiceModule.init :', e);
         }
     }
 
@@ -29,11 +31,13 @@ export class RedisServiceModule implements IMainServiceModule {
     private async handleMessage(message: IRedisRequest) {
         try {
             const result = await this.onMessage(message);
+            this.logger.log.info('Sending data');
             this.io.send({
                 data: result,
                 success: true,
             } as IRedisResponse);
         } catch (e) {
+            this.logger.log.error(e);
             this.io.send({
                 error: e,
                 success: false,
@@ -47,6 +51,7 @@ export class RedisServiceModule implements IMainServiceModule {
                 !message.action ||
                 !((message.action as string) in EMessageActions)
             ) {
+                this.logger.log.error('Unavailable action type');
                 reject(new Error('Unavailable action type'));
                 return;
             }
@@ -78,11 +83,11 @@ export class RedisServiceModule implements IMainServiceModule {
                         });
 
                         stream.on('end', () =>
-                            console.log('NxtRedis del was finished')
+                            this.logger.log.info('NxtRedis del was finished')
                         );
 
                         stream.on('error', (error) =>
-                            console.log(
+                            this.logger.log.error(
                                 'Error while EMessageActions.delete action',
                                 error
                             )
@@ -90,6 +95,7 @@ export class RedisServiceModule implements IMainServiceModule {
                         break;
                 }
             } catch (e) {
+                this.logger.log.error(e);
                 reject(e);
                 return;
             }

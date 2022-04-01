@@ -1,5 +1,7 @@
 import * as shell from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
+import pino, { Logger, Level, TransportTargetOptions } from 'pino';
+
 //todo: utils should not rely on any configs/ all utils functions should rely on args instead
 import * as conf from './config.json';
 
@@ -70,3 +72,41 @@ async function getCache(key, saveCallback) {
 }
 
 export { exec, getNodeId, currentTime, getCache };
+
+type ITransportOptions = {
+    [key: string]: any;
+};
+
+export class PinoLogger {
+    public log: Logger;
+    constructor(level?: Level, path?: string) {
+        this.log = this.createTransport(level, path);
+    }
+
+    private createTransport(level?: Level, path?: string) {
+        const targets = [
+            {
+                target: 'pino-pretty',
+                options: {
+                    translateTime: 'SYS:dd:mm:yy HH:MM:ss',
+                } as ITransportOptions,
+                level: level || 'trace',
+            },
+        ];
+
+        if (path) {
+            targets.push({
+                target: 'pino/file',
+                options: {
+                    destination: path,
+                },
+                level: level || 'trace',
+            });
+        }
+
+        const transport = pino.transport({
+            targets: targets,
+        });
+        return pino(transport);
+    }
+}

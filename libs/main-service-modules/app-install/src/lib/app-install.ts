@@ -7,12 +7,14 @@ import { IAppInstallFiles } from './types';
 import * as Diff from 'diff';
 
 // import * as config from '../config.json';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class AppInstall implements IMainServiceModule {
     private watcher: FSWatcher;
     public name: string;
     private path: string;
     private io?: Namespace;
+    private logger = new PinoLogger();
     public files: Map<string, IAppInstallFiles> = new Map();
     // private folder: string;
 
@@ -37,11 +39,11 @@ export class AppInstall implements IMainServiceModule {
     }
 
     private onConnection(socket: Socket) {
-        console.log(`WatcherSocket: ${socket.id} connected...`);
+        this.logger.log.info(`Socekt: ${socket.id} connected...`);
 
         this.run();
 
-        socket.on('error', (error) => console.log(error));
+        socket.on('error', (error) => this.logger.log.error(error));
     }
 
     private run() {
@@ -53,7 +55,7 @@ export class AppInstall implements IMainServiceModule {
                     content: readFileSync(path, 'utf8'),
                 });
             }
-            console.log(`File ${path} has been added`, this.files);
+            this.logger.log.info(`File ${path} has been added`, this.files);
         });
 
         this.watcher.on('change', async (path) => {
@@ -65,23 +67,23 @@ export class AppInstall implements IMainServiceModule {
                     this.sendData(node, diffContent);
                 }
             }
-            console.log(`File ${path} has been changed`, this.files);
+            this.logger.log.info(`File ${path} has been changed`, this.files);
         });
 
         this.watcher.on('unlink', (path) => {
             this.files.delete(path);
-            console.log(`File ${path} has been removed`, this.files);
+            this.logger.log.info(`File ${path} has been removed`, this.files);
         });
 
         this.watcher.on('ready', () => {
-            console.log(
+            this.logger.log.info(
                 `Watcher: "${this.name}" ready to changes!!!`,
                 this.files
             );
         });
 
         this.watcher.on('error', (error) =>
-            console.log(`Watcher error: ${error}`)
+            this.logger.log.error(`Watcher error: ${error}`)
         );
     }
 

@@ -11,10 +11,11 @@ export class TeranexNodeService extends NodeService {
 
     init() {
         this.socket.on('connect', async () => {
+            this.logger.log.info('TeranexNodeService connected');
             this.socket.emit('init', { nodeId: this.nodeId });
         });
         this.socket.on('request', this.handleRequest.bind(this));
-        this.socket.on('error', (error) => console.log('Ooops: ', error));
+        this.socket.on('error', (error) => this.logger.log.error(error));
     }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
@@ -23,6 +24,7 @@ export class TeranexNodeService extends NodeService {
         const device = await this.getDevice(deviceId);
         try {
             if (device.busy) {
+                this.logger.log.error('Device is busy');
                 this.socket.emit('response', {
                     nodeId: this.nodeId,
                     ip,
@@ -41,6 +43,7 @@ export class TeranexNodeService extends NodeService {
             data = data.map((val) =>
                 val.replace(/\n\n/g, '\n').replace(/ACK\n/, '')
             );
+            this.logger.log.info('Commands complete successfuly');
             this.socket.emit('response', {
                 nodeId: this.nodeId,
                 ip,
@@ -57,6 +60,7 @@ export class TeranexNodeService extends NodeService {
             } else {
                 error = 'Device unknown error';
             }
+            this.logger.log.error(error);
             this.socket.emit('response', {
                 nodeId: this.nodeId,
                 ip,
@@ -77,7 +81,10 @@ export class TeranexNodeService extends NodeService {
             await device.command('ping\r\n');
             this.devices[deviceId] = device;
         } catch (e) {
-            console.log('Get device error: ', e);
+            this.logger.log.error(
+                `Can not get. Device ${deviceId} is: `,
+                this.devices[deviceId]
+            );
             this.devices[deviceId] = null;
         }
         return this.devices[deviceId];

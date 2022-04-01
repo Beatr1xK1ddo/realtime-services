@@ -1,5 +1,6 @@
 import { Socket } from 'net';
 import { IDeviceResponse } from '@socket/shared-types';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class HyperdeckDevice {
     private timeout = 2000;
@@ -8,6 +9,7 @@ export class HyperdeckDevice {
     private response?: Omit<IDeviceResponse, 'data'>;
     private socket?: Socket;
     public busy = false;
+    private logger = new PinoLogger();
 
     constructor(ip: string, port: number) {
         this.ip = ip;
@@ -26,7 +28,11 @@ export class HyperdeckDevice {
             };
 
             this.socket?.connect({ host: this.ip, port: this.port }, () => {
-                console.log('Hyperdeck device connected: ', this.ip, this.port);
+                this.logger.log.info(
+                    'Hyperdeck device connected: ',
+                    this.ip,
+                    this.port
+                );
                 resolve(true);
             });
 
@@ -35,7 +41,7 @@ export class HyperdeckDevice {
             );
 
             this.socket?.on('error', (err) => {
-                console.log(
+                this.logger.log.error(
                     'Hyperdeck device error: ',
                     this.ip,
                     this.port,
@@ -45,7 +51,7 @@ export class HyperdeckDevice {
             });
 
             this.socket?.on('timeout', () => {
-                console.log(
+                this.logger.log.error(
                     'Hyperdeck device error: ',
                     this.ip,
                     this.port,
@@ -62,10 +68,15 @@ export class HyperdeckDevice {
                 resolve,
                 reject,
             };
-            console.log('Hyperdeck device command: ', this.ip, this.port, cmd);
+            this.logger.log.info(
+                'Hyperdeck device command: ',
+                this.ip,
+                this.port,
+                cmd
+            );
             this.socket?.write(cmd, (error) => {
                 if (error) {
-                    console.log(
+                    this.logger.log.error(
                         'Hyperdeck device socket write error: ',
                         this.ip,
                         this.port,

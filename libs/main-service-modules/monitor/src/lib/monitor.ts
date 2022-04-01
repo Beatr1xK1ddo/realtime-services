@@ -7,6 +7,7 @@ import sqlQueries from './sql-queries';
 import { IAppTypeKeyes } from './types';
 import Redis from 'ioredis';
 import * as util from '@socket/shared-utils';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class Monitor implements IMainServiceModule {
     public name: string;
@@ -15,6 +16,7 @@ export class Monitor implements IMainServiceModule {
     private queries = sqlQueries;
     private redis: Redis;
     private lastRuntime?: number;
+    private logger = new PinoLogger();
 
     constructor(name: string, urlRedis: string) {
         this.name = name;
@@ -27,7 +29,7 @@ export class Monitor implements IMainServiceModule {
             this.io.on('connection', this.onConnection.bind(this));
             this.db = await this.connectDb();
         } catch (e) {
-            console.log('Ooops, :', e);
+            this.logger.log.error('Ooops, :', e);
         }
     }
 
@@ -37,7 +39,7 @@ export class Monitor implements IMainServiceModule {
         socket.on('data', this.onData.bind(this));
 
         socket.on('error', (error) => {
-            console.log('Ooops: ', error);
+            this.logger.log.error('Ooops: ', error);
         });
     }
 
@@ -67,6 +69,7 @@ export class Monitor implements IMainServiceModule {
             .catch((e: Error) => console.log(e));
 
         if (_.isEmpty(alerts)) {
+            this.logger.log.info('Alerts are empty');
             this.io?.send({
                 sender: this.name,
                 data: {
@@ -92,11 +95,12 @@ export class Monitor implements IMainServiceModule {
                                 this.handleErrors(monitorApp, rows.values[0]);
                             }
                         } catch (e) {
-                            console.log('Oooops: ', e);
+                            this.logger.log.error(e);
                         }
                     });
                 }
             );
+            this.logger.log.info('Handle alerts: ', alerts);
         }
 
         this.lastRuntime = util.currentTime();
@@ -180,7 +184,7 @@ export class Monitor implements IMainServiceModule {
                 }
             }
         } catch (e) {
-            console.log(e);
+            this.logger.log.error('Unknown error: ', e);
         }
     }
 
@@ -269,6 +273,8 @@ export class Monitor implements IMainServiceModule {
             .exec(
                 `php ${conf.live_monitor.history.bin} ${appType} ${appId} ${fromTime} ${toTime} ${nodeId} ${nodeIp} ${nodePort}`
             )
-            .catch((e: Error) => console.log('Ooops: ', e));
+            .catch((e: Error) =>
+                this.logger.log.error('Exec php script error: ', e)
+            );
     }
 }

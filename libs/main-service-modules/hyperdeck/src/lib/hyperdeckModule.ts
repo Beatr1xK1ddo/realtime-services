@@ -6,12 +6,14 @@ import {
     INodeInitEvent,
 } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class HyperdeckModule implements IMainServiceModule {
     private io?: Namespace;
     public name: string;
     private nodes: Map<number, Socket>;
     private clients: Map<number, Map<string, Set<Socket>>>;
+    private logger = new PinoLogger();
 
     constructor(name: string) {
         this.name = name;
@@ -26,6 +28,7 @@ export class HyperdeckModule implements IMainServiceModule {
 
     private handleConnection(socket: Socket) {
         socket.on('init', ({ nodeId }: INodeInitEvent) => {
+            this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
         socket.on(
@@ -42,6 +45,9 @@ export class HyperdeckModule implements IMainServiceModule {
                 } else {
                     this.clients.get(nodeId)?.get(deviceId)?.add(socket);
                 }
+                this.logger.log.info(
+                    `Socket: "${socket.id}" subscribed to node: "${nodeId}"`
+                );
             }
         );
         socket.on(
@@ -53,11 +59,17 @@ export class HyperdeckModule implements IMainServiceModule {
                     return;
                 }
                 devicesSubscribers.get(deviceId)?.delete(socket);
+                this.logger.log.info(
+                    `Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`
+                );
             }
         );
         socket.on('commands', ({ nodeId, ...data }: IClientCmdRequestEvent) => {
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
+                this.logger.log.info(
+                    `Commands to node: "${nodeId}" requested to device`
+                );
                 nodeSocket.emit('request', data);
             }
         });
@@ -68,6 +80,13 @@ export class HyperdeckModule implements IMainServiceModule {
                 .get(nodeId)
                 ?.get(deviceId)
                 ?.forEach((socket) => socket.emit('result', data));
+            this.logger.log.info(
+                `Response was sent to clients with node: "${nodeId}"`
+            );
         });
+
+        socket.on('error', (error) =>
+            this.logger.log.error('Socket error: ', error)
+        );
     }
 }

@@ -3,6 +3,7 @@ import { Namespace, Socket } from 'socket.io';
 import { IUdpPlayerData } from './types';
 import { parse } from 'url';
 import { spawn } from 'child_process';
+import { PinoLogger } from '@socket/shared-utils';
 
 const MAX_BUFFER_SIZE = 65536;
 
@@ -10,6 +11,7 @@ export class UdpPlayer implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private streams: Map<string, IUdpPlayerData>;
+    private logger = new PinoLogger();
 
     constructor(name: string) {
         this.name = name;
@@ -85,6 +87,8 @@ export class UdpPlayer implements IMainServiceModule {
             }
         });
 
-        socket.on('error', (error) => console.log('Ooops: ', error));
+        socket.on('error', (error) =>
+            this.logger.log.error('Socket error', error)
+        );
     }
 }
