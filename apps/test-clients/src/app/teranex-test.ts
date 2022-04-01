@@ -13,18 +13,17 @@ const commands = [
 ];
 */
 
-export function teranexTestRun() {
-    const manager = new Manager('http://qa.nextologies.com:1987');
-    // const manager = new Manager('http://localhost:1987');
+export function teranexTestRun(url: string) {
+    console.log(`Initializing client connection to TeranexModule on ${url}`);
+    const manager = new Manager(url);
     const socket = manager.socket('/teranex');
 
     socket.on('connect', () => {
-        console.log('client subscribed...');
+        console.log('Client connected to TeranexModule');
         socket.emit('subscribe', { nodeId, ip, port });
     });
     socket.on('result', (data) => {
-        console.log('testing log from "result"');
-        console.log(data);
+        console.log(`Teranex response ${data}`);
     });
 
     socket.emit('commands', {

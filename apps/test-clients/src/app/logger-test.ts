@@ -1,19 +1,19 @@
 import { Manager } from 'socket.io-client';
 
-export function loggerTestRun() {
-    const manager = new Manager('http://qa.nextologies.com:1987');
-    // const manager = new Manager('http://localhost:1987');
+export function loggerTestRun(url: string) {
+    console.log(`Initializing client connection to LoggerModule on ${url}`);
+    const manager = new Manager(url);
     const socket = manager.socket('/logger');
 
     socket.on('connect', () => {
-        console.log('client connected to Logger...');
+        console.log('Client connected to LoggerModule');
         socket.emit('subscribe', { nodeId: 2975, logType: 'appLog' });
     });
 
-    socket.on('data', (message) => {
-        console.log(`Message to ${socket.id}`, message);
+    socket.on('data', (data) => {
+        console.log(`Logger data ${data}`);
     });
     socket.on('error', (error) => {
-        console.log(`Message to ${socket.id}`, error);
+        console.log(`Logger error ${error}`);
     });
 }
