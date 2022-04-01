@@ -1,6 +1,7 @@
 import { Namespace, Socket } from 'socket.io';
 import { Mongoose } from 'mongoose';
 import { ELogTypes, ILogData, IMainServiceModule } from '@socket/shared-types';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class LoggerServiceModule implements IMainServiceModule {
     private dbURL =
@@ -9,6 +10,7 @@ export class LoggerServiceModule implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
+    private logger = new PinoLogger();
 
     constructor(name: string) {
         this.name = name;
@@ -25,7 +27,7 @@ export class LoggerServiceModule implements IMainServiceModule {
             this.io.on('connection', this.handleConnection.bind(this));
             await this.initDbConnection();
         } catch (e) {
-            console.log('Ooops, :', e);
+            this.logger.log.error('Init error :', e);
         }
     }
 
@@ -37,6 +39,9 @@ export class LoggerServiceModule implements IMainServiceModule {
                     this.clients.get(logType)!.set(nodeId, new Set());
                 }
                 this.clients.get(logType)!.get(nodeId)!.add(socket);
+                this.logger.log.info(
+                    `Socket "${socket.id}" was subscribed to node "${nodeId}"`
+                );
             }
         );
         socket.on('unsubscribe', (nodeId: number, logType?: ELogTypes) => {
@@ -46,11 +51,16 @@ export class LoggerServiceModule implements IMainServiceModule {
             unsubscribeLogTypes.forEach((logType) => {
                 this.clients.get(logType)!.get(nodeId)?.delete(socket);
             });
+            this.logger.log.info(
+                `Socket "${socket.id}" was unsubscribed from node "${nodeId}"`
+            );
         });
 
         socket.on('data', this.handleData.bind(this));
 
-        socket.on('error', (error) => console.log('Ooops', error));
+        socket.on('error', (error) =>
+            this.logger.log.error('Socket error: ', error)
+        );
     }
 
     private async initDbConnection() {
@@ -63,16 +73,15 @@ export class LoggerServiceModule implements IMainServiceModule {
             }
         } catch (error) {
             this.db.connection.close();
-            console.log('Ooops: ', error);
+            this.logger.log.error('DB connection error: ', error);
         }
     }
 
     private handleData(data: ILogData) {
-        console.log(data);
         const { nodeId, data: logData } = data;
         const clients = this.clients.get(logData.type);
         clients!.get(nodeId)?.forEach((socket) => socket.emit('data', data));
-
+        this.logger.log.info(`Sending data to sockets with node "${nodeId}"`);
         if (this.db.connection) {
             this.collections[logData.type].insertOne(data);
         }
