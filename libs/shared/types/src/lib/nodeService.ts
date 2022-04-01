@@ -7,13 +7,18 @@ export abstract class NodeService {
     protected logger: PinoLogger;
 
     constructor(nodeId: number, url: string) {
+        this.logger = new PinoLogger();
         this.nodeId = nodeId;
         this.url = url;
         this.socket = io(this.url, {
             secure: true,
             reconnection: true,
         });
-        this.logger = new PinoLogger();
+        this.socket.on(
+            'disconnect',
+            (reason) => this.logger.log.info(`NodeService transport disconnected ${reason}`)
+        );
+        this.logger.log.info(`NodeService created on ${nodeId} for ${url} state ${this.socket.disconnected}`);
     }
 
     abstract init(): void;

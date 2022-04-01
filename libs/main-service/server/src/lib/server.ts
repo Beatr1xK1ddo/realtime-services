@@ -13,16 +13,17 @@ export class MainServiceServer {
     private logger = new PinoLogger();
 
     constructor(port: number) {
+        this.logger.log.info(`Creating server on ${port} using ${config.ssl.key} ${config.ssl.crt}`);
         this.https = createServer({
             key: readFileSync(config.ssl.key),
             cert: readFileSync(config.ssl.crt),
-        });
-        this.io = new Server(this.https, { cors: { origin: '*' } }).listen(
-            port
-        );
+        }).listen(port);
+        this.io = new Server(this.https, { cors: { origin: '*' } });
+        this.logger.log.info(`Server running on ${port}`);
     }
 
     registerModule(module: IMainServiceModule) {
+        this.logger.log.info(`Registering module ${module.name}`);
         if (MainServiceServer.namespaces.has(module.name)) {
             this.logger.log.error(
                 `Module with namespace: ${module.name} already exists`
@@ -34,9 +35,7 @@ export class MainServiceServer {
         const ioNamespace = this.io.of(`/${module.name}`);
 
         MainServiceServer.namespaces.set(module.name, ioNamespace);
-        this.logger.log.info(
-            `Module with namespace: ${module.name} was registered`
-        );
+        this.logger.log.info(`Module with namespace: ${module.name} was registered`);
         module.init(ioNamespace);
     }
 }
