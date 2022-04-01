@@ -1,5 +1,7 @@
-// import { loggerTestRun } from './app/logger-test';
+import { loggerTestRun } from './app/logger-test';
 import { teranexTestRun } from './app/teranex-test';
 
-// loggerTestRun();
-teranexTestRun();
+const mainServiceUrl = "https://qa.nextologies.com:1987";
+
+loggerTestRun(mainServiceUrl);
+teranexTestRun(mainServiceUrl);
