@@ -10,7 +10,8 @@
                 "outputPath": "dist/apps/nxt-realtime-main-service",
                 "main": "apps/nxt-realtime-main-service/src/main.ts",
                 "tsConfig": "apps/nxt-realtime-main-service/tsconfig.app.json",
-                "assets": ["apps/nxt-realtime-main-service/src/assets"]
+                "assets": ["apps/nxt-realtime-main-service/src/assets"],
+                "webpackConfig": "apps/custom-webpack.config.js"
             },
             "configurations": {
                 "production": {

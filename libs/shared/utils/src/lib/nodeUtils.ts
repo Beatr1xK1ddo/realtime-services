@@ -1,6 +1,6 @@
 import * as shell from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
-import pino, { Logger, Level, TransportTargetOptions } from 'pino';
+import pino, { Logger, Level } from 'pino';
 
 //todo: utils should not rely on any configs/ all utils functions should rely on args instead
 import * as conf from './config.json';

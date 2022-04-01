@@ -11,7 +11,7 @@
                 "main": "apps/nxt-realtime-node-services/src/main.ts",
                 "tsConfig": "apps/nxt-realtime-node-services/tsconfig.app.json",
                 "assets": ["apps/nxt-realtime-node-services/src/assets"],
-                "webpackConfig": "apps/nxt-realtime-node-services/webpackConfig.js"
+                "webpackConfig": ["apps/nxt-realtime-node-services/webpackConfig.js", "apps/custom-webpack.config.js"]
             },
             "configurations": {
                 "production": {
