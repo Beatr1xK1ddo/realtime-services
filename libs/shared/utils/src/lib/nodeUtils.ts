@@ -78,9 +78,12 @@ type ITransportOptions = {
 };
 
 export class PinoLogger {
+    public name?: string;
     public log: Logger;
-    constructor(level?: Level, path?: string) {
+
+    constructor(name?: string, level?: Level, path?: string) {
         this.log = this.createTransport(level, path);
+        this.name = name;
     }
 
     private createTransport(level?: Level, path?: string) {
@@ -89,6 +92,7 @@ export class PinoLogger {
                 target: 'pino-pretty',
                 options: {
                     translateTime: 'SYS:dd:mm:yy HH:MM:ss',
+                    ignore: 'hostname',
                 } as ITransportOptions,
                 level: level || 'trace',
             },
@@ -107,6 +111,6 @@ export class PinoLogger {
         const transport = pino.transport({
             targets: targets,
         });
-        return pino(transport);
+        return pino(transport).child({ loggerName: this.name || 'default' });
     }
 }

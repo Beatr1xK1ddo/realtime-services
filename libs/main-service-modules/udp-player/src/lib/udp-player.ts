@@ -1,4 +1,4 @@
-import { IMainServiceModule } from '@socket/shared-types';
+import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import { IUdpPlayerData } from './types';
 import { parse } from 'url';
@@ -11,10 +11,15 @@ export class UdpPlayer implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private streams: Map<string, IUdpPlayerData>;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(name: string) {
+    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     init(io: Namespace) {
@@ -40,6 +45,7 @@ export class UdpPlayer implements IMainServiceModule {
             );
 
             ffmpeg.stdout.on('data', (data) => {
+                this.logger.log.info('ffmpeg data: ', data);
                 const newStream: IUdpPlayerData = {
                     udp: query.udp as string,
                     ffmpeg,
@@ -69,6 +75,7 @@ export class UdpPlayer implements IMainServiceModule {
                 if (!newStream.initSeg) newStream.initSeg = fmp4Data;
 
                 ffmpeg.on('close', (code, signal) => {
+                    this.logger.log.info('ffmpeg closing udp: ', query.udp);
                     this.streams.delete(query.udp as string);
                 });
 
@@ -80,6 +87,7 @@ export class UdpPlayer implements IMainServiceModule {
         stream.clients.add(socket);
 
         socket.on('disconnect', () => {
+            this.logger.log.info(`Socket ${socket.id} disconnected`);
             stream.clients.delete(socket);
 
             if (!stream.clients.size) {

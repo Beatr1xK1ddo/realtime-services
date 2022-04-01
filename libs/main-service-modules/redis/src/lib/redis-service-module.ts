@@ -1,4 +1,4 @@
-import { IMainServiceModule } from '@socket/shared-types';
+import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import { EMessageActions, IRedisRequest, IRedisResponse } from './types';
 import Redis from 'ioredis';
@@ -8,11 +8,20 @@ export class RedisServiceModule implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private redis: Redis;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(name: string, urlRedis: string) {
+    constructor(
+        name: string,
+        urlRedis: string,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.name = name;
         this.redis = new Redis(urlRedis);
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     init(io: Namespace) {
@@ -31,13 +40,13 @@ export class RedisServiceModule implements IMainServiceModule {
     private async handleMessage(message: IRedisRequest) {
         try {
             const result = await this.onMessage(message);
-            this.logger.log.info('Sending data');
+            this.logger.log.info('Sending data "data": ', result);
             this.io.send({
                 data: result,
                 success: true,
             } as IRedisResponse);
         } catch (e) {
-            this.logger.log.error(e);
+            this.logger.log.error('Error while send', e);
             this.io.send({
                 error: e,
                 success: false,
@@ -95,7 +104,7 @@ export class RedisServiceModule implements IMainServiceModule {
                         break;
                 }
             } catch (e) {
-                this.logger.log.error(e);
+                this.logger.log.error('Error while hendling message', e);
                 reject(e);
                 return;
             }

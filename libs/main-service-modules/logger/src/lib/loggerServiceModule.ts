@@ -1,6 +1,11 @@
 import { Namespace, Socket } from 'socket.io';
 import { Mongoose } from 'mongoose';
-import { ELogTypes, ILogData, IMainServiceModule } from '@socket/shared-types';
+import {
+    ELogTypes,
+    ILogData,
+    IMainServiceModule,
+    IPinoOptions,
+} from '@socket/shared-types';
 import { PinoLogger } from '@socket/shared-utils';
 
 export class LoggerServiceModule implements IMainServiceModule {
@@ -10,15 +15,20 @@ export class LoggerServiceModule implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(name: string) {
+    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.clients = new Map();
         for (const name in ELogTypes) {
             this.clients.set(name as ELogTypes, new Map());
         }
         this.db = new Mongoose();
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     async init(io: Namespace) {
@@ -40,7 +50,7 @@ export class LoggerServiceModule implements IMainServiceModule {
                 }
                 this.clients.get(logType)!.get(nodeId)!.add(socket);
                 this.logger.log.info(
-                    `Socket "${socket.id}" was subscribed to node "${nodeId}"`
+                    `Socket "${socket.id}" was subscribed to "log: ${logType}" and "node: ${nodeId}"`
                 );
             }
         );
@@ -52,7 +62,7 @@ export class LoggerServiceModule implements IMainServiceModule {
                 this.clients.get(logType)!.get(nodeId)?.delete(socket);
             });
             this.logger.log.info(
-                `Socket "${socket.id}" was unsubscribed from node "${nodeId}"`
+                `Socket "${socket.id}" was unsubscribed from "log: ${logType}" and "node: ${nodeId}"`
             );
         });
 
@@ -81,7 +91,9 @@ export class LoggerServiceModule implements IMainServiceModule {
         const { nodeId, data: logData } = data;
         const clients = this.clients.get(logData.type);
         clients!.get(nodeId)?.forEach((socket) => socket.emit('data', data));
-        this.logger.log.info(`Sending data to sockets with node "${nodeId}"`);
+        this.logger.log.info(
+            `Sending data to sockets with "log: ${logData.type}" and "node: ${nodeId}"`
+        );
         if (this.db.connection) {
             this.collections[logData.type].insertOne(data);
         }

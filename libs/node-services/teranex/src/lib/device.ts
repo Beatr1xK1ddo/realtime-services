@@ -1,5 +1,6 @@
 import { Socket } from 'net';
-import { IDeviceResponse } from '@socket/shared-types';
+import { IDeviceResponse, IPinoOptions } from '@socket/shared-types';
+import { PinoLogger } from '@socket/shared-utils';
 
 export class TeranexDevice {
     private timeout = 2000;
@@ -8,10 +9,20 @@ export class TeranexDevice {
     private response: IDeviceResponse;
     private socket?: Socket;
     public busy = false;
+    private logger: PinoLogger;
 
-    constructor(ip: string, port: number) {
+    constructor(
+        ip: string,
+        port: number,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.ip = ip;
         this.port = port;
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     connect() {
@@ -31,22 +42,36 @@ export class TeranexDevice {
             };
 
             this.socket.connect({ host: this.ip, port: this.port }, () => {
-                console.log('Teranex device connected: ', this.ip, this.port);
+                this.logger.log.info(
+                    'Teranex device connected: ',
+                    this.ip,
+                    this.port
+                );
                 resolve(true);
             });
 
             this.socket.on('data', (data) => {
-                console.log('Teranex device data: ', this.ip, this.port, data);
+                this.logger.log.info(
+                    'Teranex device data: ',
+                    this.ip,
+                    this.port,
+                    data
+                );
                 this.response.data += data.toString();
             });
 
             this.socket.on('error', (err) => {
-                console.log('Teranex device error: ', this.ip, this.port, err);
+                this.logger.log.error(
+                    'Teranex device error: ',
+                    this.ip,
+                    this.port,
+                    err
+                );
                 reject(err);
             });
 
             this.socket.on('timeout', () => {
-                console.log(
+                this.logger.log.error(
                     'Teranex device error: ',
                     this.ip,
                     this.port,
@@ -64,11 +89,16 @@ export class TeranexDevice {
                 reject,
                 data: '',
             };
-            console.log('Teranex device command: ', this.ip, this.port, cmd);
+            this.logger.log.info(
+                'Teranex device command: ',
+                this.ip,
+                this.port,
+                cmd
+            );
             this.socket.write(cmd, (error) => {
                 if (error) {
-                    console.log(
-                        'Teranex device socket write error: ',
+                    this.logger.log.error(
+                        'Teranex device error while execute cmd: ',
                         this.ip,
                         this.port,
                         error
@@ -82,6 +112,6 @@ export class TeranexDevice {
 
     destroy() {
         this.socket?.end();
-        console.log('Teranex device destroyed: ', this.ip, this.port);
+        this.logger.log.info('Teranex device destroyed: ', this.ip, this.port);
     }
 }

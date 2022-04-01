@@ -1,4 +1,4 @@
-import { IMainServiceModule } from '@socket/shared-types';
+import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { Socket, Namespace } from 'socket.io';
 import * as mysql from 'mysql';
 import * as conf from '../../config.json';
@@ -16,11 +16,20 @@ export class Monitor implements IMainServiceModule {
     private queries = sqlQueries;
     private redis: Redis;
     private lastRuntime?: number;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(name: string, urlRedis: string) {
+    constructor(
+        name: string,
+        urlRedis: string,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.name = name;
         this.redis = new Redis(urlRedis);
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     async init(io: Namespace) {
@@ -29,7 +38,7 @@ export class Monitor implements IMainServiceModule {
             this.io.on('connection', this.onConnection.bind(this));
             this.db = await this.connectDb();
         } catch (e) {
-            this.logger.log.error('Ooops, :', e);
+            this.logger.log.error('Error when init run: ', e);
         }
     }
 
@@ -39,7 +48,7 @@ export class Monitor implements IMainServiceModule {
         socket.on('data', this.onData.bind(this));
 
         socket.on('error', (error) => {
-            this.logger.log.error('Ooops: ', error);
+            this.logger.log.error('Socket error: ', error);
         });
     }
 
@@ -53,7 +62,11 @@ export class Monitor implements IMainServiceModule {
                 connectionLimit: 10,
             });
             $con.getConnection((err) => {
-                if (err) reject(err);
+                if (err) {
+                    this.logger.log.error('Error while getConnection', err);
+                    reject(err);
+                }
+                this.logger.log.info('Connection with database established');
                 resolve($con);
             });
         });
@@ -66,7 +79,9 @@ export class Monitor implements IMainServiceModule {
     async startMonitor() {
         const alerts = await this.redis
             .smembers('monit-alerts')
-            .catch((e: Error) => console.log(e));
+            .catch((e: Error) =>
+                this.logger.log.error('Error while "smembers" on redis', e)
+            );
 
         if (_.isEmpty(alerts)) {
             this.logger.log.info('Alerts are empty');
@@ -137,9 +152,10 @@ export class Monitor implements IMainServiceModule {
                         }
                     );
                 }
-
+                this.logger.log.info('Sending "restore"');
                 this.sendData('restore', null, null, sqlRec);
             } else if (sqlRec.haltComeback) {
+                this.logger.log.info('Sending "restore"');
                 this.sendData('restore', null, null, sqlRec);
             } else {
                 results = await Promise.all([
@@ -155,6 +171,7 @@ export class Monitor implements IMainServiceModule {
                         this.fetchHistory(sqlRec)
                     );
 
+                    this.logger.log.info('Sending "status_error"');
                     this.sendData(
                         'status_error',
                         signalLostTime,
@@ -173,7 +190,7 @@ export class Monitor implements IMainServiceModule {
                     history = await util.getCache(app.uniqueID, () =>
                         this.fetchHistory(sqlRec)
                     );
-
+                    this.logger.log.info('Sending "ts_errors"');
                     this.sendData(
                         'ts_errors',
                         signalErrorTime,
@@ -253,7 +270,7 @@ export class Monitor implements IMainServiceModule {
             companyId: sqlRec.companyId,
             lastCCErrors: replyCount || null,
         };
-
+        this.logger.log.info('Sending data "data": ', data);
         this.io?.send({
             sender: this.name,
             data: {

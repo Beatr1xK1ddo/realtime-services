@@ -4,6 +4,7 @@ import {
     IMainServiceModule,
     IClientSubscribeEvent,
     INodeInitEvent,
+    IPinoOptions,
 } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import { PinoLogger } from '@socket/shared-utils';
@@ -15,10 +16,15 @@ export class HyperdeckModule implements IMainServiceModule {
     private clients: Map<number, Map<string, Set<Socket>>>;
     private logger = new PinoLogger();
 
-    constructor(name: string) {
+    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.nodes = new Map();
         this.clients = new Map();
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     init(io: Namespace) {
@@ -46,7 +52,7 @@ export class HyperdeckModule implements IMainServiceModule {
                     this.clients.get(nodeId)?.get(deviceId)?.add(socket);
                 }
                 this.logger.log.info(
-                    `Socket: "${socket.id}" subscribed to node: "${nodeId}"`
+                    `Socket: "${socket.id}" subscribed to: "node: ${nodeId}" and "device ${deviceId}"`
                 );
             }
         );
@@ -60,7 +66,7 @@ export class HyperdeckModule implements IMainServiceModule {
                 }
                 devicesSubscribers.get(deviceId)?.delete(socket);
                 this.logger.log.info(
-                    `Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`
+                    `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
                 );
             }
         );
@@ -68,7 +74,7 @@ export class HyperdeckModule implements IMainServiceModule {
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
                 this.logger.log.info(
-                    `Commands to node: "${nodeId}" requested to device`
+                    `Commands to node: "${nodeId}" requested to device: "${data.ip}:${data.port}"`
                 );
                 nodeSocket.emit('request', data);
             }
@@ -81,7 +87,7 @@ export class HyperdeckModule implements IMainServiceModule {
                 ?.get(deviceId)
                 ?.forEach((socket) => socket.emit('result', data));
             this.logger.log.info(
-                `Response was sent to clients with node: "${nodeId}"`
+                `Response was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`
             );
         });
 

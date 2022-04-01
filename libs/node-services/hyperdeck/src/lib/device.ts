@@ -1,5 +1,5 @@
 import { Socket } from 'net';
-import { IDeviceResponse } from '@socket/shared-types';
+import { IDeviceResponse, IPinoOptions } from '@socket/shared-types';
 import { PinoLogger } from '@socket/shared-utils';
 
 export class HyperdeckDevice {
@@ -9,11 +9,20 @@ export class HyperdeckDevice {
     private response?: Omit<IDeviceResponse, 'data'>;
     private socket?: Socket;
     public busy = false;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(ip: string, port: number) {
+    constructor(
+        ip: string,
+        port: number,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.ip = ip;
         this.port = port;
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     connect() {

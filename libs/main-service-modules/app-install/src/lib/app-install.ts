@@ -1,6 +1,6 @@
 import { watch, FSWatcher } from 'chokidar';
 import { readFileSync } from 'fs';
-import { IMainServiceModule } from '@socket/shared-types';
+import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import * as path from 'path';
 import { IAppInstallFiles } from './types';
@@ -14,11 +14,15 @@ export class AppInstall implements IMainServiceModule {
     public name: string;
     private path: string;
     private io?: Namespace;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
     public files: Map<string, IAppInstallFiles> = new Map();
     // private folder: string;
 
-    constructor(name: string, path: string) {
+    constructor(
+        name: string,
+        path: string,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.name = name;
         this.path = path;
         this.watcher = watch(this.path, {
@@ -28,6 +32,11 @@ export class AppInstall implements IMainServiceModule {
                 pollInterval: 100,
             },
         });
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
         // тут я оставил в комментариях его способ установления пути отслеживания файлов
         // щас реализована моя через конструктор
         // this.folder = config.app_install.logsDir;

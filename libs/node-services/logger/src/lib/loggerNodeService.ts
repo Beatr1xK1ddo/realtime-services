@@ -49,7 +49,9 @@ export class LoggerNodeService extends NodeService {
     init() {
         this.socket.on('connect', this._watchAll.bind(this));
         this.socket.on('message', (jsonData) => this._onMessage(jsonData));
-        this.socket.on('error', (error) => console.log('Ooops', error));
+        this.socket.on('error', (error) =>
+            this.logger.log.error(`Socket: ${this.socket.id} error: `, error)
+        );
     }
 
     // private watch() {
@@ -145,12 +147,15 @@ export class LoggerNodeService extends NodeService {
         });
 
         file.tail.stderr.on('data', (data) => {
+            this.logger.log.info(`Running file.tail.stderr on "data": ${data}`);
             this.debug(`stderr: ${data.toString()}`);
         });
         file.tail.on('error', (error) => {
+            this.logger.log.error(`file.tail error: ${error}`);
             this.debug(`error: ${error.message}`);
         });
         file.tail.on('close', (code) => {
+            this.logger.log.info(`Running file.tail on "close": ${code}`);
             this.debug(`close ${code}`);
         });
     }
@@ -166,11 +171,16 @@ export class LoggerNodeService extends NodeService {
                 pollInterval: 1000,
             },
         });
-        console.log('watch', this.watcher.getWatched());
 
         this.watcher
-            .on('add', (fname) => this._watch(fname))
-            .on('unlink', (fname) => this._unwatch(fname));
+            .on('add', (fname) => {
+                this.logger.log.info(`Watcher "add" ${fname}`);
+                this._watch(fname);
+            })
+            .on('unlink', (fname) => {
+                this._unwatch(fname);
+                this.logger.log.info(`Watcher "unlink" ${fname}`);
+            });
     }
 
     // send(receiver, data, tag = null) {
@@ -188,6 +198,9 @@ export class LoggerNodeService extends NodeService {
 
         switch (info.type) {
             case ELogTypes.appLog:
+                this.logger.log.info(
+                    `Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`
+                );
                 this.socket.emit('data', {
                     nodeId: this.nodeId,
                     data: {
@@ -203,6 +216,9 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
             case ELogTypes.sysLog:
+                this.logger.log.info(
+                    `Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`
+                );
                 this.socket.emit('data', {
                     nodeId: this.nodeId,
                     data: {
@@ -230,7 +246,7 @@ export class LoggerNodeService extends NodeService {
     }
 
     _parseFilename(filename: string) {
-        console.log('watching file', filename);
+        this.logger.log.info('Watching file', filename);
         if (filename === sysLog) return { type: ELogTypes.sysLog };
 
         const [appType, appId, appName, subType] = path
@@ -262,10 +278,17 @@ export class LoggerNodeService extends NodeService {
                 new Date().toISOString() + '  ' + message + '\n',
                 { mode: '777' },
                 (err) => {
-                    err && console.error(err.toString());
+                    if (err) {
+                        this.logger.log.error(
+                            'Error while debug',
+                            err.toString()
+                        );
+                    }
                 }
             );
-        } catch (e) {}
+        } catch (e) {
+            this.logger.log.error('Error while debug on catch block', e);
+        }
     }
 
     async _onMessage(req: any) {
@@ -278,13 +301,14 @@ export class LoggerNodeService extends NodeService {
 
         try {
             // const res = await Promise.resolve(this.onMessage(data, sender));
-
+            this.logger.log.info('Sending data: ', data);
             this.socket.emit('data', {
                 receiver: sender,
                 data,
                 tag,
             });
         } catch (e) {
+            this.logger.log.info('Error while sending data: ', e);
             this.socket.emit('data', {
                 receiver: sender,
                 error: e,

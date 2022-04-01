@@ -60,7 +60,7 @@ export class TeranexNodeService extends NodeService {
             } else {
                 error = 'Device unknown error';
             }
-            this.logger.log.error(error);
+            this.logger.log.error('Error while handle message: ', error);
             this.socket.emit('response', {
                 nodeId: this.nodeId,
                 ip,

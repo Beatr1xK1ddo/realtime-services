@@ -1,6 +1,6 @@
 import { createServer } from 'https';
 import { Namespace, Server } from 'socket.io';
-import { IMainServiceModule } from '@socket/shared-types';
+import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { readFileSync } from 'fs';
 
 import * as config from './config.json';
@@ -10,15 +10,20 @@ export class MainServiceServer {
     static namespaces: Map<string, Namespace> = new Map();
     private https;
     private io;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(port: number) {
+    constructor(port: number, loggerOptions?: Partial<IPinoOptions>) {
         this.https = createServer({
-            key: readFileSync(config.ssl.key),
-            cert: readFileSync(config.ssl.crt),
+            // key: readFileSync(config.ssl.key),
+            // cert: readFileSync(config.ssl.crt),
         });
         this.io = new Server(this.https, { cors: { origin: '*' } }).listen(
             port
+        );
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
         );
     }
 

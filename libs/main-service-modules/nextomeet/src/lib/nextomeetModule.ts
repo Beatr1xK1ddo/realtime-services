@@ -4,6 +4,7 @@ import {
     INodeInitEvent,
     IClientNextomeetReqEvent,
     IClientNextomeetSubEvent,
+    IPinoOptions,
 } from '@socket/shared-types';
 import { PinoLogger } from '@socket/shared-utils';
 import { Namespace, Socket } from 'socket.io';
@@ -13,12 +14,17 @@ export class NextomeetModule implements IMainServiceModule {
     public name: string;
     private nodes: Map<number, Socket>;
     private clients: Map<number, Set<Socket>>;
-    private logger = new PinoLogger();
+    private logger: PinoLogger;
 
-    constructor(name: string) {
+    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.nodes = new Map();
         this.clients = new Map();
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     init(io: Namespace) {
@@ -71,6 +77,8 @@ export class NextomeetModule implements IMainServiceModule {
                 `Response was sent to clients with node: "${nodeId}"`
             );
         });
-        socket.on('error', (error) => this.logger.log.error(error));
+        socket.on('error', (error) =>
+            this.logger.log.error('Socket error', error)
+        );
     }
 }

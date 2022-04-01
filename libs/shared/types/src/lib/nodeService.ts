@@ -1,19 +1,29 @@
 import { io, Socket } from 'socket.io-client';
 import { PinoLogger } from '@socket/shared-utils';
+import { IPinoOptions } from '@socket/shared-types';
+
 export abstract class NodeService {
     protected nodeId: number;
     protected url: string;
     protected socket: Socket;
     protected logger: PinoLogger;
 
-    constructor(nodeId: number, url: string) {
+    constructor(
+        nodeId: number,
+        url: string,
+        loggerOptions?: Partial<IPinoOptions>
+    ) {
         this.nodeId = nodeId;
         this.url = url;
         this.socket = io(this.url, {
             secure: true,
             reconnection: true,
         });
-        this.logger = new PinoLogger();
+        this.logger = new PinoLogger(
+            loggerOptions?.name,
+            loggerOptions?.level,
+            loggerOptions?.path
+        );
     }
 
     abstract init(): void;
