@@ -9,12 +9,12 @@
     "logDir": "../../var/log/",
     "cacheDir": "../../var/cache/",
     "ssl": {
-        "key": "../cert/nextologies.com.key",
-        "crt": "../cert/ed1cf1e8c47efb33.crt",
-        "ca": "../cert/gd_bundle-g2-g1.crt"
+        "key": "/etc/pki/tls/private/nextologies.com.key",
+        "crt": "/etc/pki/tls/certs/nextologies_full.crt",
+        "ca": "/etc/pki/tls/certs/gd_bundle-g2-g1.crt"
     },
     "logAgent": {
-        "serviceUrl": "http://qa.nextologies.com:1987/logger",
+        "serviceUrl": "https://qa.nextologies.com:1987/logger",
         "applogDir": "/home/dv2/data/logs/real--*.log",
         "syslogFile": "/var/log/syslog",
         "excludeMessages": {
@@ -23,7 +23,7 @@
         }
     },
     "teranex": {
-        "serviceUrl": "http://qa.nextologies.com:1987/teranex"
+        "serviceUrl": "https://qa.nextologies.com:1987/teranex"
     },
     "live_monitor": {
         "history": {
