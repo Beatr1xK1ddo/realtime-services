@@ -38,7 +38,7 @@ export class TeranexNodeService extends NodeService<TeranexDevice> {
                     }
                 })
             );
-            console.log('cmdAnswers', cmdAnswers);
+
             this.logger.log.info('Commands complete successfuly');
 
             this.socket.emit('response', {
