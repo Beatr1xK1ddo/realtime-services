@@ -1,5 +1,8 @@
 import { Manager } from 'socket.io-client';
-import { IClientCmdRequestEvent } from '@socket/shared-types';
+import {
+    IClientCmdRequestEvent,
+    IServerModuleMessage,
+} from '@socket/shared-types';
 
 const nodeId = 356;
 const ip = '192.168.99.22';
@@ -18,19 +21,36 @@ export function teranexTestRun(url: string) {
     const manager = new Manager(url);
     const socket = manager.socket('/teranex');
 
+    socket.on('subscribed', (data: IServerModuleMessage) => {
+        console.log(data.message);
+    });
+
+    socket.on('unsubscribed', (data: IServerModuleMessage) => {
+        console.log(data.message);
+    });
+
     socket.on('connect', () => {
         console.log('Client connected to TeranexModule');
         socket.emit('subscribe', { nodeId, ip, port });
+        socket.emit('commands', {
+            nodeId,
+            ip,
+            port,
+            commands: ['TERANEX DEVICE\n\n'],
+            // commands,
+        } as IClientCmdRequestEvent);
+
+        // setTimeout(() => {
+        //     socket.emit('commands', {
+        //         nodeId,
+        //         ip,
+        //         port,
+        //         // commands: ['TERANEX DEVICE\n\n'],
+        //         commands,
+        //     } as IClientCmdRequestEvent);
+        // }, 3000);
     });
     socket.on('result', (data) => {
         console.log(`Teranex response ${JSON.stringify(data)}`);
     });
-
-    socket.emit('commands', {
-        nodeId,
-        ip,
-        port,
-        commands: ['TERANEX DEVICE\n\n'],
-        // commands,
-    } as IClientCmdRequestEvent);
 }
