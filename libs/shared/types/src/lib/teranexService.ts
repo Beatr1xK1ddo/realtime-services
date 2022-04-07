@@ -1,4 +1,9 @@
 export type INodeInitEvent = { nodeId: number };
+
+export type IServerModuleMessage = {
+    message: string;
+};
+
 export type IClientSubscribeEvent = {
     nodeId: number;
     ip: string;
@@ -17,6 +22,7 @@ export type IDeviceResponse = {
     resolve: (value?: unknown) => void;
     reject: (reason?: unknown) => void;
 };
+
 export type IDeviceResponseEvent = {
     nodeId: number;
     ip: string;
