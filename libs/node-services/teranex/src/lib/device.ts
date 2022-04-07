@@ -1,117 +1,85 @@
-import { Socket } from 'net';
-import { IDeviceResponse, IPinoOptions } from '@socket/shared-types';
-import { PinoLogger } from '@socket/shared-utils';
+import { Device, IPinoOptions } from '@socket/shared-types';
+import { PinoLogger, debounce } from '@socket/shared-utils';
 
-export class TeranexDevice {
-    private timeout = 2000;
-    private ip: string;
-    private port: number;
-    private response: IDeviceResponse;
-    private socket?: Socket;
-    public busy = false;
-    private logger: PinoLogger;
-
+export class TeranexDevice extends Device {
     constructor(
         ip: string,
         port: number,
         loggerOptions?: Partial<IPinoOptions>
     ) {
-        this.ip = ip;
-        this.port = port;
+        super(ip, port);
+
         this.logger = new PinoLogger(
             loggerOptions?.name,
             loggerOptions?.level,
             loggerOptions?.path
         );
+        this.init();
     }
 
-    connect() {
-        if (this.socket) {
-            this.destroy();
-        }
+    private init() {
+        const debouncer = debounce((data) => this.response.resolve(data), 1000);
 
-        this.socket = new Socket();
-        this.socket.setEncoding('utf8');
-        this.socket.setTimeout(this.timeout);
+        this.socket.connect({ host: this.ip, port: this.port }, () => {
+            this.logger.log.info(
+                `Teranex device "${this.ip}:${this.port}" connected`
+            );
+        });
 
-        return new Promise((resolve, reject) => {
-            this.response = {
-                resolve,
-                reject,
-                data: '',
-            };
+        this.socket.on('data', (data) => {
+            this.logger.log.info(
+                `Teranex device "${this.ip}:${this.port}" data: `,
+                data
+            );
+            console.log('data: ', data);
+            this.response.data += data.toString();
+            debouncer(this.response.data);
+        });
 
-            this.socket.connect({ host: this.ip, port: this.port }, () => {
-                this.logger.log.info(
-                    'Teranex device connected: ',
-                    this.ip,
-                    this.port
-                );
-                resolve(true);
-            });
+        this.socket.on('error', (err) => {
+            this.logger.log.error(
+                `Teranex device "${this.ip}:${this.port}" error: `,
+                err
+            );
+            this.response.reject(err);
+            this.socket.destroy();
+        });
 
-            this.socket.on('data', (data) => {
-                this.logger.log.info(
-                    'Teranex device data: ',
-                    this.ip,
-                    this.port,
-                    data
-                );
-                this.response.data += data.toString();
-            });
-
-            this.socket.on('error', (err) => {
-                this.logger.log.error(
-                    'Teranex device error: ',
-                    this.ip,
-                    this.port,
-                    err
-                );
-                reject(err);
-            });
-
-            this.socket.on('timeout', () => {
-                this.logger.log.error(
-                    'Teranex device error: ',
-                    this.ip,
-                    this.port,
-                    'timeout'
-                );
-                reject(Error('timeout'));
-            });
+        this.socket.on('timeout', () => {
+            this.logger.log.error(
+                `Teranex device "${this.ip}:${this.port}" timeout error`
+            );
+            this.response.reject(
+                `Teranex device "${this.ip}:${this.port}" timeout error`
+            );
+            this.socket.destroy();
         });
     }
 
-    command(cmd: string, timeout = 0.7) {
+    public async command(cmd: string): Promise<string> {
         return new Promise((resolve, reject) => {
+            // this.socket.emit('cmd', resolve);
             this.response = {
+                data: '',
                 resolve,
                 reject,
-                data: '',
             };
-            this.logger.log.info(
-                'Teranex device command: ',
-                this.ip,
-                this.port,
-                cmd
-            );
+
             this.socket.write(cmd, (error) => {
                 if (error) {
                     this.logger.log.error(
-                        'Teranex device error while execute cmd: ',
-                        this.ip,
-                        this.port,
+                        `Teranex device "${this.ip}:${this.port}" error: `,
                         error
                     );
+                    this.socket.destroy();
                     reject(error);
                 }
             });
-            setTimeout(() => resolve(this.response.data), timeout * 1000);
-        });
-    }
 
-    destroy() {
-        this.socket?.end();
-        this.logger.log.info('Teranex device destroyed: ', this.ip, this.port);
+            // setTimeout(() => {
+            //     console.log('resolved !!!!!!!!!!!!!!!!');
+            //     this.response.resolve(this.response.data);
+            // }, 10000);
+        });
     }
 }

@@ -2,11 +2,12 @@ import { io, Socket } from 'socket.io-client';
 import { PinoLogger } from '@socket/shared-utils';
 import { IPinoOptions } from '@socket/shared-types';
 
-export abstract class NodeService {
+export abstract class NodeService<D extends Device = any> {
     protected nodeId: number;
     protected url: string;
     protected socket: Socket;
     protected logger: PinoLogger;
+    protected devices?: IDevices<D>;
 
     constructor(
         nodeId: number,

@@ -71,7 +71,18 @@ async function getCache(key, saveCallback) {
     return Promise.resolve(dataContent || null);
 }
 
-export { exec, getNodeId, currentTime, getCache };
+function debounce(cb: (...args) => void, timeout?: number) {
+    let timer: NodeJS.Timeout;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+            console.log('DEBOUNCE WAS EMMITED');
+            cb.apply(this, args);
+        }, timeout || 1000);
+    };
+}
+
+export { exec, getNodeId, currentTime, getCache, debounce };
 
 type ITransportOptions = {
     [key: string]: any;
