@@ -23,8 +23,8 @@ export abstract class NodeService<D extends Device = any> {
         this.devices = {};
         this.url = url;
         this.socket = io(this.url, {
-            // secure: true,
-            // reconnection: true,
+            secure: true,
+            reconnection: true,
         });
         this.logger = new PinoLogger(
             loggerOptions?.name,
