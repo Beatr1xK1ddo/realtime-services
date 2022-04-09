@@ -27,12 +27,17 @@ export class TeranexDevice extends Device {
         });
 
         this.socket.on('data', (data) => {
+            this.debounceTrigger = true;
+
             this.logger.log.info(
                 `Teranex device "${this.ip}:${this.port}" data: `,
                 data
             );
+
             console.log('data: ', data);
+
             this.response.data += data.toString();
+
             debouncer(this.response.data);
         });
 
@@ -58,7 +63,7 @@ export class TeranexDevice extends Device {
 
     public async command(cmd: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            // this.socket.emit('cmd', resolve);
+            this.debounceTrigger = false;
             this.response = {
                 data: '',
                 resolve,
@@ -71,15 +76,17 @@ export class TeranexDevice extends Device {
                         `Teranex device "${this.ip}:${this.port}" error: `,
                         error
                     );
+
                     this.socket.destroy();
+
                     reject(error);
                 }
+                setTimeout(() => {
+                    if (this.debounceTrigger) return;
+                    this.logger.log.info('Reserved timeout resolve response');
+                    this.response.resolve(this.response.data);
+                }, 4000);
             });
-
-            // setTimeout(() => {
-            //     console.log('resolved !!!!!!!!!!!!!!!!');
-            //     this.response.resolve(this.response.data);
-            // }, 10000);
         });
     }
 }

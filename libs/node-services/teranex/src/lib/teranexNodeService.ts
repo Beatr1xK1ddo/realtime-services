@@ -1,5 +1,6 @@
 import {
-    IClientCmdRequestEvent, IClientSubscribeEvent,
+    IClientCmdRequestEvent,
+    IClientSubscribeEvent,
     IDeviceResponseEvent,
     NodeService,
 } from '@socket/shared-types';
@@ -16,16 +17,22 @@ export class TeranexNodeService extends NodeService<TeranexDevice> {
         this.socket.on('error', (error) => this.logger.log.error(error));
     }
 
-    private async handleSubscription(event: {socketId: string, event: IClientSubscribeEvent}) {
+    private async handleSubscription(event: {
+        socketId: string;
+        event: IClientSubscribeEvent;
+    }) {
         const { ip, port } = event.event;
         const deviceId = `${ip}:${port}`;
         try {
             const device = await this.getDevice(deviceId);
-            if (device) this.socket.emit('subscribed', event);
+            if (device) {
+                this.socket.emit('subscribed', event);
+                this.logger.log.info('Subscribing to device');
+            }
         } catch (e) {
             //todo: add subscription failure handling
         }
-    };
+    }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
         const { ip, port, commands } = data;
@@ -38,8 +45,6 @@ export class TeranexNodeService extends NodeService<TeranexDevice> {
                     try {
                         const answer = await device.command(command);
                         const data = this.format(answer);
-                        console.log('answer is: ', answer);
-                        console.log('data is: ', data);
                         this.logger.log.info('Command answer is: ', data);
                         return data;
                     } catch (e) {

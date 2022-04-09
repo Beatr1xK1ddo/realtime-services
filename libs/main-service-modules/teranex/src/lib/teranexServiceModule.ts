@@ -45,6 +45,7 @@ export class TeranexServiceModule implements IMainServiceModule {
             'subscribe',
             ({ nodeId, ip, port }: IClientSubscribeEvent) => {
                 const deviceId = `${ip}:${port}`;
+
                 if (!this.clients.has(nodeId)) {
                     const devicesSubscribers = new Map();
                     devicesSubscribers.set(deviceId, new Set([socket]));
@@ -76,11 +77,16 @@ export class TeranexServiceModule implements IMainServiceModule {
         );
         socket.on('commands', ({ nodeId, ...data }: IClientCmdRequestEvent) => {
             const nodeSocket = this.nodes.get(nodeId);
+
             if (nodeSocket) {
                 this.logger.log.info(
                     `Commands to node: "${nodeId}" requested to device "${data.ip}:${data.port}"`
                 );
                 nodeSocket.emit('request', data);
+            } else {
+                this.logger.log.info(
+                    `Commands to node: "${nodeId}" requested to device "${data.ip}:${data.port}"`
+                );
             }
         });
         socket.on('response', ({ nodeId, ...data }: IDeviceResponseEvent) => {
