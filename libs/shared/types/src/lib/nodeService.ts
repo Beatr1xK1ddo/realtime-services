@@ -47,6 +47,7 @@ export abstract class Device {
     protected logger?: PinoLogger;
     protected socket: NetSocket;
     protected timeout?: number;
+    protected debounceTrigger = false;
 
     constructor(ip: string, port: number, timeout?: number) {
         this.ip = ip;
