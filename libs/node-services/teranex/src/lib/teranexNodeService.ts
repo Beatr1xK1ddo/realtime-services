@@ -33,38 +33,16 @@ export class TeranexNodeService extends NodeService<TeranexDevice> {
 
         try {
             const device = await this.getDevice(deviceId);
-            const cmdAnswers = await Promise.all(
-                commands.map(async (command: string) => {
-                    try {
-                        const answer = await device.command(command);
-                        const data = this.format(answer);
-                        console.log('answer is: ', answer);
-                        console.log('data is: ', data);
-                        this.logger.log.info('Command answer is: ', data);
-                        return data;
-                    } catch (e) {
-                        this.logger.log.error('Command error', e);
-                    }
-                })
-            );
-
-            this.logger.log.info('Commands complete successfuly');
-
-            this.socket.emit('response', {
-                nodeId: this.nodeId,
-                ip,
-                port,
-                data: cmdAnswers,
-            } as IDeviceResponseEvent);
+            const result = [];
+            for (const command of commands) {
+                const commandResult = await device.command(command);
+                result.push(this.format(commandResult));
+            }
+            this.logger.log.info(`Commands complete successfully: ${JSON.stringify(result)}`);
+            this.socket.emit('response', {nodeId: this.nodeId, ip, port, data: result,} as IDeviceResponseEvent);
         } catch (error) {
-            this.logger.log.error('Error while handle request');
-
-            this.socket.emit('response', {
-                nodeId: this.nodeId,
-                ip,
-                port,
-                error,
-            } as IDeviceResponseEvent);
+            this.logger.log.error(`Error while handle request, ${JSON.stringify(error.message)}`);
+            this.socket.emit('response', {nodeId: this.nodeId, ip, port, error,} as IDeviceResponseEvent);
         }
     }
 
