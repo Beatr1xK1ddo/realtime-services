@@ -16,10 +16,8 @@ export class MainServiceServer {
         this.https = createServer({
             key: readFileSync(config.ssl.key),
             cert: readFileSync(config.ssl.crt),
-        });
-        this.io = new Server(this.https, { cors: { origin: '*' } }).listen(
-            port
-        );
+        }).listen(port);
+        this.io = new Server(this.https, { cors: { origin: '*' } });
         this.logger = new PinoLogger(
             loggerOptions?.name,
             loggerOptions?.level,
