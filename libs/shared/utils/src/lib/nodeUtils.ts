@@ -76,7 +76,6 @@ function debounce(cb: (...args) => void, timeout?: number) {
     return (...args) => {
         clearTimeout(timer);
         timer = setTimeout(() => {
-            console.log('DEBOUNCE WAS EMMITED');
             cb.apply(this, args);
         }, timeout || 1000);
     };

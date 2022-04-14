@@ -16,12 +16,6 @@ const {
 
 getNodeId().then((id) => {
     if (id === null) return;
-    new LoggerNodeService(
-        id,
-        loggerServiceUrl,
-        applogDir,
-        syslogFile,
-        excludeMessages
-    ).init();
-    new TeranexNodeService(id, teranexServiceUrl).init();
+    new LoggerNodeService('Logger', id, loggerServiceUrl, applogDir, syslogFile, excludeMessages);
+    new TeranexNodeService('Teranex', id, teranexServiceUrl);
 });

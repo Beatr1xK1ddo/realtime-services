@@ -15,14 +15,8 @@ export class LoggerNodeService extends NodeService {
     private watcher: FSWatcher;
     private mapFiles: Map<string, IFile> = new Map();
 
-    constructor(
-        nodeId: number,
-        url: string,
-        appLogsPath: string,
-        sysLogsPath: string,
-        exclude: any
-    ) {
-        super(nodeId, url);
+    constructor(name: string, nodeId: number, url: string, appLogsPath: string, sysLogsPath: string, exclude: any) {
+        super(name, nodeId, url);
         this.nodeId = nodeId;
         this.appLogsPath = appLogsPath;
         this.sysLogsPath = sysLogsPath;
@@ -37,81 +31,35 @@ export class LoggerNodeService extends NodeService {
         this.watcher = watch(this.appLogsPath, {
             ignoreInitial: true,
         });
-    }
+    };
 
-    // init() {
-    //     this.socket.on('connect', this.watch.bind(this));
+    protected override onConnected() {
+        super.onConnected();
+        this._watchAll();
+    };
 
-    // this.socket.on('message', this.onMessage);
+    _watchAll() {
+        this._unwatchAll();
+        this._watch(this.sysLogsPath);
 
-    //     this.socket.on('error', (error) => console.log('Ooops', error));
-    // }
-    init() {
-        this.socket.on('connect', this._watchAll.bind(this));
-        this.socket.on('message', (jsonData) => this._onMessage(jsonData));
-        this.socket.on('error', (error) =>
-            this.logger.log.error(`Socket: ${this.socket.id} error: `, error)
-        );
-    }
+        this.watcher = watch(this.appLogsPath, {
+            persistent: true,
+            awaitWriteFinish: {
+                stabilityThreshold: 200,
+                pollInterval: 1000,
+            },
+        });
 
-    // private watch() {
-    //     this.watcher.on('add', (path) => {
-    //         const data = this.converter(path);
-    //         this.send(data);
-    //     });
-
-    //     this.watcher.on('unlink', (path) => {
-    //         // this.mapFiles.delete(path);
-    //         console.log(`File ${path} has been removed`, this.mapFiles);
-    //     });
-
-    //     this.watcher.on('ready', () => {
-    //         console.log(
-    //             `WatcherID: "${this.socket.id}" ready to changes!!!`,
-    //             this.mapFiles
-    //         );
-    //     });
-    // }
-
-    // private send(data: ILogMessage) {
-    //     this.socket.emit('data', data);
-    // }
-
-    // private addFile() {
-    //     this.mapFiles.set();
-    // }
-
-    // private onMessage(message) {}
-
-    /*
-    private converter(path: string) {
-        const filename = basename(path);
-        const fileDomains = filename.split('.');
-        let data: ILogData;
-
-        if (filename === sysLog) {
-            data = {
-                type: ELogTypes.sysLog,
-                message: filename,
-                created: +new Date(),
-                appId: 1,
-                appName: filename,
-                appType: fileDomains[0],
-                subType: fileDomains[1],
-                nodeId: 1,
-            };
-        } else {
-            data = {
-                type: ELogTypes.appLog,
-                message: filename,
-                created: +new Date(),
-                nodeId: 1,
-            };
-        }
-
-        return data;
-    }
-*/
+        this.watcher
+            .on('add', (fname) => {
+                this.log(`Watcher "add" ${fname}`);
+                this._watch(fname);
+            })
+            .on('unlink', (fname) => {
+                this._unwatch(fname);
+                this.log(`Watcher "unlink" ${fname}`);
+            });
+    };
 
     isTrashData(data: string, filename: string) {
         if (filename === this.sysLogsPath) {
@@ -119,7 +67,7 @@ export class LoggerNodeService extends NodeService {
         } else {
             return this.excludeAppLogRegexp.test(data);
         }
-    }
+    };
 
     _watch(filename: string) {
         const info = this._parseFilename(filename);
@@ -147,61 +95,27 @@ export class LoggerNodeService extends NodeService {
         });
 
         file.tail.stderr.on('data', (data) => {
-            this.logger.log.info(`Running file.tail.stderr on "data": ${data}`);
+            this.log(`Running file.tail.stderr on "data": ${data}`);
             this.debug(`stderr: ${data.toString()}`);
         });
         file.tail.on('error', (error) => {
-            this.logger.log.error(`file.tail error: ${error}`);
+            this.log(`file.tail error: ${error}`, true);
             this.debug(`error: ${error.message}`);
         });
         file.tail.on('close', (code) => {
-            this.logger.log.info(`Running file.tail on "close": ${code}`);
+            this.log(`Running file.tail on "close": ${code}`);
             this.debug(`close ${code}`);
         });
-    }
-
-    _watchAll() {
-        this._unwatchAll();
-        this._watch(this.sysLogsPath);
-
-        this.watcher = watch(this.appLogsPath, {
-            persistent: true,
-            awaitWriteFinish: {
-                stabilityThreshold: 200,
-                pollInterval: 1000,
-            },
-        });
-
-        this.watcher
-            .on('add', (fname) => {
-                this.logger.log.info(`Watcher "add" ${fname}`);
-                this._watch(fname);
-            })
-            .on('unlink', (fname) => {
-                this._unwatch(fname);
-                this.logger.log.info(`Watcher "unlink" ${fname}`);
-            });
-    }
-
-    // send(receiver, data, tag = null) {
-    //     this.service.send(
-    //         JSON.stringify({
-    //             receiver,
-    //             data,
-    //             tag,
-    //         })
-    //     );
-    // }
+    };
 
     sendLog(msg: string, info: any) {
         const createdTime = Math.round(Date.now() / 1000);
-
         switch (info.type) {
             case ELogTypes.appLog:
-                this.logger.log.info(
+                this.log(
                     `Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`
                 );
-                this.socket.emit('data', {
+                this.emit('data', {
                     nodeId: this.nodeId,
                     data: {
                         type: info.type,
@@ -216,10 +130,8 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
             case ELogTypes.sysLog:
-                this.logger.log.info(
-                    `Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`
-                );
-                this.socket.emit('data', {
+                this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
+                this.emit('data', {
                     nodeId: this.nodeId,
                     data: {
                         type: info.type,
@@ -230,30 +142,28 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
         }
-    }
+    };
 
     _unwatchAll() {
         this.watcher && this.watcher.unwatch(this.appLogsPath);
         this.mapFiles.forEach((item) => item.tail.kill('SIGINT'));
         this.mapFiles.clear();
-    }
+    };
 
     _unwatch(filename: string) {
         if (this.mapFiles.has(filename)) {
             this.mapFiles.get(filename)?.tail.kill('SIGINT');
             this.mapFiles.delete(filename);
         }
-    }
+    };
 
     _parseFilename(filename: string) {
-        this.logger.log.info('Watching file', filename);
+        this.log(`Watching file ${filename}`);
         if (filename === sysLog) return { type: ELogTypes.sysLog };
-
         const [appType, appId, appName, subType] = path
             .basename(filename, '.log')
             .replace('real--', '')
             .split('--');
-
         if (appType && appId) {
             return {
                 type: ELogTypes.appLog,
@@ -263,57 +173,25 @@ export class LoggerNodeService extends NodeService {
                 subType,
             };
         }
-
         return { type: null };
-    }
+    };
 
     debug(message: string) {
         const filename = '/var/log/logagent_debug.log';
-
         try {
             process.umask(0);
-
             fs.appendFile(
                 `${filename}`,
                 new Date().toISOString() + '  ' + message + '\n',
                 { mode: '777' },
                 (err) => {
                     if (err) {
-                        this.logger.log.error(
-                            'Error while debug',
-                            err.toString()
-                        );
+                        this.log(`Error while debug ${err.toString()}`);
                     }
                 }
             );
         } catch (e) {
-            this.logger.log.error('Error while debug on catch block', e);
+            this.log(`Error while debug on catch block ${e}`, true);
         }
-    }
-
-    async _onMessage(req: any) {
-        const { sender, error, data, tag } = JSON.parse(req);
-
-        if (sender === 'service_manager') {
-            console.error(error);
-            return;
-        }
-
-        try {
-            // const res = await Promise.resolve(this.onMessage(data, sender));
-            this.logger.log.info('Sending data: ', data);
-            this.socket.emit('data', {
-                receiver: sender,
-                data,
-                tag,
-            });
-        } catch (e) {
-            this.logger.log.info('Error while sending data: ', e);
-            this.socket.emit('data', {
-                receiver: sender,
-                error: e,
-                tag,
-            });
-        }
-    }
+    };
 }
