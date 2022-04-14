@@ -1,0 +1,77 @@
+{
+    "root": "apps/nxt-teranex-controller",
+    "sourceRoot": "apps/nxt-teranex-controller/src",
+    "projectType": "application",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/web:webpack",
+            "outputs": ["{options.outputPath}"],
+            "defaultConfiguration": "production",
+            "options": {
+                "compiler": "babel",
+                "outputPath": "dist/apps/nxt-teranex-controller",
+                "index": "apps/nxt-teranex-controller/src/index.html",
+                "baseHref": "/",
+                "main": "apps/nxt-teranex-controller/src/main.tsx",
+                "polyfills": "apps/nxt-teranex-controller/src/polyfills.ts",
+                "tsConfig": "apps/nxt-teranex-controller/tsconfig.app.json",
+                "assets": [
+                    "apps/nxt-teranex-controller/src/favicon.ico",
+                    "apps/nxt-teranex-controller/src/assets"
+                ],
+                "styles": ["apps/nxt-teranex-controller/src/styles.css"],
+                "scripts": [],
+                "webpackConfig": "@nrwl/react/plugins/webpack"
+            },
+            "configurations": {
+                "production": {
+                    "baseHref": "./",
+                    "fileReplacements": [
+                        {
+                            "replace": "apps/nxt-teranex-controller/src/environments/environment.ts",
+                            "with": "apps/nxt-teranex-controller/src/environments/environment.prod.ts"
+                        }
+                    ],
+                    "optimization": true,
+                    "outputHashing": "all",
+                    "sourceMap": false,
+                    "namedChunks": false,
+                    "extractLicenses": true,
+                    "vendorChunk": false
+                },
+                "development": {}
+            }
+        },
+        "serve": {
+            "executor": "@nrwl/web:dev-server",
+            "options": {
+                "buildTarget": "nxt-teranex-controller:build:development",
+                "hmr": true
+            },
+            "configurations": {
+                "production": {
+                    "buildTarget": "nxt-teranex-controller:build:production",
+                    "hmr": false
+                }
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": [
+                    "apps/nxt-teranex-controller/**/*.{ts,tsx,js,jsx}"
+                ]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/apps/nxt-teranex-controller"],
+            "options": {
+                "jestConfig": "apps/nxt-teranex-controller/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}
