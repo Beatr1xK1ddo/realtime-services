@@ -85,6 +85,7 @@ export class Device {
     protected port: number;
     protected socket: NetSocket;
     protected reconnectionAttempts: number;
+    protected reconnectionAttemptsUsed: number;
     protected timeout?: number;
 
     private logger: PinoLogger;
@@ -100,6 +101,7 @@ export class Device {
         this.socket = new NetSocket();
         this.socket.setEncoding('utf8');
         this.reconnectionAttempts = options?.reconnectionAttempts || 10;
+        this.reconnectionAttemptsUsed = 0;
         if (options?.timeout) {
             this.timeout = options.timeout;
             this.socket.setTimeout(this.timeout);
@@ -123,9 +125,9 @@ export class Device {
     };
 
     private reconnect(): void {
-        this.reconnectionAttempts--;
         this.socket.removeAllListeners();
-        setTimeout(this.connect.bind(this), 1000);
+        setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
+        this.reconnectionAttemptsUsed++;
     };
 
     protected handleConnectionEstablished() {
@@ -134,7 +136,7 @@ export class Device {
 
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
-        if (error || this.reconnectionAttempts > 0) {
+        if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
             this.reconnect();
         } else {
             this.handleDisconnect();
