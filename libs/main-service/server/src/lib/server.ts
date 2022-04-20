@@ -9,7 +9,7 @@ import { PinoLogger } from '@socket/shared-utils';
 export class MainServiceServer {
     static namespaces: Map<string, Namespace> = new Map();
     private https;
-    private io;
+    private io: Server;
     private logger: PinoLogger;
 
     constructor(port: number, loggerOptions?: Partial<IPinoOptions>) {

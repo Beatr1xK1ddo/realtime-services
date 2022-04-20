@@ -1,5 +1,5 @@
-import {Namespace, Socket} from 'socket.io';
-import {PinoLogger} from '@socket/shared-utils';
+import { Namespace, Socket } from 'socket.io';
+import { PinoLogger } from '@socket/shared-utils';
 import {
     IClientCmdRequestEvent,
     IDeviceResponseEvent,
@@ -8,6 +8,7 @@ import {
     INodeInitEvent,
     IPinoOptions,
 } from '@socket/shared-types';
+import { isClientSubscribeEvet } from './types';
 
 export class TeranexServiceModule implements IMainServiceModule {
     public name: string;
@@ -37,46 +38,67 @@ export class TeranexServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('init', ({nodeId}: INodeInitEvent) => {
+        socket.on('init', ({ nodeId }: INodeInitEvent) => {
             this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
         socket.on('subscribe', (event: IClientSubscribeEvent) => {
-                //todo: make this better
-                const weShouldProceed = typeof event === 'object' && typeof event.nodeId === 'number' && typeof event.ip === 'string' && typeof event.port === 'number';
-                this.logger.log.info(`Client: ${socket.id} attempting to subscribed to ${weShouldProceed ? JSON.stringify(event) : weShouldProceed}`);
-                if (!weShouldProceed) {
-                    socket.emit('error', {request: 'subscribe', message: 'bad request'});
-                    return;
+            const weShouldProceed = isClientSubscribeEvet(event);
+            this.logger.log.info(
+                `Client: ${socket.id} attempting to subscribed to ${
+                    weShouldProceed ? JSON.stringify(event) : weShouldProceed
+                }`
+            );
+            if (!weShouldProceed) {
+                socket.emit('error', {
+                    request: 'subscribe',
+                    message: 'bad request',
+                });
+                return;
+            }
+            const { nodeId, ip, port } = event;
+            const deviceId = `${ip}:${port}`;
+            //add self to subscriptions
+            if (!this.clients.has(nodeId)) {
+                const devicesSubscribers = new Map();
+                devicesSubscribers.set(deviceId, new Set([socket]));
+                this.clients.set(nodeId, devicesSubscribers);
+            } else if (!this.clients.get(nodeId)?.has(deviceId)) {
+                this.clients.get(nodeId)?.set(deviceId, new Set([socket]));
+            } else {
+                this.clients.get(nodeId)?.get(deviceId)?.add(socket);
+            }
+            //pass subscription message to node service
+            if (this.nodes.has(nodeId))
+                this.nodes
+                    .get(nodeId)
+                    ?.emit('subscribe', { socketId: socket.id, event });
+        });
+        socket.on(
+            'subscribed',
+            (event: { socketId: string; event: IClientSubscribeEvent }) => {
+                const deviceId = `${event.event.ip}:${event.event.port}`;
+                const nodeSubscribers = this.clients
+                    .get(event.event.nodeId)
+                    ?.get(deviceId);
+                if (nodeSubscribers) {
+                    const client = Array.from(nodeSubscribers.values()).find(
+                        (socket) => socket.id === event.socketId
+                    );
+                    if (client) {
+                        this.logger.log.info(
+                            `Subscribed event to ${JSON.stringify(
+                                event.event
+                            )} received from ${socket.id} for ${client.id}"`
+                        );
+                        client.emit('subscribed', event.event);
+                    }
                 }
-                const {nodeId, ip, port} = event;
-                const deviceId = `${ip}:${port}`;
-                //add self to subscriptions
-                if (!this.clients.has(nodeId)) {
-                    const devicesSubscribers = new Map();
-                    devicesSubscribers.set(deviceId, new Set([socket]));
-                    this.clients.set(nodeId, devicesSubscribers);
-                } else if (!this.clients.get(nodeId)?.has(deviceId)) {
-                    this.clients.get(nodeId)?.set(deviceId, new Set([socket]));
-                } else {
-                    this.clients.get(nodeId)?.get(deviceId)?.add(socket);
-                }
-                //pass subscription message to node service
-                if (this.nodes.has(nodeId)) this.nodes.get(nodeId)?.emit('subscribe', {socketId: socket.id, event});
             }
         );
-        socket.on('subscribed', (event: { socketId: string, event: IClientSubscribeEvent }) => {
-            const deviceId = `${event.event.ip}:${event.event.port}`;
-            const nodeSubscribers = this.clients.get(event.event.nodeId)?.get(deviceId);
-            if (nodeSubscribers) {
-                const client = Array.from(nodeSubscribers.values()).find(socket => socket.id === event.socketId);
-                if (client) {
-                    this.logger.log.info(`Subscribed event to ${JSON.stringify(event.event)} received from ${socket.id} for ${client.id}"`);
-                    client.emit('subscribed', event.event);
-                }
-            }
-        });
-        socket.on('unsubscribe', ({nodeId, ip, port}: IClientSubscribeEvent) => {
+        socket.on(
+            'unsubscribe',
+            ({ nodeId, ip, port }: IClientSubscribeEvent) => {
                 const deviceId = `${ip}:${port}`;
                 const devicesSubscribers = this.clients.get(nodeId);
                 if (!devicesSubscribers || !devicesSubscribers.get(deviceId)) {
@@ -88,7 +110,7 @@ export class TeranexServiceModule implements IMainServiceModule {
                 );
             }
         );
-        socket.on('commands', ({nodeId, ...data}: IClientCmdRequestEvent) => {
+        socket.on('commands', ({ nodeId, ...data }: IClientCmdRequestEvent) => {
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
                 this.logger.log.info(
@@ -97,8 +119,8 @@ export class TeranexServiceModule implements IMainServiceModule {
                 nodeSocket.emit('request', data);
             }
         });
-        socket.on('response', ({nodeId, ...data}: IDeviceResponseEvent) => {
-            const {ip, port} = data;
+        socket.on('response', ({ nodeId, ...data }: IDeviceResponseEvent) => {
+            const { ip, port } = data;
             const deviceId = `${ip}:${port}`;
             this.clients
                 .get(nodeId)

@@ -1,6 +1,11 @@
 import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
-import { EMessageActions, IRedisRequest, IRedisResponse } from './types';
+import {
+    EMessageActions,
+    IRedisRequest,
+    IRedisResponse,
+    isIRedisRequest,
+} from './types';
 import Redis from 'ioredis';
 import { PinoLogger } from '@socket/shared-utils';
 
@@ -9,6 +14,7 @@ export class RedisServiceModule implements IMainServiceModule {
     private io?: Namespace;
     private redis: Redis;
     private logger: PinoLogger;
+    private clients: Set<Socket>;
 
     constructor(
         name: string,
@@ -34,46 +40,64 @@ export class RedisServiceModule implements IMainServiceModule {
     }
 
     private handleConnection(socket: Socket) {
+        // sending data to clients
         socket.on('message', this.handleMessage.bind(this));
+        socket.on('subscribe', () => {
+            if (!this.clients.has(socket)) {
+                this.log('add new subscriber');
+                this.clients.add(socket);
+            }
+        });
+        socket.on('unsubscribe', () => {
+            if (this.clients.has(socket)) {
+                const socketUnsubscribe = [...this.clients].find(
+                    (socketSet) => socket.id === socketSet.id
+                );
+                this.clients.delete(socketUnsubscribe);
+                this.log(`unsubscribe socket ${socket.id}`);
+            }
+        });
     }
 
     private async handleMessage(message: IRedisRequest) {
         try {
             const result = await this.onMessage(message);
-            this.logger.log.info('Sending data "data": ', result);
-            this.io.send({
+            this.log('Sending data ...');
+
+            const response: IRedisResponse = {
                 data: result,
                 success: true,
-            } as IRedisResponse);
+            };
+
+            this.io.emit('data', response);
+            this.log(`Sending response ${response}`);
         } catch (e) {
-            this.logger.log.error('Error while send', e);
-            this.io.send({
+            const response: IRedisResponse = {
                 error: e,
                 success: false,
-            } as IRedisResponse);
+            };
+
+            this.io.emit('data', response);
+            this.log(`Error while send ${e}`, true);
         }
     }
 
-    onMessage(message: IRedisRequest) {
+    private async onMessage(message: IRedisRequest) {
         return new Promise(async (resolve, reject) => {
-            if (
-                !message.action ||
-                !((message.action as string) in EMessageActions)
-            ) {
-                this.logger.log.error('Unavailable action type');
-                reject(new Error('Unavailable action type'));
-                return;
+            if (!isIRedisRequest(message)) {
+                this.log('Unavailable action type', true);
+                reject('Unavailable action type');
             }
 
-            let resp = null;
+            let response = null;
 
             try {
                 switch (message.action.toLowerCase()) {
                     case EMessageActions.get:
-                        resp = await this.redis.mget(message.data);
+                        response = await this.redis.mget(message.data);
                         break;
                     case EMessageActions.set:
-                        resp = await this.redis.mset(message.data);
+                        response = await this.redis.mset(message.data);
                         break;
                     case EMessageActions.delete:
                         const stream = this.redis.scanStream({
@@ -84,32 +108,53 @@ export class RedisServiceModule implements IMainServiceModule {
                             if (!keys.length) {
                                 return;
                             }
+
                             const pipeline = this.redis.pipeline();
+
                             keys.forEach((key) => {
                                 pipeline.del(key);
                             });
+
                             pipeline.exec();
                         });
 
-                        stream.on('end', () =>
-                            this.logger.log.info('NxtRedis del was finished')
-                        );
+                        stream.on('end', () => {
+                            this.log('NxtRedis del was finished');
+                            resolve('NxtRedis del was finished');
+                        });
 
-                        stream.on('error', (error) =>
-                            this.logger.log.error(
-                                'Error while EMessageActions.delete action',
-                                error
-                            )
-                        );
+                        stream.on('error', (error) => {
+                            this.log(
+                                `Error while EMessageActions.delete action ${error}`,
+                                true
+                            );
+                            reject(error);
+                        });
                         break;
                 }
+                resolve(response);
             } catch (e) {
-                this.logger.log.error('Error while hendling message', e);
+                this.log(`Error while hendling message ${e}`, true);
                 reject(e);
-                return;
             }
-
-            resolve(resp);
         });
     }
+
+    private log(message: string, error?: boolean) {
+        if (error) {
+            this.logger.log.error(message);
+        } else {
+            this.logger.log.info(message);
+        }
+    }
+
+    // private sendToSubscribers(action: EMessageActions, message?: string) {
+    //     const response: IRedisResponseClient = {
+    //         action,
+    //         data: message,
+    //     };
+    //     for (const socket of this.clients) {
+    //         socket.emit('data');
+    //     }
+    // }
 }
