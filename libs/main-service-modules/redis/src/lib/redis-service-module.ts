@@ -95,9 +95,11 @@ export class RedisServiceModule implements IMainServiceModule {
                 switch (message.action.toLowerCase()) {
                     case EMessageActions.get:
                         response = await this.redis.mget(message.data);
+                        resolve(response);
                         break;
                     case EMessageActions.set:
                         response = await this.redis.mset(message.data);
+                        resolve(response);
                         break;
                     case EMessageActions.delete:
                         const stream = this.redis.scanStream({
@@ -132,7 +134,6 @@ export class RedisServiceModule implements IMainServiceModule {
                         });
                         break;
                 }
-                resolve(response);
             } catch (e) {
                 this.log(`Error while hendling message ${e}`, true);
                 reject(e);
