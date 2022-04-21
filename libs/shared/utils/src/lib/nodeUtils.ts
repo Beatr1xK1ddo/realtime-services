@@ -1,7 +1,7 @@
 import * as shell from 'child_process';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import pino, { Logger, Level } from 'pino';
-
+import { IRealtimeAppStatusEvent } from '@socket/shared-types';
 //todo: utils should not rely on any configs/ all utils functions should rely on args instead
 import * as conf from './config.json';
 
@@ -81,7 +81,20 @@ function debounce(cb: (...args) => void, timeout?: number) {
     };
 }
 
-export { exec, getNodeId, currentTime, getCache, debounce };
+const isRealtimeAppStatusEvent = (
+    data: IRealtimeAppStatusEvent
+): data is IRealtimeAppStatusEvent => {
+    return 'statusChange' in data;
+};
+
+export {
+    exec,
+    getNodeId,
+    currentTime,
+    getCache,
+    debounce,
+    isRealtimeAppStatusEvent,
+};
 
 type ITransportOptions = {
     [key: string]: any;

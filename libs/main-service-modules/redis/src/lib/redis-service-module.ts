@@ -1,4 +1,9 @@
-import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
+import {
+    IMainServiceModule,
+    IPinoOptions,
+    IRealtimeAppEvent,
+    IRedisClientEvent,
+} from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import {
     EMessageActions,
@@ -14,7 +19,7 @@ export class RedisServiceModule implements IMainServiceModule {
     private io?: Namespace;
     private redis: Redis;
     private logger: PinoLogger;
-    private clients: Set<Socket>;
+    private clients: Map<string, Map<number, Set<Socket>>>;
 
     constructor(
         name: string,
@@ -28,117 +33,73 @@ export class RedisServiceModule implements IMainServiceModule {
             loggerOptions?.level,
             loggerOptions?.path
         );
+        this.clients = new Map();
     }
 
     init(io: Namespace) {
         try {
             this.io = io;
             this.io.on('connection', this.handleConnection.bind(this));
+            this.redis.on('message', this.handleMessage.bind(this));
         } catch (e) {
             this.logger.log.error('Error inside RedisServiceModule.init :', e);
         }
     }
 
     private handleConnection(socket: Socket) {
-        // sending data to clients
-        socket.on('message', this.handleMessage.bind(this));
-        socket.on('subscribe', () => {
-            if (!this.clients.has(socket)) {
-                this.log('add new subscriber');
-                this.clients.add(socket);
+        socket.on('subscribe', (event: IRedisClientEvent) => {
+            const { id, type, nodeId } = event;
+            const channel = `realtime:app:${nodeId}:${type}`;
+            const channelAppIdsMap = this.clients.get(channel);
+
+            if (!channelAppIdsMap) {
+                const channelMap = new Map<number, Set<Socket>>();
+                this.clients.set(channel, channelMap);
+            }
+
+            if (!channelAppIdsMap.has(id)) {
+                channelAppIdsMap.set(id, new Set<Socket>());
+            }
+
+            if (!channelAppIdsMap.get(id).has(socket)) {
+                channelAppIdsMap.get(id).add(socket);
+                this.redis.subscribe(channel, (error, count) => {
+                    if (error) {
+                        this.log(
+                            `Error while subscribe to redis ${error.name}`,
+                            true
+                        );
+                    } else {
+                        this.log(
+                            `Subscribe to redis channel: ${channel} success`
+                        );
+                        this.log(`The channel has: ${count} subscribers`);
+                    }
+                });
             }
         });
-        socket.on('unsubscribe', () => {
-            if (this.clients.has(socket)) {
-                const socketUnsubscribe = [...this.clients].find(
-                    (socketSet) => socket.id === socketSet.id
+
+        socket.on('unsubscribe', (event: IRedisClientEvent) => {
+            const { id, type, nodeId } = event;
+            const channel = `realtime:app:${nodeId}:${type}`;
+
+            if (this.clients.get(channel)?.get(id)?.has(socket)) {
+                this.clients.get(channel).get(id).delete(socket);
+                this.log(
+                    `Unsubscribe socket ${socket.id} from "${nodeId}/${type}/${id}`
                 );
-                this.clients.delete(socketUnsubscribe);
-                this.log(`unsubscribe socket ${socket.id}`);
             }
         });
     }
 
-    private async handleMessage(message: IRedisRequest) {
-        try {
-            const result = await this.onMessage(message);
-            this.log('Sending data ...');
+    private async handleMessage(channel: string, event: IRealtimeAppEvent) {
+        const { id } = event;
+        const eventClients = this.clients.get(channel)?.get(id);
 
-            const response: IRedisResponse = {
-                data: result,
-                success: true,
-            };
-
-            this.io.emit('data', response);
-            this.log(`Sending response ${response}`);
-        } catch (e) {
-            const response: IRedisResponse = {
-                error: e,
-                success: false,
-            };
-
-            this.io.emit('data', response);
-            this.log(`Error while send ${e}`, true);
+        if (!eventClients) {
+            return;
         }
-    }
-
-    private async onMessage(message: IRedisRequest) {
-        return new Promise(async (resolve, reject) => {
-            if (!isIRedisRequest(message)) {
-                this.log('Unavailable action type', true);
-                reject('Unavailable action type');
-            }
-
-            let response = null;
-
-            try {
-                switch (message.action.toLowerCase()) {
-                    case EMessageActions.get:
-                        response = await this.redis.mget(message.data);
-                        resolve(response);
-                        break;
-                    case EMessageActions.set:
-                        response = await this.redis.mset(message.data);
-                        resolve(response);
-                        break;
-                    case EMessageActions.delete:
-                        const stream = this.redis.scanStream({
-                            match: message.data,
-                        });
-
-                        stream.on('data', (keys) => {
-                            if (!keys.length) {
-                                return;
-                            }
-
-                            const pipeline = this.redis.pipeline();
-
-                            keys.forEach((key) => {
-                                pipeline.del(key);
-                            });
-
-                            pipeline.exec();
-                        });
-
-                        stream.on('end', () => {
-                            this.log('NxtRedis del was finished');
-                            resolve('NxtRedis del was finished');
-                        });
-
-                        stream.on('error', (error) => {
-                            this.log(
-                                `Error while EMessageActions.delete action ${error}`,
-                                true
-                            );
-                            reject(error);
-                        });
-                        break;
-                }
-            } catch (e) {
-                this.log(`Error while hendling message ${e}`, true);
-                reject(e);
-            }
-        });
+        eventClients.forEach((socket) => socket.emit('response', event));
     }
 
     private log(message: string, error?: boolean) {
@@ -148,14 +109,4 @@ export class RedisServiceModule implements IMainServiceModule {
             this.logger.log.info(message);
         }
     }
-
-    // private sendToSubscribers(action: EMessageActions, message?: string) {
-    //     const response: IRedisResponseClient = {
-    //         action,
-    //         data: message,
-    //     };
-    //     for (const socket of this.clients) {
-    //         socket.emit('data');
-    //     }
-    // }
 }
