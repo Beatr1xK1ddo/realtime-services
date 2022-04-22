@@ -3,14 +3,14 @@ export type IRealtimeAppEvent =
     | IRealtimeAppTimingEvent;
 
 export type IRealtimeAppStatusEvent = {
-    id: number;
+    id: string;
     type: string;
     status: string;
     statusChange: string;
 };
 
 export type IRealtimeAppTimingEvent = {
-    id: number;
+    id: string;
     type: string;
     startTime: number;
 };
@@ -18,5 +18,5 @@ export type IRealtimeAppTimingEvent = {
 export type IRedisClientEvent = {
     nodeId: number;
     type: string;
-    id: number;
+    id: string;
 };

@@ -134,6 +134,6 @@ export class PinoLogger {
         const transport = pino.transport({
             targets: targets,
         });
-        return pino(transport).child({ loggerName: this.name || 'default' });
+        return pino(transport);
     }
 }
