@@ -8,6 +8,7 @@
         "main-service-modules-nextomeet": "libs/main-service-modules/nextomeet",
         "main-service-modules-redis": "libs/main-service-modules/redis",
         "main-service-modules-teranex": "libs/main-service-modules/teranex",
+        "main-service-modules-thumbnails": "libs/main-service-modules/thumbnails",
         "main-service-modules-types": "libs/main-service-modules/types",
         "main-service-modules-udp-player": "libs/main-service-modules/udp-player",
         "main-service-server": "libs/main-service/server",

@@ -40,6 +40,9 @@
             "@socket/main-service-modules/teranex": [
                 "libs/main-service-modules/teranex/src/index.ts"
             ],
+            "@socket/main-service-modules/thumbnails": [
+                "libs/main-service-modules/thumbnails/src/index.ts"
+            ],
             "@socket/main-service-modules/types": [
                 "libs/main-service-modules/types/src/index.ts"
             ],

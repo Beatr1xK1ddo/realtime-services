@@ -1,0 +1,45 @@
+{
+    "root": "libs/main-service-modules/thumbnails",
+    "sourceRoot": "libs/main-service-modules/thumbnails/src",
+    "projectType": "library",
+    "tags": [],
+    "targets": {
+        "build": {
+            "executor": "@nrwl/web:rollup",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/main-service-modules/thumbnails",
+                "tsConfig": "libs/main-service-modules/thumbnails/tsconfig.lib.json",
+                "project": "libs/main-service-modules/thumbnails/package.json",
+                "entryFile": "libs/main-service-modules/thumbnails/src/index.ts",
+                "external": ["react/jsx-runtime"],
+                "rollupConfig": "@nrwl/react/plugins/bundle-rollup",
+                "compiler": "babel",
+                "assets": [
+                    {
+                        "glob": "libs/main-service-modules/thumbnails/README.md",
+                        "input": ".",
+                        "output": "."
+                    }
+                ]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": [
+                    "libs/main-service-modules/thumbnails/**/*.{ts,tsx,js,jsx}"
+                ]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/main-service-modules/thumbnails"],
+            "options": {
+                "jestConfig": "libs/main-service-modules/thumbnails/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    }
+}
