@@ -1,0 +1,7 @@
+{
+    "ssl": {
+        "key": "/etc/pki/tls/private/nextologies.com.key",
+        "crt": "/etc/pki/tls/certs/nextologies_full.crt",
+        "ca": "/etc/pki/tls/certs/gd_bundle-g2-g1.crt"
+    }
+}

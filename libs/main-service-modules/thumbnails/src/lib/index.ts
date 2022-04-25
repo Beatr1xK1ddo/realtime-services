@@ -13,15 +13,21 @@ export class Thumbnails implements IMainServiceModule {
     private logger: PinoLogger;
     private clients: Map<string, Set<Socket>>;
 
-    constructor(name: string, port: number, host: string) {
+    constructor(
+        name: string,
+        port: number,
+        host: string,
+        key: string,
+        cert: string
+    ) {
         this.name = name;
         this.logger = new PinoLogger();
         this.clients = new Map();
         this.server = https
             .createServer(
                 {
-                    key: readFileSync('/path/to/private.key'),
-                    cert: readFileSync('/path/to/your_domain_name.crt'),
+                    key: readFileSync(key),
+                    cert: readFileSync(cert),
                 },
                 this.handleRequest.bind(this)
             )
