@@ -107,8 +107,6 @@ export class RedisServiceModule implements IMainServiceModule {
 
     private handleMessage(channel: string, event) {
         const cleanEvent = JSON.parse(event);
-        console.log('channel', channel);
-        console.log('event', event);
         const { id } = cleanEvent;
         const eventClients = this.clients.get(channel)?.get(id);
         if (!eventClients) {

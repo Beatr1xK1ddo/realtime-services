@@ -1,3 +1,8 @@
 export type IThumbnailClientRequest = {
-    channel: string;
+    id: number;
+};
+
+export type IThumbnailResponse = {
+    image: string;
+    id: number;
 };

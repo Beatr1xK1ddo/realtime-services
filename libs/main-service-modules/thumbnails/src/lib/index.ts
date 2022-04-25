@@ -2,7 +2,7 @@ import * as https from 'https';
 import { IMainServiceModule } from '@socket/shared-types';
 import { Namespace, Socket } from 'socket.io';
 import { PinoLogger } from '@socket/shared-utils';
-import { IThumbnailClientRequest } from './types';
+import { IThumbnailClientRequest, IThumbnailResponse } from './types';
 import { IncomingMessage, ServerResponse } from 'http';
 import { readFileSync } from 'fs';
 
@@ -47,7 +47,8 @@ export class Thumbnails implements IMainServiceModule {
 
     private handleConnection(socket: Socket) {
         socket.on('subscribe', (data: IThumbnailClientRequest) => {
-            const { channel } = data;
+            const { id } = data;
+            const channel = `ibpe-${id}`;
             const channelClients = this.clients.get(channel);
 
             if (!channelClients) {
@@ -61,7 +62,8 @@ export class Thumbnails implements IMainServiceModule {
         });
 
         socket.on('unsubscribe', (data: IThumbnailClientRequest) => {
-            const { channel } = data;
+            const { id } = data;
+            const channel = `ibpe-${id}`;
             const channelClients = this.clients.get(channel);
 
             if (!channelClients) {
@@ -101,15 +103,24 @@ export class Thumbnails implements IMainServiceModule {
         });
     }
 
-    private broadcastThubnail(path: string, imageBuffer: Buffer) {
-        const clientsSet = this.clients.get(path);
+    private broadcastThubnail(channel: string, imageBuffer: Buffer) {
+        const clientsSet = this.clients.get(channel);
+        const stringId = channel.split('-')[1];
+        const shouldSend = clientsSet && stringId && parseInt(stringId);
 
-        if (!clientsSet) {
+        if (!shouldSend) {
             return;
         }
+
         this.logger.log.info('Sending data to clients...');
-        clientsSet.forEach((socket) =>
-            socket.emit('response', imageBuffer.toString('base64'))
-        );
+        clientsSet.forEach((socket) => {
+            const response: IThumbnailResponse = {
+                image: `data:image/png;base64,${imageBuffer.toString(
+                    'base64'
+                )}`,
+                id: parseInt(stringId),
+            };
+            socket.emit('response', response);
+        });
     }
 }
