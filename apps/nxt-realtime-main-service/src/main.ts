@@ -1,21 +1,17 @@
-import { MainServiceServer } from '@socket/main-service-server';
-import { LoggerServiceModule } from '@socket/main-service-modules-logger';
-import { TeranexServiceModule } from '@socket/main-service-modules/teranex';
-import { RedisServiceModule } from '@socket/main-service-modules-redis';
-import { Thumbnails } from '@socket/main-service-modules/thumbnails';
 import * as config from './assets/config.json';
 
-const server = new MainServiceServer(1987);
+import { MainServiceServer } from "@socket/main-service-server";
+import { LoggerServiceModule } from "@socket/main-service-modules-logger";
+import { TeranexServiceModule } from "@socket/main-service-modules/teranex";
+import { RedisServiceModule } from "@socket/main-service-modules-redis";
+import { ThumbnailsModule } from "@socket/main-service-modules/thumbnails";
+
+const server = new MainServiceServer(config.mainService.port, {ssl: config.ssl});
 const modules = [
-    // new LoggerServiceModule('logger'),
-    // new TeranexServiceModule('teranex'),
-    // Thumbnails constructor params
-    // name: string,
-    // port: number,
-    // host: string,
-    // key: string,
-    // cert: string
-    new Thumbnails('thumb', 3000, 'localhost', config.ssl.key, config.ssl.crt),
+    new LoggerServiceModule(config.loggerService.name),
+    new TeranexServiceModule(config.teranexService.name),
+    new RedisServiceModule(config.redisService.name, {url: config.redisService.url}),
+    new ThumbnailsModule(config.thumbnailsService.name, {apiServerPort: config.thumbnailsService.apiServerPort, apiServerSsl: config.ssl}),
 ];
 
 modules.forEach((module) => server.registerModule(module));

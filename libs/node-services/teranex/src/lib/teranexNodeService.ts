@@ -2,12 +2,10 @@ import {
     IClientCmdRequestEvent,
     IClientSubscribeEvent,
     IDeviceResponseEvent,
-    NodeDeviceService,
-    NodeServiceOptions,
 } from '@socket/shared-types';
-import { TeranexDevice } from './device';
+import {Device, NodeDeviceService, NodeServiceOptions,} from '@socket/shared/entities';
 
-export class TeranexNodeService extends NodeDeviceService<TeranexDevice> {
+export class TeranexNodeService extends NodeDeviceService {
     constructor(
         name: string,
         nodeId: number,
@@ -21,14 +19,14 @@ export class TeranexNodeService extends NodeDeviceService<TeranexDevice> {
 
     protected onConnected() {
         super.onConnected();
-        this.emit('init', { nodeId: this.nodeId });
+        this.emit('init', {nodeId: this.nodeId});
     }
 
     private async handleSubscription(event: {
         socketId: string;
         event: IClientSubscribeEvent;
     }) {
-        const { ip, port } = event.event;
+        const {ip, port} = event.event;
         try {
             const device = await this.getDevice(ip, port);
             if (device) this.emit('subscribed', event);
@@ -38,7 +36,7 @@ export class TeranexNodeService extends NodeDeviceService<TeranexDevice> {
     }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
-        const { ip, port, commands } = data;
+        const {ip, port, commands} = data;
         try {
             const device = await this.getDevice(ip, port);
             const result = [];
@@ -63,7 +61,7 @@ export class TeranexNodeService extends NodeDeviceService<TeranexDevice> {
         }
     }
 
-    private async getDevice(ip: string, port: number): Promise<TeranexDevice> {
+    private async getDevice(ip: string, port: number): Promise<Device> {
         const deviceId = `${ip}:${port}`;
         if (this.devices[deviceId]) {
             return this.devices[deviceId];
@@ -80,9 +78,10 @@ export class TeranexNodeService extends NodeDeviceService<TeranexDevice> {
     private static async createDevice(
         ip: string,
         port: number
-    ): Promise<TeranexDevice | null> {
+    ): Promise<Device | null> {
         try {
-            const device = new TeranexDevice(ip, port);
+            const device = new Device(ip, port, {debounceDelay: 300});
+            device.connect();
             await device.sendCommand('ping\r\n');
             return device;
         } catch (e) {

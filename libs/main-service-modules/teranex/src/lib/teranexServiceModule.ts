@@ -21,11 +21,7 @@ export class TeranexServiceModule implements IMainServiceModule {
         this.name = name;
         this.nodes = new Map();
         this.clients = new Map();
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
+        this.logger = new PinoLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
     }
 
     async init(io: Namespace) {
@@ -69,14 +65,9 @@ export class TeranexServiceModule implements IMainServiceModule {
                 this.clients.get(nodeId)?.get(deviceId)?.add(socket);
             }
             //pass subscription message to node service
-            if (this.nodes.has(nodeId))
-                this.nodes
-                    .get(nodeId)
-                    ?.emit('subscribe', { socketId: socket.id, event });
+            if (this.nodes.has(nodeId)) this.nodes.get(nodeId)?.emit('subscribe', { socketId: socket.id, event });
         });
-        socket.on(
-            'subscribed',
-            (event: { socketId: string; event: IClientSubscribeEvent }) => {
+        socket.on('subscribed', (event: { socketId: string; event: IClientSubscribeEvent }) => {
                 const deviceId = `${event.event.ip}:${event.event.port}`;
                 const nodeSubscribers = this.clients
                     .get(event.event.nodeId)
@@ -96,18 +87,15 @@ export class TeranexServiceModule implements IMainServiceModule {
                 }
             }
         );
-        socket.on(
-            'unsubscribe',
-            ({ nodeId, ip, port }: IClientSubscribeEvent) => {
+        socket.on('unsubscribe',({ nodeId, ip, port }: IClientSubscribeEvent) => {
                 const deviceId = `${ip}:${port}`;
                 const devicesSubscribers = this.clients.get(nodeId);
-                if (!devicesSubscribers || !devicesSubscribers.get(deviceId)) {
-                    return;
+                if (devicesSubscribers && devicesSubscribers.has(deviceId)) {
+                    devicesSubscribers.get(deviceId)?.delete(socket);
+                    this.logger.log.info(
+                        `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
+                    );
                 }
-                devicesSubscribers.get(deviceId)?.delete(socket);
-                this.logger.log.info(
-                    `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
-                );
             }
         );
         socket.on('commands', ({ nodeId, ...data }: IClientCmdRequestEvent) => {

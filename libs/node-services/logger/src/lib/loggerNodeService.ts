@@ -1,9 +1,12 @@
 import { FSWatcher, watch } from 'chokidar';
-import { NodeService, ELogTypes } from '@socket/shared-types';
 import * as path from 'path';
 import { spawn } from 'child_process';
-import { IFile } from './types';
 import * as fs from 'fs';
+
+import type { IFile } from './types';
+
+import { ELogTypes } from '@socket/shared-types';
+import { NodeService } from '@socket/shared/entities';
 
 const sysLog = 'system.ts';
 
@@ -15,7 +18,14 @@ export class LoggerNodeService extends NodeService {
     private watcher: FSWatcher;
     private mapFiles: Map<string, IFile> = new Map();
 
-    constructor(name: string, nodeId: number, url: string, appLogsPath: string, sysLogsPath: string, exclude: any) {
+    constructor(
+        name: string,
+        nodeId: number,
+        url: string,
+        appLogsPath: string,
+        sysLogsPath: string,
+        exclude: any
+    ) {
         super(name, nodeId, url);
         this.nodeId = nodeId;
         this.appLogsPath = appLogsPath;
@@ -31,12 +41,12 @@ export class LoggerNodeService extends NodeService {
         this.watcher = watch(this.appLogsPath, {
             ignoreInitial: true,
         });
-    };
+    }
 
     protected override onConnected() {
         super.onConnected();
         this._watchAll();
-    };
+    }
 
     _watchAll() {
         this._unwatchAll();
@@ -59,7 +69,7 @@ export class LoggerNodeService extends NodeService {
                 this._unwatch(fname);
                 this.log(`Watcher "unlink" ${fname}`);
             });
-    };
+    }
 
     isTrashData(data: string, filename: string) {
         if (filename === this.sysLogsPath) {
@@ -67,7 +77,7 @@ export class LoggerNodeService extends NodeService {
         } else {
             return this.excludeAppLogRegexp.test(data);
         }
-    };
+    }
 
     _watch(filename: string) {
         const info = this._parseFilename(filename);
@@ -106,7 +116,7 @@ export class LoggerNodeService extends NodeService {
             this.log(`Running file.tail on "close": ${code}`);
             this.debug(`close ${code}`);
         });
-    };
+    }
 
     sendLog(msg: string, info: any) {
         const createdTime = Math.round(Date.now() / 1000);
@@ -130,7 +140,9 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
             case ELogTypes.sysLog:
-                this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
+                this.log(
+                    `Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`
+                );
                 this.emit('data', {
                     nodeId: this.nodeId,
                     data: {
@@ -142,20 +154,20 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
         }
-    };
+    }
 
     _unwatchAll() {
         this.watcher && this.watcher.unwatch(this.appLogsPath);
         this.mapFiles.forEach((item) => item.tail.kill('SIGINT'));
         this.mapFiles.clear();
-    };
+    }
 
     _unwatch(filename: string) {
         if (this.mapFiles.has(filename)) {
             this.mapFiles.get(filename)?.tail.kill('SIGINT');
             this.mapFiles.delete(filename);
         }
-    };
+    }
 
     _parseFilename(filename: string) {
         this.log(`Watching file ${filename}`);
@@ -174,7 +186,7 @@ export class LoggerNodeService extends NodeService {
             };
         }
         return { type: null };
-    };
+    }
 
     debug(message: string) {
         const filename = '/var/log/logagent_debug.log';
@@ -193,5 +205,5 @@ export class LoggerNodeService extends NodeService {
         } catch (e) {
             this.log(`Error while debug on catch block ${e}`, true);
         }
-    };
+    }
 }

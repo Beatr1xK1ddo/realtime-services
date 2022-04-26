@@ -1,126 +1,112 @@
 import * as https from 'https';
-import { IMainServiceModule } from '@socket/shared-types';
-import { Namespace, Socket } from 'socket.io';
-import { PinoLogger } from '@socket/shared-utils';
-import { IThumbnailClientRequest, IThumbnailResponse } from './types';
-import { IncomingMessage, ServerResponse } from 'http';
 import { readFileSync } from 'fs';
+import { Namespace, Socket } from 'socket.io';
 
-export class Thumbnails implements IMainServiceModule {
-    public name: string;
-    private server: https.Server;
-    private io?: Namespace;
-    private logger: PinoLogger;
+import type { IncomingMessage, ServerResponse } from 'http';
+import type { SSL } from '@socket/shared-types';
+import type { IThumbnailClientSubscription, IThumbnailResponse } from './types';
+
+import {MainServiceModule} from "@socket/shared/entities";
+
+type ThumbnailsModuleOptions = {
+    apiServerPort: number;
+    apiServerSsl: SSL;
+};
+
+export class ThumbnailsModule extends MainServiceModule {
+    private thumbnailsApiServer: https.Server;
     private clients: Map<string, Set<Socket>>;
 
-    constructor(
-        name: string,
-        port: number,
-        host: string,
-        key: string,
-        cert: string
-    ) {
-        this.name = name;
-        this.logger = new PinoLogger();
+    constructor(name: string, options: ThumbnailsModuleOptions) {
+        super(name);
         this.clients = new Map();
-        this.server = https
+        this.thumbnailsApiServer = https
             .createServer(
                 {
-                    key: readFileSync(key),
-                    cert: readFileSync(cert),
+                    key: readFileSync(options.apiServerSsl.key),
+                    cert: readFileSync(options.apiServerSsl.cert),
                 },
-                this.handleRequest.bind(this)
+                this.handleApiRequest.bind(this)
             )
-            .listen(port, host, () => {
-                this.logger.log.info(`HTTPS server runing on port ${port}...`);
+            .listen(options.apiServerPort, () => {
+                this.log(`API server running on port ${options.apiServerPort}`);
             });
+        this.log('created');
     }
 
-    public init(io: Namespace) {
-        try {
-            this.io = io;
-            this.io.on('connection', this.handleConnection.bind(this));
-        } catch (e) {
-            this.logger.log.error('Error while init', e);
-        }
-    }
-
-    private handleConnection(socket: Socket) {
-        socket.on('subscribe', (data: IThumbnailClientRequest) => {
-            const { id } = data;
-            const channel = `ibpe-${id}`;
-            const channelClients = this.clients.get(channel);
-
-            if (!channelClients) {
-                this.clients.set(channel, new Set([socket]));
-            }
-
-            if (channelClients && !channelClients.has(socket)) {
-                this.logger.log.info(`Client ${socket.id} subscbibed`);
-                channelClients.add(socket);
-            }
-        });
-
-        socket.on('unsubscribe', (data: IThumbnailClientRequest) => {
-            const { id } = data;
-            const channel = `ibpe-${id}`;
-            const channelClients = this.clients.get(channel);
-
-            if (!channelClients) {
-                this.logger.log.info(`No channel was found`);
-                return;
-            }
-
-            if (channelClients && channelClients.has(socket)) {
-                this.logger.log.info(`Client ${socket.id} unsubscbibed`);
-                channelClients.delete(socket);
-            }
-        });
-
-        socket.on('error', (error) =>
-            this.logger.log.error('Socket error: ', error)
+    override init(io: Namespace) {
+        super.init(io);
+        this.registerHandler(
+            'connection',
+            this.handleClientConnection.bind(this)
         );
+        this.log('initialized');
     }
 
-    private handleRequest(req: IncomingMessage, res: ServerResponse) {
-        const path = req.url?.split('?')[1];
-        const params = new URLSearchParams(path);
-        const payload: Buffer[] = [];
-
-        req.on('data', (chunk) => {
-            payload.push(chunk as Buffer);
+    private handleClientConnection(socket: Socket) {
+        socket.on('subscribe', (data: IThumbnailClientSubscription) => {
+            const { channel } = data;
+            this.log(`subscribe request from ${socket.id} for ${channel}`);
+            if (!this.clients.has(channel)) {
+                this.clients.set(channel, new Set());
+            }
+            this.clients.get(channel)!.add(socket);
+            this.log(
+                `subscribe request from ${socket.id} for ${channel} succeed`
+            );
         });
-
-        req.on('end', () => {
-            const image = Buffer.concat(payload);
-            const channel = params.get('channel');
-
-            if (path && channel) {
-                this.broadcastThubnail(channel as string, image);
-                res.writeHead(200);
-                res.end();
+        socket.on('unsubscribe', (data: IThumbnailClientSubscription) => {
+            const { channel } = data;
+            this.log(`unsubscribe request from ${socket.id} for ${channel}`);
+            const channelClients = this.clients.get(channel);
+            if (channelClients) {
+                channelClients.delete(socket);
+                this.log(
+                    `unsubscribe request from ${socket.id} for ${channel} succeed`
+                );
+            } else {
+                this.log(
+                    `Unsubscribe request from ${socket.id} for ${channel}`
+                );
             }
         });
+        socket.on('error', (error) => {
+            this.log(`${socket.id} error: ${error.message}`, true);
+        });
     }
 
-    private broadcastThubnail(channel: string, imageBuffer: Buffer) {
-        const clientsSet = this.clients.get(channel);
-        const stringId = channel.split('-')[1];
-        const shouldSend = clientsSet && stringId && parseInt(stringId);
-
-        if (!shouldSend) {
-            return;
+    private handleApiRequest(
+        request: IncomingMessage,
+        response: ServerResponse
+    ) {
+        const params = new URLSearchParams(request.url);
+        const channel = params.get('channel');
+        if (channel && this.clients.has(channel)) {
+            const payload: Buffer[] = [];
+            request.on('data', (chunk) => {
+                payload.push(chunk as Buffer);
+            });
+            request.on('end', () => {
+                const image = Buffer.concat(payload);
+                this.sendThumbnail(channel, image);
+                response.writeHead(200);
+                response.end();
+            });
+        } else {
+            response.writeHead(200);
+            response.end();
         }
+    }
 
-        this.logger.log.info('Sending data to clients...');
-        clientsSet.forEach((socket) => {
+    private sendThumbnail(channel: string, imageBuffer: Buffer) {
+        this.clients.get(channel)?.forEach((socket) => {
             const response: IThumbnailResponse = {
-                image: `data:image/png;base64,${imageBuffer.toString(
+                channel,
+                imageSrcBase64: `data:image/png;base64,${imageBuffer.toString(
                     'base64'
                 )}`,
-                id: parseInt(stringId),
             };
-            socket.emit('response', response);
+            socket.emit('thumbnail', response);
         });
     }
 }

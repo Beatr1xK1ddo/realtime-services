@@ -1,8 +1,8 @@
-export type IThumbnailClientRequest = {
-    id: number;
+export type IThumbnailClientSubscription = {
+    channel: string,
 };
 
 export type IThumbnailResponse = {
-    image: string;
-    id: number;
+    channel: string,
+    imageSrcBase64: string,
 };

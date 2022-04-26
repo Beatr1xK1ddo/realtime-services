@@ -1,42 +1,32 @@
-import {
-    IMainServiceModule,
-    IPinoOptions,
-    IRedisClientEvent,
-} from '@socket/shared-types';
-import { Namespace, Socket } from 'socket.io';
+import {IMainServiceModule, IPinoOptions, IRedisClientEvent,} from '@socket/shared-types';
+import {Namespace, Socket} from 'socket.io';
 import Redis from 'ioredis';
-import { PinoLogger } from '@socket/shared-utils';
+import {PinoLogger} from '@socket/shared-utils';
+
+type RedisServiceModuleOptions = {
+    url: string,
+    logger?: Partial<IPinoOptions>,
+};
 
 export class RedisServiceModule implements IMainServiceModule {
     public name: string;
-    private reddisUrl: string;
+    private redisUrl: string;
     private io?: Namespace;
     private reddis: Redis;
     private logger: PinoLogger;
     private clients: Map<string, Map<string, Set<Socket>>>;
 
-    constructor(
-        name: string,
-        urlRedis: string,
-        loggerOptions?: Partial<IPinoOptions>
-    ) {
+    constructor(name: string, options: RedisServiceModuleOptions) {
         this.name = name;
-
         this.clients = new Map();
-
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
-
-        this.reddisUrl = urlRedis;
-
-        this.initialReddis();
+        this.logger = new PinoLogger(options.logger?.name, options.logger?.level, options.logger?.path);
+        this.redisUrl = options.url;
+        this.initializeRedis();
     }
 
-    private initialReddis() {
-        this.reddis = new Redis(this.reddisUrl);
+    //todo why not to put in inside of init?
+    private initializeRedis() {
+        this.reddis = new Redis(this.redisUrl);
 
         this.reddis.on('error', (error) => {
             this.log('Error while connecting to Redis', true);
@@ -63,7 +53,7 @@ export class RedisServiceModule implements IMainServiceModule {
         this.log('Socket was connected');
         socket.on('subscribe', (event: IRedisClientEvent) => {
             console.log('this is event', event);
-            const { id, nodeId } = event;
+            const {id, nodeId} = event;
             const channel = `realtime:app:${nodeId}:ipbe`;
 
             if (!this.clients.get(channel)) {
@@ -96,7 +86,7 @@ export class RedisServiceModule implements IMainServiceModule {
         });
 
         socket.on('unsubscribe', (event: IRedisClientEvent) => {
-            const { id, nodeId } = event;
+            const {id, nodeId} = event;
             const channel = `realtime:app:${nodeId}:ipbe`;
             if (this.clients.get(channel)?.get(id)?.has(socket)) {
                 this.clients.get(channel).get(id).delete(socket);
@@ -107,7 +97,7 @@ export class RedisServiceModule implements IMainServiceModule {
 
     private handleMessage(channel: string, event) {
         const cleanEvent = JSON.parse(event);
-        const { id } = cleanEvent;
+        const {id} = cleanEvent;
         const eventClients = this.clients.get(channel)?.get(id);
         if (!eventClients) {
             return;
