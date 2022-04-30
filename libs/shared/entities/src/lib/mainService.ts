@@ -14,16 +14,15 @@ export class MainServiceModule implements IMainServiceModule {
     protected logger: PinoLogger;
 
     constructor(name: string, options?: MainServiceModuleOptions) {
-        this.log('creating');
-        this.name = name;
-        this.options = options;
-
         const loggerOptions = this.options?.logger;
         this.logger = new PinoLogger(
             loggerOptions?.name,
             loggerOptions?.level,
             loggerOptions?.path
         );
+        this.name = name;
+        this.options = options;
+        this.log('creating');
     }
 
     init(socket: Namespace): void {
