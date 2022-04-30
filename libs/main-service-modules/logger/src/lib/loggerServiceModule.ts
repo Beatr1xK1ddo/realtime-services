@@ -9,8 +9,7 @@ import {
 import { PinoLogger } from '@socket/shared-utils';
 
 export class LoggerServiceModule implements IMainServiceModule {
-    private dbURL =
-        'mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin';
+    private dbURL = 'mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin';
     private db: Mongoose;
     public name: string;
     private io?: Namespace;
