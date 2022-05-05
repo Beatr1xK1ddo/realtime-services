@@ -61,7 +61,6 @@ export class LoggerNodeService extends NodeService {
         if (!info.type) return;
 
         const file: IFile = {
-            counter: 0,
             lastChunk: null,
             tail: spawn("tail", `-f ${filename}`.split(" ")),
         };
@@ -83,15 +82,12 @@ export class LoggerNodeService extends NodeService {
 
         file.tail.stderr.on("data", (data) => {
             this.log(`Running file.tail.stderr on "data": ${data}`);
-            this.debug(`stderr: ${data.toString()}`);
         });
         file.tail.on("error", (error) => {
             this.log(`file.tail error: ${error}`, true);
-            this.debug(`error: ${error.message}`);
         });
         file.tail.on("close", (code) => {
             this.log(`Running file.tail on "close": ${code}`);
-            this.debug(`close ${code}`);
         });
     }
 
@@ -134,13 +130,6 @@ export class LoggerNodeService extends NodeService {
         this.mapFiles.clear();
     }
 
-    private unwatch(filename: string) {
-        if (this.mapFiles.has(filename)) {
-            this.mapFiles.get(filename)?.tail.kill("SIGINT");
-            this.mapFiles.delete(filename);
-        }
-    }
-
     private parseFilename(filename: string) {
         this.log(`Watching file "${filename}"`);
         if (filename === sysLog) return {type: ELogTypes.sysLog};
@@ -158,24 +147,5 @@ export class LoggerNodeService extends NodeService {
             };
         }
         return {type: null};
-    }
-
-    private debug(message: string) {
-        const filename = "/var/log/logagent_debug.log";
-        try {
-            process.umask(0);
-            fs.appendFile(
-                `${filename}`,
-                new Date().toISOString() + "  " + message + "\n",
-                {mode: "777"},
-                (err) => {
-                    if (err) {
-                        this.log(`Error while debug ${err.toString()}`);
-                    }
-                }
-            );
-        } catch (e) {
-            this.log(`Error while debug on catch block ${e}`, true);
-        }
     }
 }

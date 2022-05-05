@@ -19,6 +19,5 @@ const modules = [
         apiServerSsl: ssl,
     }),
 ];
-// const modules = [new LoggerServiceModule('logger')];
 
 modules.forEach((module) => server.registerModule(module));

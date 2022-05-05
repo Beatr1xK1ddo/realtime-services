@@ -1,41 +1,29 @@
 import {Namespace, Socket} from "socket.io";
 import {Mongoose} from "mongoose";
-import {
-    ELogTypes,
-    ILogData,
-    ILoggerRequestPayload,
-    IMainServiceModule,
-    IPinoOptions,
-} from "@socket/shared-types";
-import {PinoLogger} from "@socket/shared-utils";
+import {ELogTypes, ILogData, ILoggerRequestPayload, IPinoOptions} from "@socket/shared-types";
+import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
-export class LoggerServiceModule implements IMainServiceModule {
+export class LoggerServiceModule extends MainServiceModule {
     private dbURL =
         "mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin";
     private db: Mongoose;
-    public name: string;
     private io?: Namespace;
     private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
-    private logger: PinoLogger;
 
-    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
+    constructor(name: string, options?: MainServiceModuleOptions) {
+        super(name, options);
         this.name = name;
         this.clients = new Map();
         for (const name in ELogTypes) {
             this.clients.set(name as ELogTypes, new Map());
         }
         this.db = new Mongoose();
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
     }
 
-    async init(io: Namespace) {
+    public override async init(io: Namespace) {
         try {
-            this.io = io;
-            this.io.on("connection", this.handleConnection.bind(this));
+            super.init(io);
+            this.registerHandler("connection", this.handleConnection.bind(this));
             await this.initDbConnection();
         } catch (e) {
             this.logger.log.error("Init error :", e);

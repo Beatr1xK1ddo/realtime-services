@@ -25,8 +25,8 @@ export class NodeService {
         this.nodeId = nodeId;
         this.mainServiceUrl = mainServiceUrl;
         this.socket = io(this.mainServiceUrl, {
-            // secure: true,
-            // reconnection: true,
+            secure: true,
+            reconnection: true,
         });
         this.logger = new PinoLogger(
             options?.logger?.name,
