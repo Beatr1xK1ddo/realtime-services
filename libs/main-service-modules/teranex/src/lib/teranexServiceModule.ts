@@ -1,43 +1,24 @@
-import {Namespace, Socket} from "socket.io";
-import {PinoLogger} from "@socket/shared-utils";
+import {Socket} from "socket.io";
 import {
     IClientCmdRequestEvent,
     IDeviceResponseEvent,
-    IMainServiceModule,
     IClientSubscribeEvent,
     INodeInitEvent,
-    IPinoOptions,
 } from "@socket/shared-types";
 import {isClientSubscribeEvet} from "./types";
+import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
-export class TeranexServiceModule implements IMainServiceModule {
-    public name: string;
-    private io?: Namespace;
+export class TeranexServiceModule extends MainServiceModule {
     private nodes: Map<number, Socket>;
     private clients: Map<number, Map<string, Set<Socket>>>;
-    private logger: PinoLogger;
 
-    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
-        this.name = name;
+    constructor(name: string, options?: MainServiceModuleOptions) {
+        super(name, options);
         this.nodes = new Map();
         this.clients = new Map();
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
     }
 
-    async init(io: Namespace) {
-        try {
-            this.io = io;
-            this.io.on("connection", this.handleConnection.bind(this));
-        } catch (e) {
-            this.logger.log.error("Error while init", e);
-        }
-    }
-
-    private handleConnection(socket: Socket) {
+    protected override onConnected(socket: Socket) {
         socket.on("init", ({nodeId}: INodeInitEvent) => {
             this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);

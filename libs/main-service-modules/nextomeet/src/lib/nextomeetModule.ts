@@ -1,38 +1,22 @@
 import {
     IClientNextomeetResEvent,
-    IMainServiceModule,
     INodeInitEvent,
     IClientNextomeetReqEvent,
     IClientNextomeetSubEvent,
-    IPinoOptions,
 } from "@socket/shared-types";
-import {PinoLogger} from "@socket/shared-utils";
-import {Namespace, Socket} from "socket.io";
+import {Socket} from "socket.io";
+import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
-export class NextomeetModule implements IMainServiceModule {
-    private io?: Namespace;
-    public name: string;
+export class NextomeetModule extends MainServiceModule {
     private nodes: Map<number, Socket>;
     private clients: Map<number, Set<Socket>>;
-    private logger: PinoLogger;
 
-    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
-        this.name = name;
+    constructor(name: string, options?: MainServiceModuleOptions) {
+        super(name, options);
         this.nodes = new Map();
         this.clients = new Map();
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
     }
-
-    init(io: Namespace) {
-        this.io = io;
-        this.io.on("connection", this.handleConnection.bind(this));
-    }
-
-    private handleConnection(socket: Socket) {
+    protected override onConnected(socket: Socket) {
         socket.on("init", ({nodeId}: INodeInitEvent) => {
             this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);

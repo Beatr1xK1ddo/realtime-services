@@ -1,4 +1,4 @@
-import {Namespace} from "socket.io";
+import {Namespace, Socket} from "socket.io";
 
 import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
 import {PinoLogger} from "@socket/shared-utils";
@@ -28,12 +28,12 @@ export class MainServiceModule implements IMainServiceModule {
     init(socket: Namespace): void {
         this.log("initializing");
         this.socket = socket;
-        this.socket.on("connect", this.onConnected.bind(this));
+        this.socket.on("connection", this.onConnected.bind(this));
         this.socket.on("disconnect", this.onDisconnected.bind(this));
         this.socket.on("error", this.onError.bind(this));
     }
 
-    protected onConnected(): void {
+    protected onConnected(socket: Socket): void {
         this.log("transport connected");
     }
 

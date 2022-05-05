@@ -7,12 +7,10 @@ export class LoggerServiceModule extends MainServiceModule {
     private dbURL =
         "mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin";
     private db: Mongoose;
-    private io?: Namespace;
     private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
 
     constructor(name: string, options?: MainServiceModuleOptions) {
         super(name, options);
-        this.name = name;
         this.clients = new Map();
         for (const name in ELogTypes) {
             this.clients.set(name as ELogTypes, new Map());
