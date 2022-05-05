@@ -1,6 +1,5 @@
 import * as path from "path";
 import {spawn} from "child_process";
-import * as fs from "fs";
 
 import type {IFile} from "./types";
 
@@ -95,7 +94,6 @@ export class LoggerNodeService extends NodeService {
         const createdTime = Math.round(Date.now() / 1000);
         switch (info.type) {
             case ELogTypes.appLog:
-                this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
                 this.emit("data", {
                     nodeId: this.nodeId,
                     data: {
@@ -111,7 +109,6 @@ export class LoggerNodeService extends NodeService {
                 });
                 break;
             case ELogTypes.sysLog:
-                this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
                 this.emit("data", {
                     nodeId: this.nodeId,
                     data: {

@@ -39,20 +39,19 @@ export class NextomeetModule implements IMainServiceModule {
         });
         socket.on("subscribe", ({nodeId}: IClientNextomeetSubEvent) => {
             if (!this.clients.has(nodeId)) {
-                const nodeSubscribers = new Map();
-                nodeSubscribers.set(nodeId, new Set([socket]));
-            } else {
+                this.clients.set(nodeId, new Set([socket]));
+            } else if (!this.clients.get(nodeId)?.has(socket)) {
                 this.clients.get(nodeId)?.add(socket);
             }
             this.logger.log.info(`Socket: "${socket.id}" subscribed to node: "${nodeId}"`);
         });
         socket.on("unsubscribe", ({nodeId}: IClientNextomeetSubEvent) => {
             const devicesSubscribers = this.clients.get(nodeId);
-            this.logger.log.info(`Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`);
             if (!devicesSubscribers) {
                 return;
             }
             devicesSubscribers.delete(socket);
+            this.logger.log.info(`Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`);
         });
         socket.on("commands", (data: IClientNextomeetReqEvent) => {
             const {nodeId} = data;

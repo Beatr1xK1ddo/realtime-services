@@ -1,62 +1,50 @@
-import {IClientCmdRequestEvent, IDeviceResponseEvent} from "@socket/shared-types";
-import {HyperdeckDevice} from "./device";
-import {IHyperdeckDevices} from "./types";
-import {NodeService} from "@socket/shared/entities";
+import {
+    IClientCmdRequestEvent,
+    IClientSubscribeEvent,
+    IDeviceResponseEvent,
+} from "@socket/shared-types";
+import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
 
-export class TeranexNodeService extends NodeService {
-    private devices: IHyperdeckDevices = {};
+export class HyperdeckNodeService extends NodeDeviceService {
+    constructor(
+        name: string,
+        nodeId: number,
+        mainServiceUrl: string,
+        options?: NodeServiceOptions
+    ) {
+        super(name, nodeId, mainServiceUrl, options);
+        this.registerHandler("subscribe", this.handleSubscription.bind(this));
+        this.registerHandler("request", this.handleRequest.bind(this));
+    }
+
+    private async handleSubscription(event: {socketId: string; event: IClientSubscribeEvent}) {
+        const {ip, port} = event.event;
+        try {
+            const device = await this.getDevice(ip, port);
+            if (device) this.emit("subscribed", event);
+        } catch (e) {
+            //todo: add subscription failure handling
+        }
+    }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
         const {ip, port, commands} = data;
-        const deviceId = `${ip}:${port}`;
-        const device = await this.getDevice(deviceId);
         try {
-            if (!device) {
-                this.log("Device is null", true);
-                this.emit("response", {
-                    nodeId: this.nodeId,
-                    ip,
-                    port,
-                    error: "Device is null",
-                } as IDeviceResponseEvent);
-                return;
-            }
+            const device = await this.getDevice(ip, port);
 
-            if (device.busy) {
-                this.log("Device is busy", true);
-                this.emit("response", {
-                    nodeId: this.nodeId,
-                    ip,
-                    port,
-                    error: "Device is busy",
-                } as IDeviceResponseEvent);
-                return;
-            }
-
-            device.busy = true;
             const data = [];
             for (const cmd of commands) {
-                data.push(await device.command(cmd));
+                data.push(await device.sendCommand(cmd));
             }
-            device.busy = false;
 
-            this.log("Response was sended");
+            this.log(`Commands processed ${JSON.stringify(data)}`);
             this.emit("response", {
                 nodeId: this.nodeId,
                 ip,
                 port,
                 data,
             } as IDeviceResponseEvent);
-        } catch (e: any) {
-            let error;
-            if (e.code === "ECONNREFUSED") {
-                error = "Device is unavailable";
-            } else if (e.message === "timeout") {
-                error = "Device timeout";
-            } else {
-                error = "Device unknown error";
-            }
-            this.log(error, true);
+        } catch (error) {
             this.emit("response", {
                 nodeId: this.nodeId,
                 ip,
@@ -66,20 +54,28 @@ export class TeranexNodeService extends NodeService {
         }
     }
 
-    async getDevice(deviceId: string): Promise<HyperdeckDevice | null> {
-        if (this.devices[deviceId]) {
-            return this.devices[deviceId];
+    async getDevice(ip: string, port: number): Promise<Device> {
+        const deviceId = `${ip}:${port}`;
+        if (this.devices?.[deviceId]) {
+            return this.devices?.[deviceId];
         }
-        try {
-            const [ip, port] = deviceId.split(":");
-            const device = new HyperdeckDevice(ip, parseInt(port));
-            await device.connect();
-            await device.command("ping\r\n");
-            this.devices[deviceId] = device;
-        } catch (e) {
-            this.log(`Can not get. Device ${deviceId} is: ${this.devices[deviceId]}`, true);
-            this.devices[deviceId] = null;
+        const device = await HyperdeckNodeService.createDevice(ip, port);
+        if (!device) {
+            this.log(`Can't create device ${deviceId}`, true);
+            throw new Error(`Can't create device ${deviceId}`);
         }
+        this.devices[deviceId] = device;
         return this.devices[deviceId];
+    }
+
+    private static async createDevice(ip: string, port: number): Promise<Device | null> {
+        try {
+            const device = new Device(ip, port);
+            device.connect();
+            await device.sendCommand("ping\r\n");
+            return device;
+        } catch (e) {
+            return null;
+        }
     }
 }

@@ -41,7 +41,7 @@ export class TeranexNodeService extends NodeDeviceService {
                 const commandResult = await device.sendCommand(command);
                 result.push(TeranexNodeService.format(commandResult));
             }
-            this.log(`commands processed ${JSON.stringify(result)}`);
+            this.log(`Commands processed ${JSON.stringify(result)}`);
             this.emit("response", {
                 nodeId: this.nodeId,
                 ip,

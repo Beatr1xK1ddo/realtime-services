@@ -70,7 +70,7 @@ export class NodeService {
 }
 
 export abstract class NodeDeviceService<D extends Device = Device> extends NodeService {
-    protected devices?: Devices<D>;
+    protected devices: Devices<D>;
 
     constructor(
         name: string,
