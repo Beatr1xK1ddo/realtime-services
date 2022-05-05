@@ -1,4 +1,5 @@
-import * as https from 'https';
+import { createServer, Server } from 'https';
+import * as url from 'url';
 import { readFileSync } from 'fs';
 import { Namespace, Socket } from 'socket.io';
 
@@ -14,23 +15,21 @@ type ThumbnailsModuleOptions = {
 };
 
 export class ThumbnailsModule extends MainServiceModule {
-    private thumbnailsApiServer: https.Server;
+    private thumbnailsApiServer: Server;
     private clients: Map<string, Set<Socket>>;
 
     constructor(name: string, options: ThumbnailsModuleOptions) {
         super(name);
         this.clients = new Map();
-        this.thumbnailsApiServer = https
-            .createServer(
-                {
-                    key: readFileSync(options.apiServerSsl.key),
-                    cert: readFileSync(options.apiServerSsl.cert),
-                },
-                this.handleApiRequest.bind(this)
-            )
-            .listen(options.apiServerPort, () => {
-                this.log(`API server running on port ${options.apiServerPort}`);
-            });
+        this.thumbnailsApiServer = createServer(
+            {
+                key: readFileSync(options.apiServerSsl.key),
+                cert: readFileSync(options.apiServerSsl.cert),
+            },
+            this.handleApiRequest.bind(this)
+        ).listen(options.apiServerPort, () => {
+            this.log(`API server running on port ${options.apiServerPort}`);
+        });
         this.log('created');
     }
 
@@ -67,21 +66,28 @@ export class ThumbnailsModule extends MainServiceModule {
     }
 
     private handleApiRequest(request: IncomingMessage, response: ServerResponse) {
-        const params = new URLSearchParams(request.url);
-        const channel = params.get('channel');
-        if (channel && this.clients.has(channel)) {
-            const payload: Buffer[] = [];
-            request.on('data', (chunk) => {
-                payload.push(chunk as Buffer);
-            });
-            request.on('end', () => {
-                const image = Buffer.concat(payload);
-                this.sendThumbnail(channel, image);
+        const requestURL = request.url;
+        if (request.method === 'POST' && requestURL && requestURL.startsWith('/thumb')) {
+            const queryParams = url.parse(requestURL, true).query;
+            const channel = queryParams['channel'];
+            if (channel && typeof channel === 'string' && this.clients.has(channel)) {
+                this.log(`got thumbnail for ${channel}`);
+                const payload: Buffer[] = [];
+                request.on('data', (chunk) => {
+                    payload.push(chunk as Buffer);
+                });
+                request.on('end', () => {
+                    const image = Buffer.concat(payload);
+                    this.sendThumbnail(channel, image);
+                    response.writeHead(200);
+                    response.end();
+                });
+            } else {
                 response.writeHead(200);
                 response.end();
-            });
+            }
         } else {
-            response.writeHead(200);
+            response.writeHead(400);
             response.end();
         }
     }
