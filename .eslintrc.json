@@ -1,13 +1,12 @@
 {
     "root": true,
     "extends": [
-        "plugin:@typescript-eslint/recommended"
+        "prettier"
     ],
     "parser": "@typescript-eslint/parser",
     "ignorePatterns": ["**/*"],
-    "plugins": ["@nrwl/nx", "prettier"],
+    "plugins": ["prettier", "@nrwl/nx"],
     "rules": {
-      "prettier/prettier": "error"
-      }
-  }
-  
+        "prettier/prettier": "error"
+    }
+}

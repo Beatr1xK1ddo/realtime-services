@@ -1,1 +1,1 @@
-export * from './lib/nextomeetModule';
+export * from "./lib/nextomeetModule";

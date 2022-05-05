@@ -1,4 +1,4 @@
-import sqlQueries from './sql-queries';
+import sqlQueries from "./sql-queries";
 
 export type IAppType = typeof sqlQueries;
 

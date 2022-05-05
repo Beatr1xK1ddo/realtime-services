@@ -1,4 +1,4 @@
-export type INodeInitEvent = { nodeId: number };
+export type INodeInitEvent = {nodeId: number};
 
 export type IServerModuleMessage = {
     message: string;

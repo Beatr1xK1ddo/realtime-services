@@ -1,13 +1,13 @@
-import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
-import { Socket, Namespace } from 'socket.io';
-import * as mysql from 'mysql';
-import * as conf from '../../config.json';
-import * as _ from 'lodash';
-import sqlQueries from './sql-queries';
-import { IAppTypeKeyes } from './types';
-import Redis from 'ioredis';
-import * as util from '@socket/shared-utils';
-import { PinoLogger } from '@socket/shared-utils';
+import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {Socket, Namespace} from "socket.io";
+import * as mysql from "mysql";
+import * as conf from "../../config.json";
+import * as _ from "lodash";
+import sqlQueries from "./sql-queries";
+import {IAppTypeKeyes} from "./types";
+import Redis from "ioredis";
+import * as util from "@socket/shared-utils";
+import {PinoLogger} from "@socket/shared-utils";
 
 export class Monitor implements IMainServiceModule {
     public name: string;
@@ -18,11 +18,7 @@ export class Monitor implements IMainServiceModule {
     private lastRuntime?: number;
     private logger: PinoLogger;
 
-    constructor(
-        name: string,
-        urlRedis: string,
-        loggerOptions?: Partial<IPinoOptions>
-    ) {
+    constructor(name: string, urlRedis: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.redis = new Redis(urlRedis);
         this.logger = new PinoLogger(
@@ -35,38 +31,38 @@ export class Monitor implements IMainServiceModule {
     async init(io: Namespace) {
         try {
             this.io = io;
-            this.io.on('connection', this.onConnection.bind(this));
+            this.io.on("connection", this.onConnection.bind(this));
             this.db = await this.connectDb();
         } catch (e) {
-            this.logger.log.error('Error when init run: ', e);
+            this.logger.log.error("Error when init run: ", e);
         }
     }
 
     private onConnection(socket: Socket): void {
         this.startMonitor();
 
-        socket.on('data', this.onData.bind(this));
+        socket.on("data", this.onData.bind(this));
 
-        socket.on('error', (error) => {
-            this.logger.log.error('Socket error: ', error);
+        socket.on("error", (error) => {
+            this.logger.log.error("Socket error: ", error);
         });
     }
 
     private connectDb(): Promise<mysql.Pool> {
         return new Promise((resolve, reject) => {
             const $con = mysql.createPool({
-                host: 'localhost',
-                user: 'root',
-                password: 'lolwhat1337',
-                database: 'test',
+                host: "localhost",
+                user: "root",
+                password: "lolwhat1337",
+                database: "test",
                 connectionLimit: 10,
             });
             $con.getConnection((err) => {
                 if (err) {
-                    this.logger.log.error('Error while getConnection', err);
+                    this.logger.log.error("Error while getConnection", err);
                     reject(err);
                 }
-                this.logger.log.info('Connection with database established');
+                this.logger.log.info("Connection with database established");
                 resolve($con);
             });
         });
@@ -78,13 +74,11 @@ export class Monitor implements IMainServiceModule {
 
     async startMonitor() {
         const alerts = await this.redis
-            .smembers('monit-alerts')
-            .catch((e: Error) =>
-                this.logger.log.error('Error while "smembers" on redis', e)
-            );
+            .smembers("monit-alerts")
+            .catch((e: Error) => this.logger.log.error('Error while "smembers" on redis', e));
 
         if (_.isEmpty(alerts)) {
-            this.logger.log.info('Alerts are empty');
+            this.logger.log.info("Alerts are empty");
             this.io?.send({
                 sender: this.name,
                 data: {
@@ -93,29 +87,25 @@ export class Monitor implements IMainServiceModule {
                 },
             });
         } else {
-            _.each(
-                this.parseMonitorAlerts(alerts as string[]),
-                (monitorApps, appType) => {
-                    if (!this.queries[appType as IAppTypeKeyes]) return;
+            _.each(this.parseMonitorAlerts(alerts as string[]), (monitorApps, appType) => {
+                if (!this.queries[appType as IAppTypeKeyes]) return;
 
-                    _.each(monitorApps, async (monitorApp) => {
-                        try {
-                            const rows = await this.db?.query(
-                                this.queries[appType as IAppTypeKeyes]
-                                    .selectQuery,
-                                monitorApp
-                            );
+                _.each(monitorApps, async (monitorApp) => {
+                    try {
+                        const rows = await this.db?.query(
+                            this.queries[appType as IAppTypeKeyes].selectQuery,
+                            monitorApp
+                        );
 
-                            if (rows && rows?.values?.[0]) {
-                                this.handleErrors(monitorApp, rows.values[0]);
-                            }
-                        } catch (e) {
-                            this.logger.log.error(e);
+                        if (rows && rows?.values?.[0]) {
+                            this.handleErrors(monitorApp, rows.values[0]);
                         }
-                    });
-                }
-            );
-            this.logger.log.info('Handle alerts: ', alerts);
+                    } catch (e) {
+                        this.logger.log.error(e);
+                    }
+                });
+            });
+            this.logger.log.info("Handle alerts: ", alerts);
         }
 
         this.lastRuntime = util.currentTime();
@@ -135,28 +125,23 @@ export class Monitor implements IMainServiceModule {
             const signalStabilizeTime = +results[1]!;
 
             if (sqlRec.haltUntil) {
-                const query =
-                    this.queries[app.appType as IAppTypeKeyes].updateQuery;
-                this.db?.query(
-                    query.replace('halt_comeback = false', 'halt_until = null'),
-                    { appId: app.appId }
-                );
+                const query = this.queries[app.appType as IAppTypeKeyes].updateQuery;
+                this.db?.query(query.replace("halt_comeback = false", "halt_until = null"), {
+                    appId: app.appId,
+                });
             }
 
             if (signalComebackTime && signalStabilizeTime) {
                 if (sqlRec.haltComeback) {
-                    this.db?.query(
-                        this.queries[app.appType as IAppTypeKeyes].updateQuery,
-                        {
-                            appId: app.appId,
-                        }
-                    );
+                    this.db?.query(this.queries[app.appType as IAppTypeKeyes].updateQuery, {
+                        appId: app.appId,
+                    });
                 }
                 this.logger.log.info('Sending "restore"');
-                this.sendData('restore', null, null, sqlRec);
+                this.sendData("restore", null, null, sqlRec);
             } else if (sqlRec.haltComeback) {
                 this.logger.log.info('Sending "restore"');
-                this.sendData('restore', null, null, sqlRec);
+                this.sendData("restore", null, null, sqlRec);
             } else {
                 results = await Promise.all([
                     this.redis.get(`${app.cachePrefix}-last-error`),
@@ -167,41 +152,29 @@ export class Monitor implements IMainServiceModule {
                 const signalErrorTime = +results[1]!;
 
                 if (signalLostTime) {
-                    history = await util.getCache(app.uniqueID, () =>
-                        this.fetchHistory(sqlRec)
-                    );
+                    history = await util.getCache(app.uniqueID, () => this.fetchHistory(sqlRec));
 
                     this.logger.log.info('Sending "status_error"');
-                    this.sendData(
-                        'status_error',
-                        signalLostTime,
-                        history,
-                        sqlRec,
-                        0
-                    );
+                    this.sendData("status_error", signalLostTime, history, sqlRec, 0);
                 } else if (signalErrorTime) {
                     results = await Promise.all([
                         this.redis.get(`${app.cachePrefix}-last-cc-amount`),
-                        this.redis.get(
-                            `${app.cachePrefix}-past-interval-cc-amount`
-                        ),
+                        this.redis.get(`${app.cachePrefix}-past-interval-cc-amount`),
                     ]);
 
-                    history = await util.getCache(app.uniqueID, () =>
-                        this.fetchHistory(sqlRec)
-                    );
+                    history = await util.getCache(app.uniqueID, () => this.fetchHistory(sqlRec));
                     this.logger.log.info('Sending "ts_errors"');
                     this.sendData(
-                        'ts_errors',
+                        "ts_errors",
                         signalErrorTime,
                         history,
                         sqlRec,
-                        +results[0]! + '/' + +results[1]!
+                        +results[0]! + "/" + +results[1]!
                     );
                 }
             }
         } catch (e) {
-            this.logger.log.error('Unknown error: ', e);
+            this.logger.log.error("Unknown error: ", e);
         }
     }
 
@@ -209,7 +182,7 @@ export class Monitor implements IMainServiceModule {
         const result: any = {};
 
         _.each(alerts, (item: string) => {
-            const data = item.split(';');
+            const data = item.split(";");
 
             if (!data.length || !data[0] || !data[1] || !data[2] || !data[3]) {
                 return;
@@ -219,7 +192,7 @@ export class Monitor implements IMainServiceModule {
             const appId = data[2];
             const nodeId = data[0];
 
-            const nodeInfo = data[3].split(':');
+            const nodeInfo = data[3].split(":");
             const nodeIp = nodeInfo ? nodeInfo[0] : null;
             const nodePort = nodeInfo ? nodeInfo[1] : null;
 
@@ -237,7 +210,7 @@ export class Monitor implements IMainServiceModule {
                 nodePort: nodePort,
 
                 uniqueID: `${appType}-${appId}-${nodeId}-${nodeIp}-${nodePort}`,
-                cachePrefix: item.replace(/;/gi, '-'),
+                cachePrefix: item.replace(/;/gi, "-"),
                 lastRuntime: this.lastRuntime,
             });
         });
@@ -281,7 +254,7 @@ export class Monitor implements IMainServiceModule {
     }
 
     fetchHistory(sqlRec: any) {
-        const { appId, appType, nodeId, nodeIp, nodePort } = sqlRec;
+        const {appId, appType, nodeId, nodeIp, nodePort} = sqlRec;
 
         const fromTime = util.currentTime() - conf.live_monitor.history.depth;
         const toTime = util.currentTime();
@@ -290,8 +263,6 @@ export class Monitor implements IMainServiceModule {
             .exec(
                 `php ${conf.live_monitor.history.bin} ${appType} ${appId} ${fromTime} ${toTime} ${nodeId} ${nodeIp} ${nodePort}`
             )
-            .catch((e: Error) =>
-                this.logger.log.error('Exec php script error: ', e)
-            );
+            .catch((e: Error) => this.logger.log.error("Exec php script error: ", e));
     }
 }

@@ -1,1 +1,1 @@
-export * from './lib/loggerServiceModule';
+export * from "./lib/loggerServiceModule";

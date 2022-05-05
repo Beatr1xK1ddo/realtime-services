@@ -1,2 +1,2 @@
-export * from './lib/hyperdeckNodeService';
-export * from './lib/device';
+export * from "./lib/hyperdeckNodeService";
+export * from "./lib/device";

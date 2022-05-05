@@ -1,7 +1,7 @@
-import { Socket as NetSocket } from 'net';
+import {Socket as NetSocket} from "net";
 
-import { IPinoOptions } from '@socket/shared-types';
-import { debounce, PinoLogger } from '@socket/shared-utils';
+import {IPinoOptions} from "@socket/shared-types";
+import {debounce, PinoLogger} from "@socket/shared-utils";
 
 export type Devices<T extends Device = Device> = {
     [key: string]: T;
@@ -33,25 +33,32 @@ export class Device {
         this.ip = ip;
         this.port = port;
         this.socket = new NetSocket();
-        this.socket.setEncoding('utf8');
+        this.socket.setEncoding("utf8");
         this.reconnectionAttempts = options?.reconnectionAttempts || 10;
         this.reconnectionAttemptsUsed = 0;
         if (options?.timeout) {
             this.timeout = options.timeout;
             this.socket.setTimeout(this.timeout);
         }
-        this.logger = new PinoLogger(options?.loggerOptions?.name, options?.loggerOptions?.level, options?.loggerOptions?.path);
+        this.logger = new PinoLogger(
+            options?.loggerOptions?.name,
+            options?.loggerOptions?.level,
+            options?.loggerOptions?.path
+        );
         this.id = `${this.ip}:${this.port}`;
-        this.commandResult = '';
+        this.commandResult = "";
         this.responseDebounceDelay = options?.debounceDelay;
     }
 
     connect(): void {
-        this.socket.connect({ host: this.ip, port: this.port }, this.handleConnectionEstablished.bind(this));
-        this.socket.on('close', this.handleConnectionClosed.bind(this));
-        this.socket.on('error', this.handleConnectionError.bind(this));
-        this.socket.on('timeout', this.handleConnectionTimeout.bind(this));
-        this.socket.on('data', this.handleCommandResult.bind(this));
+        this.socket.connect(
+            {host: this.ip, port: this.port},
+            this.handleConnectionEstablished.bind(this)
+        );
+        this.socket.on("close", this.handleConnectionClosed.bind(this));
+        this.socket.on("error", this.handleConnectionError.bind(this));
+        this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
+        this.socket.on("data", this.handleCommandResult.bind(this));
     }
 
     private reconnect(): void {
@@ -61,7 +68,7 @@ export class Device {
     }
 
     protected handleConnectionEstablished() {
-        this.log('connected');
+        this.log("connected");
     }
 
     protected handleConnectionClosed(error: boolean) {
@@ -82,19 +89,21 @@ export class Device {
     }
 
     protected handleConnectionTimeout(): void {
-        this.log('connection inactive');
+        this.log("connection inactive");
     }
 
     sendCommand(command: string): Promise<any> {
         this.log(`sending command ${command}`);
-        this.commandResult = '';
+        this.commandResult = "";
         this.responseHandler = undefined;
         return new Promise((resolve, reject) => {
             const resultHandler = (data: string) => {
                 this.log(`resolving command ${command} with ${data}`);
                 resolve(data);
             };
-            this.responseHandler = this.responseDebounceDelay ? debounce(resultHandler, this.responseDebounceDelay) : resultHandler;
+            this.responseHandler = this.responseDebounceDelay
+                ? debounce(resultHandler, this.responseDebounceDelay)
+                : resultHandler;
             this.socket.write(command, (error) => {
                 if (error) {
                     this.log(`sending command end up with error: ${error.message}`, true);

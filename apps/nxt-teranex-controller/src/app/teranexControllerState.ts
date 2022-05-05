@@ -8,20 +8,20 @@ import {
     Mode,
     Rate,
     Teranex,
-    Video
-} from './teranexControllerTypes';
+    Video,
+} from "./teranexControllerTypes";
 
 type TeranexAction =
-    | { type: 'mode'; payload: Mode }
-    | { type: 'device'; payload: { panelLock: boolean, remLock: boolean } }
-    | { type: 'videoInput'; payload: { video: Video } }
-    | { type: 'audioInput'; payload: { audio: Audio } }
-    | { type: 'audioStatus'; payload: { audioStatus: AudioStatus } }
-    | { type: 'systemStatus'; payload: { tc: boolean, cc: boolean, vid: boolean } }
-    | { type: 'videoOutput'; payload: { format: Format, frame: Frame, rate: Rate } }
-    | { type: 'aspectRatio'; payload: { aspect: AspectRatio } }
-    | { type: 'ancillaryData'; payload: { tc: boolean, cc: boolean} }
-    | { type: 'genLock'; payload: { ref: boolean } };
+    | {type: "mode"; payload: Mode}
+    | {type: "device"; payload: {panelLock: boolean; remLock: boolean}}
+    | {type: "videoInput"; payload: {video: Video}}
+    | {type: "audioInput"; payload: {audio: Audio}}
+    | {type: "audioStatus"; payload: {audioStatus: AudioStatus}}
+    | {type: "systemStatus"; payload: {tc: boolean; cc: boolean; vid: boolean}}
+    | {type: "videoOutput"; payload: {format: Format; frame: Frame; rate: Rate}}
+    | {type: "aspectRatio"; payload: {aspect: AspectRatio}}
+    | {type: "ancillaryData"; payload: {tc: boolean; cc: boolean}}
+    | {type: "genLock"; payload: {ref: boolean}};
 
 export const teranexInitialState: Teranex = {
     panelLock: false,
@@ -34,25 +34,39 @@ export const teranexInitialState: Teranex = {
     rate: null,
     aspect: null,
     audioStatus: {
-        1: false, 2: false, 3: false, 4: false, 5: false, 6: false, 7: false, 8: false,
-        9: false, 10: false, 11: false, 12: false, 13: false, 14: false, 15: false, 16: false,
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+        5: false,
+        6: false,
+        7: false,
+        8: false,
+        9: false,
+        10: false,
+        11: false,
+        12: false,
+        13: false,
+        14: false,
+        15: false,
+        16: false,
     },
-    systemStatus: {vid: false, ref: false, ps: false, tc: false, cc: false, eth: false,},
+    systemStatus: {vid: false, ref: false, ps: false, tc: false, cc: false, eth: false},
 };
 
 export function teranexReducer(state: Teranex, action: TeranexAction): Teranex {
     switch (action.type) {
-        case 'mode':
+        case "mode":
             return {
                 ...state,
                 mode: action.payload,
             };
-        case 'device':
+        case "device":
             const newDeviceState = {
                 ...state,
                 panelLock: action.payload.panelLock,
                 remLock: action.payload.remLock,
-                systemStatus: {...state.systemStatus}
+                systemStatus: {...state.systemStatus},
             };
             if (state.mode === null) {
                 newDeviceState.mode = "in";
@@ -98,14 +112,17 @@ export function teranexReducer(state: Teranex, action: TeranexAction): Teranex {
                 aspect: action.payload.aspect,
             };
         case "ancillaryData":
-            if ((!state.systemStatus.tc && action.payload.tc) || (!state.systemStatus.cc && action.payload.cc) ) {
+            if (
+                (!state.systemStatus.tc && action.payload.tc) ||
+                (!state.systemStatus.cc && action.payload.cc)
+            ) {
                 return {
                     ...state,
                     systemStatus: {
                         ...state.systemStatus,
                         tc: action.payload.tc,
                         cc: action.payload.cc,
-                    }
+                    },
                 };
             } else {
                 return state;
@@ -116,7 +133,7 @@ export function teranexReducer(state: Teranex, action: TeranexAction): Teranex {
                 systemStatus: {
                     ...state.systemStatus,
                     ref: action.payload.ref,
-                }
+                },
             };
         default:
             return state;
@@ -124,13 +141,13 @@ export function teranexReducer(state: Teranex, action: TeranexAction): Teranex {
 }
 
 type CommandAction =
-    | { type: 'device'; payload: { panelLock: boolean, remLock: boolean } }
-    | { type: 'video'; payload: Video }
-    | { type: 'audio'; payload: Audio }
-    | { type: 'format'; payload: Format }
-    | { type: 'frame'; payload: Frame }
-    | { type: 'rate'; payload: Rate }
-    | { type: 'aspect'; payload: AspectRatio };
+    | {type: "device"; payload: {panelLock: boolean; remLock: boolean}}
+    | {type: "video"; payload: Video}
+    | {type: "audio"; payload: Audio}
+    | {type: "format"; payload: Format}
+    | {type: "frame"; payload: Frame}
+    | {type: "rate"; payload: Rate}
+    | {type: "aspect"; payload: AspectRatio};
 
 export const commandInitialState: Command = {
     mode: null,
@@ -146,7 +163,7 @@ export const commandInitialState: Command = {
 
 export function commandReducer(state: Command, action: CommandAction): Command {
     switch (action.type) {
-        case 'device':
+        case "device":
             return {
                 ...state,
                 panelLock: action.payload.panelLock,
@@ -159,8 +176,8 @@ export function commandReducer(state: Command, action: CommandAction): Command {
         case "rate":
         case "aspect":
             return {
-              ...state,
-              [action.type]: action.payload,
+                ...state,
+                [action.type]: action.payload,
             };
         default:
             return state;

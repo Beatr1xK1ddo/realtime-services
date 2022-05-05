@@ -1,9 +1,9 @@
-import * as shell from 'child_process';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import pino, { Logger, Level } from 'pino';
-import { IRealtimeAppStatusEvent } from '@socket/shared-types';
+import * as shell from "child_process";
+import {existsSync, readFileSync, writeFileSync} from "fs";
+import pino, {Logger, Level} from "pino";
+import {IRealtimeAppStatusEvent} from "@socket/shared-types";
 //todo: utils should not rely on any configs/ all utils functions should rely on args instead
-import * as conf from './config.json';
+import * as conf from "./config.json";
 
 function exec(cmd: string): Promise<any> {
     return new Promise((resolve, reject) => {
@@ -15,12 +15,10 @@ function exec(cmd: string): Promise<any> {
 async function getNodeId(): Promise<number> {
     let nodeId = null;
     try {
-        const id = await exec(
-            'sudo /usr/bin/php /root/dv_control_new.php hostname'
-        );
+        const id = await exec("sudo /usr/bin/php /root/dv_control_new.php hostname");
         nodeId = Number.parseInt(id);
     } catch (e) {
-        console.warn('NXT|WARNING: Cannot get node id');
+        console.warn("NXT|WARNING: Cannot get node id");
     }
     return nodeId;
 }
@@ -38,9 +36,7 @@ async function getCache(key, saveCallback) {
         let isExpired = false;
 
         if (existsSync(cacheFile)) {
-            const { expires, data } = JSON.parse(
-                readFileSync(cacheFile, 'utf8')
-            );
+            const {expires, data} = JSON.parse(readFileSync(cacheFile, "utf8"));
 
             if (+expires < this.currentTime()) {
                 isExpired = true;
@@ -84,17 +80,10 @@ function debounce(cb: (...args) => void, timeout?: number) {
 const isRealtimeAppStatusEvent = (
     data: IRealtimeAppStatusEvent
 ): data is IRealtimeAppStatusEvent => {
-    return 'statusChange' in data;
+    return "statusChange" in data;
 };
 
-export {
-    exec,
-    getNodeId,
-    currentTime,
-    getCache,
-    debounce,
-    isRealtimeAppStatusEvent,
-};
+export {exec, getNodeId, currentTime, getCache, debounce, isRealtimeAppStatusEvent};
 
 type ITransportOptions = {
     [key: string]: any;
@@ -112,22 +101,22 @@ export class PinoLogger {
     private createTransport(level?: Level, path?: string) {
         const targets = [
             {
-                target: 'pino-pretty',
+                target: "pino-pretty",
                 options: {
-                    translateTime: 'SYS:dd:mm:yy HH:MM:ss',
-                    ignore: 'hostname',
+                    translateTime: "SYS:dd:mm:yy HH:MM:ss",
+                    ignore: "hostname",
                 } as ITransportOptions,
-                level: level || 'trace',
+                level: level || "trace",
             },
         ];
 
         if (path) {
             targets.push({
-                target: 'pino/file',
+                target: "pino/file",
                 options: {
                     destination: path,
                 },
-                level: level || 'trace',
+                level: level || "trace",
             });
         }
 

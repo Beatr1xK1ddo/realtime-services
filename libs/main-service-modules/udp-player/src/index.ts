@@ -1,2 +1,2 @@
-export * from './lib/udp-player';
-export * from './lib/types';
+export * from "./lib/udp-player";
+export * from "./lib/types";

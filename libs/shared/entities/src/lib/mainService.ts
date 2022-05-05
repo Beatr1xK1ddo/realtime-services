@@ -1,7 +1,7 @@
-import { Namespace } from 'socket.io';
+import {Namespace} from "socket.io";
 
-import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
-import { PinoLogger } from '@socket/shared-utils';
+import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {PinoLogger} from "@socket/shared-utils";
 
 export type MainServiceModuleOptions = {
     logger?: Partial<IPinoOptions>;
@@ -22,19 +22,19 @@ export class MainServiceModule implements IMainServiceModule {
         );
         this.name = name;
         this.options = options;
-        this.log('creating');
+        this.log("creating");
     }
 
     init(socket: Namespace): void {
-        this.log('initializing');
+        this.log("initializing");
         this.socket = socket;
-        this.socket.on('connect', this.onConnected.bind(this));
-        this.socket.on('disconnect', this.onDisconnected.bind(this));
-        this.socket.on('error', this.onError.bind(this));
+        this.socket.on("connect", this.onConnected.bind(this));
+        this.socket.on("disconnect", this.onDisconnected.bind(this));
+        this.socket.on("error", this.onError.bind(this));
     }
 
     protected onConnected(): void {
-        this.log('transport connected');
+        this.log("transport connected");
     }
 
     protected onDisconnected(reason: string): void {
@@ -45,10 +45,7 @@ export class MainServiceModule implements IMainServiceModule {
         this.log(`error ${error}`, true);
     }
 
-    protected registerHandler(
-        event: string,
-        handler: (data?: any) => void
-    ): void {
+    protected registerHandler(event: string, handler: (data?: any) => void): void {
         if (this.validateInit()) {
             this.log(`registering handler for ${event}`);
             this.socket!.on(event, handler);
@@ -74,9 +71,7 @@ export class MainServiceModule implements IMainServiceModule {
         if (this.socket) {
             return true;
         } else {
-            this.log(
-                'validation failure, you should call init before any further interactions'
-            );
+            this.log("validation failure, you should call init before any further interactions");
             return false;
         }
     }

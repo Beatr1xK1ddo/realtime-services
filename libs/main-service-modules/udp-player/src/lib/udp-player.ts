@@ -1,9 +1,9 @@
-import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
-import { Namespace, Socket } from 'socket.io';
-import { IUdpPlayerData } from './types';
-import { parse } from 'url';
-import { spawn } from 'child_process';
-import { PinoLogger } from '@socket/shared-utils';
+import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {Namespace, Socket} from "socket.io";
+import {IUdpPlayerData} from "./types";
+import {parse} from "url";
+import {spawn} from "child_process";
+import {PinoLogger} from "@socket/shared-utils";
 
 const MAX_BUFFER_SIZE = 65536;
 
@@ -24,28 +24,28 @@ export class UdpPlayer implements IMainServiceModule {
 
     init(io: Namespace) {
         this.io = io;
-        this.io.on('connection', this.onConnection.bind(this));
+        this.io.on("connection", this.onConnection.bind(this));
     }
 
     private onConnection(socket: Socket) {
         const url = socket.request.url;
-        const { query } = parse(url, true);
+        const {query} = parse(url, true);
 
-        if (!('udp' in query)) {
+        if (!("udp" in query)) {
             return;
         }
 
         if (!this.streams.has(query.udp as string)) {
             const ffmpeg = spawn(
-                'ffmpeg',
+                "ffmpeg",
                 `-i udp://@${query.udp}?fifo_size=1000000&overrun_nonfatal=1 -f mp4 -c:v copy -c:a aac -ac 2 -b:a 128k -ar 44100 -threads 0 -movflags frag_keyframe+empty_moov+default_base_moof -frag_duration 1000000 -min_frag_duration 1000000 pipe:1`.split(
-                    ' '
+                    " "
                 ),
-                { stdio: ['ignore', 'pipe', 'inherit'] }
+                {stdio: ["ignore", "pipe", "inherit"]}
             );
 
-            ffmpeg.stdout.on('data', (data) => {
-                this.logger.log.info('ffmpeg data: ', data);
+            ffmpeg.stdout.on("data", (data) => {
+                this.logger.log.info("ffmpeg data: ", data);
                 const newStream: IUdpPlayerData = {
                     udp: query.udp as string,
                     ffmpeg,
@@ -74,8 +74,8 @@ export class UdpPlayer implements IMainServiceModule {
 
                 if (!newStream.initSeg) newStream.initSeg = fmp4Data;
 
-                ffmpeg.on('close', (code, signal) => {
-                    this.logger.log.info('ffmpeg closing udp: ', query.udp);
+                ffmpeg.on("close", (code, signal) => {
+                    this.logger.log.info("ffmpeg closing udp: ", query.udp);
                     this.streams.delete(query.udp as string);
                 });
 
@@ -86,17 +86,15 @@ export class UdpPlayer implements IMainServiceModule {
 
         stream.clients.add(socket);
 
-        socket.on('disconnect', () => {
+        socket.on("disconnect", () => {
             this.logger.log.info(`Socket ${socket.id} disconnected`);
             stream.clients.delete(socket);
 
             if (!stream.clients.size) {
-                stream.ffmpeg.kill('SIGINT');
+                stream.ffmpeg.kill("SIGINT");
             }
         });
 
-        socket.on('error', (error) =>
-            this.logger.log.error('Socket error', error)
-        );
+        socket.on("error", (error) => this.logger.log.error("Socket error", error));
     }
 }

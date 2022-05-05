@@ -1,1 +1,1 @@
-export * from './lib/teranexServiceModule';
+export * from "./lib/teranexServiceModule";

@@ -1,6 +1,6 @@
-import { ChildProcessByStdio } from 'child_process';
-import { Socket } from 'socket.io';
-import { Readable } from 'stream';
+import {ChildProcessByStdio} from "child_process";
+import {Socket} from "socket.io";
+import {Readable} from "stream";
 
 export type IUdpPlayerData = {
     udp: string;

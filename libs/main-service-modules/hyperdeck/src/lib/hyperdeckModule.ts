@@ -5,9 +5,9 @@ import {
     IClientSubscribeEvent,
     INodeInitEvent,
     IPinoOptions,
-} from '@socket/shared-types';
-import { Namespace, Socket } from 'socket.io';
-import { PinoLogger } from '@socket/shared-utils';
+} from "@socket/shared-types";
+import {Namespace, Socket} from "socket.io";
+import {PinoLogger} from "@socket/shared-utils";
 
 export class HyperdeckModule implements IMainServiceModule {
     private io?: Namespace;
@@ -29,70 +29,62 @@ export class HyperdeckModule implements IMainServiceModule {
 
     init(io: Namespace) {
         this.io = io;
-        this.io.on('connection', this.handleConnection.bind(this));
+        this.io.on("connection", this.handleConnection.bind(this));
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('init', ({ nodeId }: INodeInitEvent) => {
+        socket.on("init", ({nodeId}: INodeInitEvent) => {
             this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
-        socket.on(
-            'subscribe',
-            ({ nodeId, ip, port }: IClientSubscribeEvent) => {
-                const deviceId = `${ip}:${port}`;
-                if (!this.clients.has(nodeId)) {
-                    const devicesSubscribers = new Map();
-                    devicesSubscribers.set(deviceId, new Set([socket]));
-                    this.clients.set(nodeId, devicesSubscribers);
-                }
-                if (!this.clients.get(nodeId)?.has(deviceId)) {
-                    this.clients.get(nodeId)?.set(deviceId, new Set([socket]));
-                } else {
-                    this.clients.get(nodeId)?.get(deviceId)?.add(socket);
-                }
-                this.logger.log.info(
-                    `Socket: "${socket.id}" subscribed to: "node: ${nodeId}" and "device ${deviceId}"`
-                );
+        socket.on("subscribe", ({nodeId, ip, port}: IClientSubscribeEvent) => {
+            const deviceId = `${ip}:${port}`;
+            if (!this.clients.has(nodeId)) {
+                const devicesSubscribers = new Map();
+                devicesSubscribers.set(deviceId, new Set([socket]));
+                this.clients.set(nodeId, devicesSubscribers);
             }
-        );
-        socket.on(
-            'unsubscribe',
-            ({ nodeId, ip, port }: IClientSubscribeEvent) => {
-                const deviceId = `${ip}:${port}`;
-                const devicesSubscribers = this.clients.get(nodeId);
-                if (!devicesSubscribers || !devicesSubscribers.get(deviceId)) {
-                    return;
-                }
-                devicesSubscribers.get(deviceId)?.delete(socket);
-                this.logger.log.info(
-                    `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
-                );
+            if (!this.clients.get(nodeId)?.has(deviceId)) {
+                this.clients.get(nodeId)?.set(deviceId, new Set([socket]));
+            } else {
+                this.clients.get(nodeId)?.get(deviceId)?.add(socket);
             }
-        );
-        socket.on('commands', ({ nodeId, ...data }: IClientCmdRequestEvent) => {
+            this.logger.log.info(
+                `Socket: "${socket.id}" subscribed to: "node: ${nodeId}" and "device ${deviceId}"`
+            );
+        });
+        socket.on("unsubscribe", ({nodeId, ip, port}: IClientSubscribeEvent) => {
+            const deviceId = `${ip}:${port}`;
+            const devicesSubscribers = this.clients.get(nodeId);
+            if (!devicesSubscribers || !devicesSubscribers.get(deviceId)) {
+                return;
+            }
+            devicesSubscribers.get(deviceId)?.delete(socket);
+            this.logger.log.info(
+                `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
+            );
+        });
+        socket.on("commands", ({nodeId, ...data}: IClientCmdRequestEvent) => {
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
                 this.logger.log.info(
                     `Commands to node: "${nodeId}" requested to device: "${data.ip}:${data.port}"`
                 );
-                nodeSocket.emit('request', data);
+                nodeSocket.emit("request", data);
             }
         });
-        socket.on('response', ({ nodeId, ...data }: IDeviceResponseEvent) => {
-            const { ip, port } = data;
+        socket.on("response", ({nodeId, ...data}: IDeviceResponseEvent) => {
+            const {ip, port} = data;
             const deviceId = `${ip}:${port}`;
             this.clients
                 .get(nodeId)
                 ?.get(deviceId)
-                ?.forEach((socket) => socket.emit('result', data));
+                ?.forEach((socket) => socket.emit("result", data));
             this.logger.log.info(
                 `Response was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`
             );
         });
 
-        socket.on('error', (error) =>
-            this.logger.log.error('Socket error: ', error)
-        );
+        socket.on("error", (error) => this.logger.log.error("Socket error: ", error));
     }
 }

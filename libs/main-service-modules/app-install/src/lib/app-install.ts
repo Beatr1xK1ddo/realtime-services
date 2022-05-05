@@ -1,13 +1,13 @@
-import { watch, FSWatcher } from 'chokidar';
-import { readFileSync } from 'fs';
-import { IMainServiceModule, IPinoOptions } from '@socket/shared-types';
-import { Namespace, Socket } from 'socket.io';
-import * as path from 'path';
-import { IAppInstallFiles } from './types';
-import * as Diff from 'diff';
+import {watch, FSWatcher} from "chokidar";
+import {readFileSync} from "fs";
+import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {Namespace, Socket} from "socket.io";
+import * as path from "path";
+import {IAppInstallFiles} from "./types";
+import * as Diff from "diff";
 
 // import * as config from '../config.json';
-import { PinoLogger } from '@socket/shared-utils';
+import {PinoLogger} from "@socket/shared-utils";
 
 export class AppInstall implements IMainServiceModule {
     private watcher: FSWatcher;
@@ -18,11 +18,7 @@ export class AppInstall implements IMainServiceModule {
     public files: Map<string, IAppInstallFiles> = new Map();
     // private folder: string;
 
-    constructor(
-        name: string,
-        path: string,
-        loggerOptions?: Partial<IPinoOptions>
-    ) {
+    constructor(name: string, path: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.path = path;
         this.watcher = watch(this.path, {
@@ -44,7 +40,7 @@ export class AppInstall implements IMainServiceModule {
 
     init(io: Namespace) {
         this.io = io;
-        this.io.on('connection', this.onConnection);
+        this.io.on("connection", this.onConnection);
     }
 
     private onConnection(socket: Socket) {
@@ -52,58 +48,53 @@ export class AppInstall implements IMainServiceModule {
 
         this.run();
 
-        socket.on('error', (error) => this.logger.log.error(error));
+        socket.on("error", (error) => this.logger.log.error(error));
     }
 
     private run() {
-        this.watcher.on('add', (path) => {
+        this.watcher.on("add", (path) => {
             const nodeId = this.parseNodeId(path);
             if (nodeId) {
                 this.files.set(path, {
                     node: nodeId,
-                    content: readFileSync(path, 'utf8'),
+                    content: readFileSync(path, "utf8"),
                 });
             }
             this.logger.log.info(`File ${path} has been added`, this.files);
         });
 
-        this.watcher.on('change', async (path) => {
+        this.watcher.on("change", async (path) => {
             if (this.files.has(path)) {
                 const diffContent = await this.getDiffContent(path);
 
                 if (diffContent) {
-                    const { node } = this.files.get(path);
+                    const {node} = this.files.get(path);
                     this.sendData(node, diffContent);
                 }
             }
             this.logger.log.info(`File ${path} has been changed`, this.files);
         });
 
-        this.watcher.on('unlink', (path) => {
+        this.watcher.on("unlink", (path) => {
             this.files.delete(path);
             this.logger.log.info(`File ${path} has been removed`, this.files);
         });
 
-        this.watcher.on('ready', () => {
-            this.logger.log.info(
-                `Watcher: "${this.name}" ready to changes!!!`,
-                this.files
-            );
+        this.watcher.on("ready", () => {
+            this.logger.log.info(`Watcher: "${this.name}" ready to changes!!!`, this.files);
         });
 
-        this.watcher.on('error', (error) =>
-            this.logger.log.error(`Watcher error: ${error}`)
-        );
+        this.watcher.on("error", (error) => this.logger.log.error(`Watcher error: ${error}`));
     }
 
     parseNodeId(filepath: string) {
-        return +path.parse(filepath).name.replace('node_', '');
+        return +path.parse(filepath).name.replace("node_", "");
     }
 
     getDiffContent(filepath: string) {
         return new Promise((resolve) => {
-            const { node, content: oldContent } = this.files.get(filepath);
-            const newContent = readFileSync(filepath, 'utf8');
+            const {node, content: oldContent} = this.files.get(filepath);
+            const newContent = readFileSync(filepath, "utf8");
 
             const [oldC, newC] = Diff.diffChars(oldContent, newContent);
 
@@ -112,7 +103,7 @@ export class AppInstall implements IMainServiceModule {
                 content: newContent,
             });
 
-            let diffValue = '';
+            let diffValue = "";
             if (newC) {
                 if (newC.added) {
                     diffValue = newC.value;
@@ -123,7 +114,7 @@ export class AppInstall implements IMainServiceModule {
                 }
             }
 
-            if (diffValue[diffValue.length - 1] === '\n') {
+            if (diffValue[diffValue.length - 1] === "\n") {
                 diffValue = diffValue.slice(0, -1);
             }
 

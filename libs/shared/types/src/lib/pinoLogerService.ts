@@ -1,4 +1,4 @@
-import { Level } from 'pino';
+import {Level} from "pino";
 
 export type IPinoOptions = {
     name: string;

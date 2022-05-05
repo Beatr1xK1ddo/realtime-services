@@ -1,1 +1,1 @@
-export * from './lib/hyperdeckModule';
+export * from "./lib/hyperdeckModule";

@@ -1,2 +1,2 @@
-export * from './lib/nextomeetNode';
-export * from './lib/types';
+export * from "./lib/nextomeetNode";
+export * from "./lib/types";

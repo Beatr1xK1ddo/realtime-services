@@ -1,13 +1,13 @@
-import * as path from 'path';
-import { spawn } from 'child_process';
-import * as fs from 'fs';
+import * as path from "path";
+import {spawn} from "child_process";
+import * as fs from "fs";
 
-import type { IFile } from './types';
+import type {IFile} from "./types";
 
-import { ELogTypes } from '@socket/shared-types';
-import { NodeService } from '@socket/shared/entities';
+import {ELogTypes} from "@socket/shared-types";
+import {NodeService} from "@socket/shared/entities";
 
-const sysLog = 'system.ts';
+const sysLog = "system.ts";
 
 export class LoggerNodeService extends NodeService {
     private appLogsPath: string;
@@ -16,15 +16,22 @@ export class LoggerNodeService extends NodeService {
     private excludeSysLogRegexp?: RegExp;
     private mapFiles: Map<string, IFile> = new Map();
 
-    constructor(name: string, nodeId: number, url: string, appLogsPath: string, sysLogsPath: string, exclude?: any) {
+    constructor(
+        name: string,
+        nodeId: number,
+        url: string,
+        appLogsPath: string,
+        sysLogsPath: string,
+        exclude?: any
+    ) {
         super(name, nodeId, url);
         this.nodeId = nodeId;
         this.appLogsPath = appLogsPath;
         this.sysLogsPath = sysLogsPath;
 
         if (exclude) {
-            this.excludeAppLogRegexp = new RegExp(`(${exclude?.applog.join('|')})`, 'i');
-            this.excludeSysLogRegexp = new RegExp(`(${exclude?.syslog.join('|')})`, 'i');
+            this.excludeAppLogRegexp = new RegExp(`(${exclude?.applog.join("|")})`, "i");
+            this.excludeSysLogRegexp = new RegExp(`(${exclude?.syslog.join("|")})`, "i");
         }
     }
 
@@ -56,33 +63,33 @@ export class LoggerNodeService extends NodeService {
         const file: IFile = {
             counter: 0,
             lastChunk: null,
-            tail: spawn('tail', `-f ${filename}`.split(' ')),
+            tail: spawn("tail", `-f ${filename}`.split(" ")),
         };
 
         this.mapFiles.set(filename, file);
 
-        file.tail.stdout.setEncoding('utf8');
+        file.tail.stdout.setEncoding("utf8");
 
-        file.tail.stdout.on('data', (_chunk) => {
+        file.tail.stdout.on("data", (_chunk) => {
             const chunk = _chunk.toString().trim();
 
             if (this.isTrashData(chunk, filename)) return;
 
             if (chunk !== file.lastChunk) {
-                this.sendLog(chunk, { type: ELogTypes.sysLog });
+                this.sendLog(chunk, {type: ELogTypes.sysLog});
             }
             file.lastChunk = chunk;
         });
 
-        file.tail.stderr.on('data', (data) => {
+        file.tail.stderr.on("data", (data) => {
             this.log(`Running file.tail.stderr on "data": ${data}`);
             this.debug(`stderr: ${data.toString()}`);
         });
-        file.tail.on('error', (error) => {
+        file.tail.on("error", (error) => {
             this.log(`file.tail error: ${error}`, true);
             this.debug(`error: ${error.message}`);
         });
-        file.tail.on('close', (code) => {
+        file.tail.on("close", (code) => {
             this.log(`Running file.tail on "close": ${code}`);
             this.debug(`close ${code}`);
         });
@@ -93,7 +100,7 @@ export class LoggerNodeService extends NodeService {
         switch (info.type) {
             case ELogTypes.appLog:
                 this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
-                this.emit('data', {
+                this.emit("data", {
                     nodeId: this.nodeId,
                     data: {
                         type: info.type,
@@ -109,7 +116,7 @@ export class LoggerNodeService extends NodeService {
                 break;
             case ELogTypes.sysLog:
                 this.log(`Sending log from "node ${this.nodeId}" and "logType: ${info.type}"`);
-                this.emit('data', {
+                this.emit("data", {
                     nodeId: this.nodeId,
                     data: {
                         type: info.type,
@@ -123,21 +130,24 @@ export class LoggerNodeService extends NodeService {
     }
 
     private unwatchAll() {
-        this.mapFiles.forEach((item) => item.tail.kill('SIGINT'));
+        this.mapFiles.forEach((item) => item.tail.kill("SIGINT"));
         this.mapFiles.clear();
     }
 
     private unwatch(filename: string) {
         if (this.mapFiles.has(filename)) {
-            this.mapFiles.get(filename)?.tail.kill('SIGINT');
+            this.mapFiles.get(filename)?.tail.kill("SIGINT");
             this.mapFiles.delete(filename);
         }
     }
 
     private parseFilename(filename: string) {
         this.log(`Watching file "${filename}"`);
-        if (filename === sysLog) return { type: ELogTypes.sysLog };
-        const [appType, appId, appName, subType] = path.basename(filename, '.log').replace('real--', '').split('--');
+        if (filename === sysLog) return {type: ELogTypes.sysLog};
+        const [appType, appId, appName, subType] = path
+            .basename(filename, ".log")
+            .replace("real--", "")
+            .split("--");
         if (appType && appId) {
             return {
                 type: ELogTypes.appLog,
@@ -147,18 +157,23 @@ export class LoggerNodeService extends NodeService {
                 subType,
             };
         }
-        return { type: null };
+        return {type: null};
     }
 
     private debug(message: string) {
-        const filename = '/var/log/logagent_debug.log';
+        const filename = "/var/log/logagent_debug.log";
         try {
             process.umask(0);
-            fs.appendFile(`${filename}`, new Date().toISOString() + '  ' + message + '\n', { mode: '777' }, (err) => {
-                if (err) {
-                    this.log(`Error while debug ${err.toString()}`);
+            fs.appendFile(
+                `${filename}`,
+                new Date().toISOString() + "  " + message + "\n",
+                {mode: "777"},
+                (err) => {
+                    if (err) {
+                        this.log(`Error while debug ${err.toString()}`);
+                    }
                 }
-            });
+            );
         } catch (e) {
             this.log(`Error while debug on catch block ${e}`, true);
         }

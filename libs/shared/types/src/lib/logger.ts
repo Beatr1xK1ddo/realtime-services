@@ -1,7 +1,7 @@
 export enum ELogTypes {
-    appLog = 'appLog',
-    sysLog = 'sysLog',
-    all = 'all',
+    appLog = "appLog",
+    sysLog = "sysLog",
+    all = "all",
 }
 
 export type ISysLogMessage = {
@@ -27,4 +27,4 @@ export type ILogData = {
     data: ISysLogMessage | IAppLogMessage;
 };
 
-export type ILoggerRequestPayload = { nodeId: number; logType: ELogTypes };
+export type ILoggerRequestPayload = {nodeId: number; logType: ELogTypes};

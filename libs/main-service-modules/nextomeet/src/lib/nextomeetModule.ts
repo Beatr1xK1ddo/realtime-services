@@ -5,9 +5,9 @@ import {
     IClientNextomeetReqEvent,
     IClientNextomeetSubEvent,
     IPinoOptions,
-} from '@socket/shared-types';
-import { PinoLogger } from '@socket/shared-utils';
-import { Namespace, Socket } from 'socket.io';
+} from "@socket/shared-types";
+import {PinoLogger} from "@socket/shared-utils";
+import {Namespace, Socket} from "socket.io";
 
 export class NextomeetModule implements IMainServiceModule {
     private io?: Namespace;
@@ -29,56 +29,44 @@ export class NextomeetModule implements IMainServiceModule {
 
     init(io: Namespace) {
         this.io = io;
-        this.io.on('connection', this.handleConnection.bind(this));
+        this.io.on("connection", this.handleConnection.bind(this));
     }
 
     private handleConnection(socket: Socket) {
-        socket.on('init', ({ nodeId }: INodeInitEvent) => {
+        socket.on("init", ({nodeId}: INodeInitEvent) => {
             this.logger.log.info(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
-        socket.on('subscribe', ({ nodeId }: IClientNextomeetSubEvent) => {
+        socket.on("subscribe", ({nodeId}: IClientNextomeetSubEvent) => {
             if (!this.clients.has(nodeId)) {
                 const nodeSubscribers = new Map();
                 nodeSubscribers.set(nodeId, new Set([socket]));
             } else {
                 this.clients.get(nodeId)?.add(socket);
             }
-            this.logger.log.info(
-                `Socket: "${socket.id}" subscribed to node: "${nodeId}"`
-            );
+            this.logger.log.info(`Socket: "${socket.id}" subscribed to node: "${nodeId}"`);
         });
-        socket.on('unsubscribe', ({ nodeId }: IClientNextomeetSubEvent) => {
+        socket.on("unsubscribe", ({nodeId}: IClientNextomeetSubEvent) => {
             const devicesSubscribers = this.clients.get(nodeId);
-            this.logger.log.info(
-                `Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`
-            );
+            this.logger.log.info(`Socket: "${socket.id}" unsubscribed from node: "${nodeId}"`);
             if (!devicesSubscribers) {
                 return;
             }
             devicesSubscribers.delete(socket);
         });
-        socket.on('commands', (data: IClientNextomeetReqEvent) => {
-            const { nodeId } = data;
+        socket.on("commands", (data: IClientNextomeetReqEvent) => {
+            const {nodeId} = data;
             const nodeSocket = this.nodes.get(nodeId);
             if (nodeSocket) {
-                this.logger.log.info(
-                    `Commands to node: "${nodeId}" requested to device`
-                );
-                nodeSocket.emit('request', data);
+                this.logger.log.info(`Commands to node: "${nodeId}" requested to device`);
+                nodeSocket.emit("request", data);
             }
         });
-        socket.on('response', (data: IClientNextomeetResEvent) => {
-            const { nodeId } = data;
-            this.clients
-                .get(nodeId)
-                ?.forEach((socket) => socket.emit('result', data));
-            this.logger.log.info(
-                `Response was sent to clients with node: "${nodeId}"`
-            );
+        socket.on("response", (data: IClientNextomeetResEvent) => {
+            const {nodeId} = data;
+            this.clients.get(nodeId)?.forEach((socket) => socket.emit("result", data));
+            this.logger.log.info(`Response was sent to clients with node: "${nodeId}"`);
         });
-        socket.on('error', (error) =>
-            this.logger.log.error('Socket error', error)
-        );
+        socket.on("error", (error) => this.logger.log.error("Socket error", error));
     }
 }

@@ -1,10 +1,10 @@
-import { createServer } from 'https';
-import { Namespace, Server, Socket } from 'socket.io';
-import { readFileSync } from 'fs';
+import {createServer} from "https";
+import {Namespace, Server, Socket} from "socket.io";
+import {readFileSync} from "fs";
 
-import type { IMainServiceModule, IPinoOptions, SSL } from '@socket/shared-types';
+import type {IMainServiceModule, IPinoOptions, SSL} from "@socket/shared-types";
 
-import { PinoLogger } from '@socket/shared-utils';
+import {PinoLogger} from "@socket/shared-utils";
 
 type MainServiceServerOptions = {
     ssl: SSL;
@@ -23,11 +23,12 @@ export class MainServiceServer {
             cert: readFileSync(options.ssl.cert),
         }).listen(port);
         //todo: handle cors more precisely
-        this.io = new Server(this.https, { cors: { origin: '*' } });
-        this.io.on('connection', (socket: Socket) => {
-            this.logger.log.info(`Socket: ${socket.id} connected to Server`);
-        });
-        this.logger = new PinoLogger(options.logger?.name, options.logger?.level, options.logger?.path);
+        this.io = new Server(this.https, {cors: {origin: "*"}});
+        this.logger = new PinoLogger(
+            options.logger?.name,
+            options.logger?.level,
+            options.logger?.path
+        );
     }
 
     registerModule(module: IMainServiceModule) {

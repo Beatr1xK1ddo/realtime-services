@@ -1,3 +1,3 @@
 export function mainServiceTypes(): string {
-    return 'main-service-types';
+    return "main-service-types";
 }
