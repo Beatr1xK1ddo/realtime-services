@@ -8,4 +8,5 @@ const mainServiceUrl = 'https://qa.nextologies.com:1987';
 // loggerTestRun(mainServiceUrl);
 // teranexTestRun(mainServiceUrl);
 
-thumbnailTestClient('http://localhost:1987/');
+loggerTestRun('http://localhost:1987');
+// thumbnailTestClient('http://localhost:1987/');

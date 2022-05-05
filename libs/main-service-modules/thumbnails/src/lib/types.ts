@@ -1,8 +1,8 @@
 export type IThumbnailClientSubscription = {
-    channel: string,
+    channel: string;
 };
 
 export type IThumbnailResponse = {
-    channel: string,
-    imageSrcBase64: string,
+    channel: string;
+    imageSrcBase64: string;
 };

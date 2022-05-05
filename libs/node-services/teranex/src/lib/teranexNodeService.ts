@@ -1,17 +1,8 @@
-import {
-    IClientCmdRequestEvent,
-    IClientSubscribeEvent,
-    IDeviceResponseEvent,
-} from '@socket/shared-types';
-import {Device, NodeDeviceService, NodeServiceOptions,} from '@socket/shared/entities';
+import { IClientCmdRequestEvent, IClientSubscribeEvent, IDeviceResponseEvent } from '@socket/shared-types';
+import { Device, NodeDeviceService, NodeServiceOptions } from '@socket/shared/entities';
 
 export class TeranexNodeService extends NodeDeviceService {
-    constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.registerHandler('subscribe', this.handleSubscription.bind(this));
         this.registerHandler('request', this.handleRequest.bind(this));
@@ -19,14 +10,11 @@ export class TeranexNodeService extends NodeDeviceService {
 
     protected onConnected() {
         super.onConnected();
-        this.emit('init', {nodeId: this.nodeId});
+        this.emit('init', { nodeId: this.nodeId });
     }
 
-    private async handleSubscription(event: {
-        socketId: string;
-        event: IClientSubscribeEvent;
-    }) {
-        const {ip, port} = event.event;
+    private async handleSubscription(event: { socketId: string; event: IClientSubscribeEvent }) {
+        const { ip, port } = event.event;
         try {
             const device = await this.getDevice(ip, port);
             if (device) this.emit('subscribed', event);
@@ -36,7 +24,7 @@ export class TeranexNodeService extends NodeDeviceService {
     }
 
     private async handleRequest(data: IClientCmdRequestEvent) {
-        const {ip, port, commands} = data;
+        const { ip, port, commands } = data;
         try {
             const device = await this.getDevice(ip, port);
             const result = [];
@@ -75,12 +63,9 @@ export class TeranexNodeService extends NodeDeviceService {
         return this.devices[deviceId];
     }
 
-    private static async createDevice(
-        ip: string,
-        port: number
-    ): Promise<Device | null> {
+    private static async createDevice(ip: string, port: number): Promise<Device | null> {
         try {
-            const device = new Device(ip, port, {debounceDelay: 300});
+            const device = new Device(ip, port, { debounceDelay: 300 });
             device.connect();
             await device.sendCommand('ping\r\n');
             return device;

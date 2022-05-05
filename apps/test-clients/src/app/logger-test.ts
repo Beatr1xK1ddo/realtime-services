@@ -8,7 +8,7 @@ export function loggerTestRun(url: string) {
 
     socket.on('connect', () => {
         console.log('Client connected to LoggerModule');
-        socket.emit('subscribe', { nodeId: 2975, logType: 'appLog' });
+        socket.emit('subscribe', { nodeId: 1337, logType: 'sysLog' });
     });
 
     socket.on('data', (data) => {

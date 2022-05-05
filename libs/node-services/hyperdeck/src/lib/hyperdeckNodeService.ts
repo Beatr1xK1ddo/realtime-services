@@ -1,8 +1,4 @@
-import {
-    IClientCmdRequestEvent,
-    IDeviceResponseEvent,
-    NodeService,
-} from '@socket/shared-types';
+import { IClientCmdRequestEvent, IDeviceResponseEvent, NodeService } from '@socket/shared-types';
 import { HyperdeckDevice } from './device';
 import { IHyperdeckDevices } from './types';
 
@@ -89,10 +85,7 @@ export class TeranexNodeService extends NodeService {
             await device.command('ping\r\n');
             this.devices[deviceId] = device;
         } catch (e) {
-            this.logger.log.error(
-                `Can not get. Device ${deviceId} is: `,
-                this.devices[deviceId]
-            );
+            this.logger.log.error(`Can not get. Device ${deviceId} is: `, this.devices[deviceId]);
             this.devices[deviceId] = null;
         }
         return this.devices[deviceId];

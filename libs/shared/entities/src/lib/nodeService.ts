@@ -15,30 +15,19 @@ export class NodeService {
     private socket: Socket;
     private logger: PinoLogger;
 
-    protected constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    protected constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         this.name = name.toUpperCase();
         this.nodeId = nodeId;
         this.mainServiceUrl = mainServiceUrl;
         this.socket = io(this.mainServiceUrl, {
-            secure: true,
-            reconnection: true,
+            // secure: true,
+            // reconnection: true,
         });
-        this.logger = new PinoLogger(
-            options?.logger?.name,
-            options?.logger?.level,
-            options?.logger?.path
-        );
+        this.logger = new PinoLogger(options?.logger?.name, options?.logger?.level, options?.logger?.path);
         this.socket.on('connect', this.onConnected.bind(this));
         this.socket.on('disconnect', this.onDisconnected.bind(this));
         this.socket.on('error', this.onError.bind(this));
-        this.log(
-            `created. Parameters: nodeId: ${nodeId}, main service URL: ${mainServiceUrl}`
-        );
+        this.log(`created. Parameters: nodeId: ${nodeId}, main service URL: ${mainServiceUrl}`);
     }
 
     protected onConnected(): void {
@@ -53,10 +42,7 @@ export class NodeService {
         this.log(`error ${error}`, true);
     }
 
-    protected registerHandler(
-        event: string,
-        handler: (data?: any) => void
-    ): void {
+    protected registerHandler(event: string, handler: (data?: any) => void): void {
         this.socket.on(event, handler);
     }
 
@@ -74,15 +60,10 @@ export class NodeService {
     }
 }
 
-export class NodeDeviceService<D extends Device = Device> extends NodeService {
+export abstract class NodeDeviceService<D extends Device = Device> extends NodeService {
     protected devices?: Devices<D>;
 
-    protected constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.devices = {};
     }

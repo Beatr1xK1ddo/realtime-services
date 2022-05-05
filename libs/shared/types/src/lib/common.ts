@@ -1,5 +1,5 @@
 export type SSL = {
-    key: string,
-    cert: string,
-    ca: string
+    key: string;
+    cert: string;
+    ca: string;
 };

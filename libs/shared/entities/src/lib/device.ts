@@ -40,21 +40,14 @@ export class Device {
             this.timeout = options.timeout;
             this.socket.setTimeout(this.timeout);
         }
-        this.logger = new PinoLogger(
-            options?.loggerOptions?.name,
-            options?.loggerOptions?.level,
-            options?.loggerOptions?.path
-        );
+        this.logger = new PinoLogger(options?.loggerOptions?.name, options?.loggerOptions?.level, options?.loggerOptions?.path);
         this.id = `${this.ip}:${this.port}`;
         this.commandResult = '';
         this.responseDebounceDelay = options?.debounceDelay;
     }
 
     connect(): void {
-        this.socket.connect(
-            { host: this.ip, port: this.port },
-            this.handleConnectionEstablished.bind(this)
-        );
+        this.socket.connect({ host: this.ip, port: this.port }, this.handleConnectionEstablished.bind(this));
         this.socket.on('close', this.handleConnectionClosed.bind(this));
         this.socket.on('error', this.handleConnectionError.bind(this));
         this.socket.on('timeout', this.handleConnectionTimeout.bind(this));
@@ -63,10 +56,7 @@ export class Device {
 
     private reconnect(): void {
         this.socket.removeAllListeners();
-        setTimeout(
-            this.connect.bind(this),
-            this.reconnectionAttemptsUsed * 5000 + 5000
-        );
+        setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
         this.reconnectionAttemptsUsed++;
     }
 
@@ -76,10 +66,7 @@ export class Device {
 
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
-        if (
-            error ||
-            this.reconnectionAttemptsUsed < this.reconnectionAttempts
-        ) {
+        if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
             this.reconnect();
         } else {
             this.handleDisconnect();
@@ -107,15 +94,10 @@ export class Device {
                 this.log(`resolving command ${command} with ${data}`);
                 resolve(data);
             };
-            this.responseHandler = this.responseDebounceDelay
-                ? debounce(resultHandler, this.responseDebounceDelay)
-                : resultHandler;
+            this.responseHandler = this.responseDebounceDelay ? debounce(resultHandler, this.responseDebounceDelay) : resultHandler;
             this.socket.write(command, (error) => {
                 if (error) {
-                    this.log(
-                        `sending command end up with error: ${error.message}`,
-                        true
-                    );
+                    this.log(`sending command end up with error: ${error.message}`, true);
                     reject(error);
                 }
             });

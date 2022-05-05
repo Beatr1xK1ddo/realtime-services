@@ -1,6 +1,4 @@
-export type IRealtimeAppEvent =
-    | IRealtimeAppStatusEvent
-    | IRealtimeAppTimingEvent;
+export type IRealtimeAppEvent = IRealtimeAppStatusEvent | IRealtimeAppTimingEvent;
 
 export type IRealtimeAppStatusEvent = {
     id: string;

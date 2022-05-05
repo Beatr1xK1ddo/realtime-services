@@ -1,14 +1,14 @@
-import {createServer} from "https";
-import {Namespace, Server} from "socket.io";
-import {readFileSync} from "fs";
+import { createServer } from 'https';
+import { Namespace, Server, Socket } from 'socket.io';
+import { readFileSync } from 'fs';
 
-import type {IMainServiceModule, IPinoOptions, SSL} from "@socket/shared-types";
+import type { IMainServiceModule, IPinoOptions, SSL } from '@socket/shared-types';
 
-import {PinoLogger} from "@socket/shared-utils";
+import { PinoLogger } from '@socket/shared-utils';
 
 type MainServiceServerOptions = {
-    ssl: SSL,
-    logger?: Partial<IPinoOptions>,
+    ssl: SSL;
+    logger?: Partial<IPinoOptions>;
 };
 
 export class MainServiceServer {
@@ -23,9 +23,12 @@ export class MainServiceServer {
             cert: readFileSync(options.ssl.cert),
         }).listen(port);
         //todo: handle cors more precisely
-        this.io = new Server(this.https, {cors: {origin: '*'}});
+        this.io = new Server(this.https, { cors: { origin: '*' } });
+        this.io.on('connection', (socket: Socket) => {
+            this.logger.log.info(`Socket: ${socket.id} connected to Server`);
+        });
         this.logger = new PinoLogger(options.logger?.name, options.logger?.level, options.logger?.path);
-    };
+    }
 
     registerModule(module: IMainServiceModule) {
         this.logger.log.info(`Registering module ${module.name}`);
@@ -37,5 +40,5 @@ export class MainServiceServer {
         MainServiceServer.namespaces.set(module.name, ioNamespace);
         this.logger.log.info(`Module with namespace: ${module.name} was registered`);
         module.init(ioNamespace);
-    };
+    }
 }

@@ -6,7 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import type { SSL } from '@socket/shared-types';
 import type { IThumbnailClientSubscription, IThumbnailResponse } from './types';
 
-import {MainServiceModule} from "@socket/shared/entities";
+import { MainServiceModule } from '@socket/shared/entities';
 
 type ThumbnailsModuleOptions = {
     apiServerPort: number;
@@ -36,10 +36,7 @@ export class ThumbnailsModule extends MainServiceModule {
 
     override init(io: Namespace) {
         super.init(io);
-        this.registerHandler(
-            'connection',
-            this.handleClientConnection.bind(this)
-        );
+        this.registerHandler('connection', this.handleClientConnection.bind(this));
         this.log('initialized');
     }
 
@@ -51,9 +48,7 @@ export class ThumbnailsModule extends MainServiceModule {
                 this.clients.set(channel, new Set());
             }
             this.clients.get(channel)!.add(socket);
-            this.log(
-                `subscribe request from ${socket.id} for ${channel} succeed`
-            );
+            this.log(`subscribe request from ${socket.id} for ${channel} succeed`);
         });
         socket.on('unsubscribe', (data: IThumbnailClientSubscription) => {
             const { channel } = data;
@@ -61,13 +56,9 @@ export class ThumbnailsModule extends MainServiceModule {
             const channelClients = this.clients.get(channel);
             if (channelClients) {
                 channelClients.delete(socket);
-                this.log(
-                    `unsubscribe request from ${socket.id} for ${channel} succeed`
-                );
+                this.log(`unsubscribe request from ${socket.id} for ${channel} succeed`);
             } else {
-                this.log(
-                    `Unsubscribe request from ${socket.id} for ${channel}`
-                );
+                this.log(`Unsubscribe request from ${socket.id} for ${channel}`);
             }
         });
         socket.on('error', (error) => {
@@ -75,10 +66,7 @@ export class ThumbnailsModule extends MainServiceModule {
         });
     }
 
-    private handleApiRequest(
-        request: IncomingMessage,
-        response: ServerResponse
-    ) {
+    private handleApiRequest(request: IncomingMessage, response: ServerResponse) {
         const params = new URLSearchParams(request.url);
         const channel = params.get('channel');
         if (channel && this.clients.has(channel)) {
@@ -102,9 +90,7 @@ export class ThumbnailsModule extends MainServiceModule {
         this.clients.get(channel)?.forEach((socket) => {
             const response: IThumbnailResponse = {
                 channel,
-                imageSrcBase64: `data:image/png;base64,${imageBuffer.toString(
-                    'base64'
-                )}`,
+                imageSrcBase64: `data:image/png;base64,${imageBuffer.toString('base64')}`,
             };
             socket.emit('thumbnail', response);
         });

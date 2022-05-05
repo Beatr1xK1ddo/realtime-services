@@ -26,3 +26,5 @@ export type ILogData = {
     nodeId: number;
     data: ISysLogMessage | IAppLogMessage;
 };
+
+export type ILoggerRequestPayload = { nodeId: number; logType: ELogTypes };
