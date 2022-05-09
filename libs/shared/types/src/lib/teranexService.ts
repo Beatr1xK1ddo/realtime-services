@@ -27,8 +27,14 @@ export type IDeviceResponseEvent = {
     nodeId: number;
     ip: string;
     port: number;
-    data?: string[];
-    error?: string;
+    data: string[];
+};
+
+export type IDeviceResponseError = {
+    nodeId: number;
+    ip: string;
+    port: number;
+    error: any;
 };
 
 export type INodeMessage = {
@@ -38,3 +44,15 @@ export type INodeMessage = {
     resolve: (value?: unknown) => void;
     reject: (reason?: unknown) => void;
 };
+
+export const isClientSubscribeEvet = (
+    event: IClientSubscribeEvent
+): event is IClientSubscribeEvent =>
+    typeof event === "object" &&
+    typeof event.nodeId === "number" &&
+    typeof event.ip === "string" &&
+    typeof event.port === "number";
+
+export enum EErrorTypes {
+    incorrectRequest = "Request is incorrect.",
+}

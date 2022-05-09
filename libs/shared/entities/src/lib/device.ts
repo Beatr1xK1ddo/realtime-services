@@ -21,6 +21,10 @@ export class Device {
     protected reconnectionAttempts: number;
     protected reconnectionAttemptsUsed: number;
     protected timeout?: number;
+    protected deviceResponse?: {
+        resolve: (value: any) => void;
+        reject: (reason?: any) => void;
+    };
 
     private logger: PinoLogger;
 
@@ -50,34 +54,40 @@ export class Device {
         this.responseDebounceDelay = options?.debounceDelay;
     }
 
-    connect(): void {
-        this.socket.connect(
-            {host: this.ip, port: this.port},
-            this.handleConnectionEstablished.bind(this)
-        );
-        this.socket.on("close", this.handleConnectionClosed.bind(this));
-        this.socket.on("error", this.handleConnectionError.bind(this));
-        this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
-        this.socket.on("data", this.handleCommandResult.bind(this));
+    connect(): Promise<any> {
+        this.log("connect is running");
+        return new Promise((resolve, reject) => {
+            this.deviceResponse = {resolve, reject};
+            this.socket.connect(
+                {host: this.ip, port: this.port},
+                this.handleConnectionEstablished.bind(this)
+            );
+            this.socket.on("close", this.handleConnectionClosed.bind(this));
+            this.socket.on("error", this.handleConnectionError.bind(this));
+            this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
+            this.socket.on("data", this.handleCommandResult.bind(this));
+        });
     }
 
     private reconnect(): void {
-        this.socket.removeAllListeners();
+        this.log("reconnect is running");
+        // this.socket.destroy();
         setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
         this.reconnectionAttemptsUsed++;
     }
 
     protected handleConnectionEstablished() {
         this.log("connected");
+        this.deviceResponse?.resolve(true);
     }
 
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
-        if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
-            this.reconnect();
-        } else {
-            this.handleDisconnect();
-        }
+        // if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
+        //     this.reconnect();
+        // } else {
+        //     this.handleDisconnect();
+        // }
     }
 
     protected handleDisconnect(): void {
@@ -86,10 +96,14 @@ export class Device {
 
     protected handleConnectionError(error: Error): void {
         this.log(`error: ${error.message}`, true);
+        this.deviceResponse?.reject(error);
+        // this.socket.destroy();
     }
 
     protected handleConnectionTimeout(): void {
         this.log("connection inactive");
+        this.deviceResponse?.reject(false);
+        // this.socket.destroy();
     }
 
     sendCommand(command: string): Promise<any> {
@@ -97,6 +111,7 @@ export class Device {
         this.commandResult = "";
         this.responseHandler = undefined;
         return new Promise((resolve, reject) => {
+            this.deviceResponse = {resolve, reject};
             const resultHandler = (data: string) => {
                 this.log(`resolving command ${command} with ${data}`);
                 resolve(data);
@@ -126,5 +141,9 @@ export class Device {
         } else {
             this.logger.log.info(loggingMessage);
         }
+    }
+
+    get check() {
+        return this.socket?.destroyed;
     }
 }

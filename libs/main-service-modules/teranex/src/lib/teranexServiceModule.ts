@@ -4,8 +4,8 @@ import {
     IDeviceResponseEvent,
     IClientSubscribeEvent,
     INodeInitEvent,
+    isClientSubscribeEvet,
 } from "@socket/shared-types";
-import {isClientSubscribeEvet} from "./types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
 export class TeranexServiceModule extends MainServiceModule {
@@ -20,12 +20,12 @@ export class TeranexServiceModule extends MainServiceModule {
 
     protected override onConnected(socket: Socket) {
         socket.on("init", ({nodeId}: INodeInitEvent) => {
-            this.logger.log.info(`Init node: ${nodeId}`);
+            this.log(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         });
         socket.on("subscribe", (event: IClientSubscribeEvent) => {
             const weShouldProceed = isClientSubscribeEvet(event);
-            this.logger.log.info(
+            this.log(
                 `Client: ${socket.id} attempting to subscribed to ${
                     weShouldProceed ? JSON.stringify(event) : weShouldProceed
                 }`
@@ -96,7 +96,7 @@ export class TeranexServiceModule extends MainServiceModule {
                 .get(nodeId)
                 ?.get(deviceId)
                 ?.forEach((socket) => socket.emit("result", data));
-            this.logger.log.info(
+            this.log(
                 `Response was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`
             );
         });

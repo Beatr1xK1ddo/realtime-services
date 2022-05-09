@@ -1,6 +1,7 @@
 import {
     IClientCmdRequestEvent,
     IClientSubscribeEvent,
+    IDeviceResponseError,
     IDeviceResponseEvent,
 } from "@socket/shared-types";
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
@@ -27,8 +28,13 @@ export class TeranexNodeService extends NodeDeviceService {
         try {
             const device = await this.getDevice(ip, port);
             if (device) this.emit("subscribed", event);
-        } catch (e) {
-            //todo: add subscription failure handling
+        } catch (error) {
+            this.emit("response", {
+                nodeId: this.nodeId,
+                ip,
+                port,
+                error,
+            } as IDeviceResponseError);
         }
     }
 
@@ -54,7 +60,7 @@ export class TeranexNodeService extends NodeDeviceService {
                 ip,
                 port,
                 error,
-            } as IDeviceResponseEvent);
+            } as IDeviceResponseError);
         }
     }
 
@@ -65,7 +71,7 @@ export class TeranexNodeService extends NodeDeviceService {
         }
         const newDevice = await TeranexNodeService.createDevice(ip, port);
         if (!newDevice) {
-            this.log(`can't create device ${deviceId}`, true);
+            this.log(`Can't create device ${deviceId}`, true);
             throw new Error(`Can't create device ${deviceId}`);
         }
         this.devices[deviceId] = newDevice;
