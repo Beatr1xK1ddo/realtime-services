@@ -1,4 +1,4 @@
-export type INodeInitEvent = {nodeId: number};
+export type INodeEvent = {nodeId: number};
 
 export type IServerModuleMessage = {
     message: string;
@@ -9,6 +9,8 @@ export type IClientSubscribeEvent = {
     ip: string;
     port: number;
 };
+
+export type IClientSubscribedEvent = {socketId: string; event: IClientSubscribeEvent};
 
 export type IClientCmdRequestEvent = {
     nodeId: number;

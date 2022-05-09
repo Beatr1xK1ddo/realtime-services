@@ -28,8 +28,10 @@ export class LoggerServiceModule extends MainServiceModule {
         }
     }
 
-    private handleConnection(socket: Socket) {
-        socket.on("subscribe", ({nodeId, logType}: ILoggerRequestPayload) => {
+    private onSubscribe(socket: Socket) {
+        return (data: ILoggerRequestPayload) => {
+            const {nodeId, logType} = data;
+
             const logtype = this.clients.get(logType);
 
             if (!logtype || logtype.get(nodeId)?.has(socket)) {
@@ -41,12 +43,16 @@ export class LoggerServiceModule extends MainServiceModule {
             } else if (!this.clients.get(logType)?.get(nodeId)?.has(socket)) {
                 this.clients.get(logType)?.get(nodeId)?.add(socket);
             }
-            this.logger.log.info(
+            this.log(
                 `Socket "${socket.id}" was subscribed to "log: ${logType}" and "node: ${nodeId}"`
             );
-        });
+        };
+    }
 
-        socket.on("unsubscribe", ({nodeId, logType}: ILoggerRequestPayload) => {
+    private onUnsubscribe(socket: Socket) {
+        return (data: ILoggerRequestPayload) => {
+            const {nodeId, logType} = data;
+
             const logtype = this.clients.get(logType);
 
             if (!logtype || !logtype.get(nodeId) || !logtype.get(nodeId)?.has(socket)) {
@@ -54,14 +60,20 @@ export class LoggerServiceModule extends MainServiceModule {
             }
 
             logtype.get(nodeId)?.delete(socket);
-            this.logger.log.info(
+            this.log(
                 `Socket "${socket.id}" was unsubscribed from "log: ${logType}" and "node: ${nodeId}"`
             );
-        });
+        };
+    }
+
+    private handleConnection(socket: Socket) {
+        socket.on("subscribe", this.onSubscribe.call(this, socket));
+
+        socket.on("unsubscribe", this.onUnsubscribe.call(this, socket));
 
         socket.on("data", this.handleData.bind(this));
 
-        socket.on("error", (error) => this.logger.log.error("Socket error: ", error));
+        socket.on("error", this.onError.bind(this));
     }
 
     private async initDbConnection() {
@@ -89,9 +101,7 @@ export class LoggerServiceModule extends MainServiceModule {
         if (!clients || !clients.size) return;
 
         clients.forEach((socket) => socket.emit("response", data));
-        this.logger.log.info(
-            `Sending data to sockets with "logType: ${logData.type}" and "nodeId: ${nodeId}"`
-        );
+        this.log(`Sending data to sockets with "logType: ${logData.type}" and "nodeId: ${nodeId}"`);
     }
 
     get collections() {

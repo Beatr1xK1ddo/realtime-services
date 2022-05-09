@@ -3,9 +3,6 @@ export type IClientNextomeetReqEvent = {
     cmd: string;
     params: IClientNextomeetParams;
 };
-export type IClientNextomeetSubEvent = {
-    nodeId: number;
-};
 
 export type IClientNextomeetResEvent = {
     nodeId: number;

@@ -3,8 +3,9 @@ import {
     IClientCmdRequestEvent,
     IDeviceResponseEvent,
     IClientSubscribeEvent,
-    INodeInitEvent,
     isClientSubscribeEvet,
+    IClientSubscribedEvent,
+    INodeEvent,
 } from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
@@ -19,11 +20,57 @@ export class TeranexServiceModule extends MainServiceModule {
     }
 
     protected override onConnected(socket: Socket) {
-        socket.on("init", ({nodeId}: INodeInitEvent) => {
+        socket.on("nodeServiceInit", this.onNodeServiceInit.call(this, socket));
+        socket.on("clientSubscribe", this.onClientSubscribe.call(this, socket));
+        socket.on("clientSubscribed", this.onClientSubscribed.call(this, socket));
+        socket.on("clientUnsubscribe", this.onClientUnsubscribe.call(this, socket));
+        socket.on("clientCommands", this.onClientCommands.bind(this));
+        socket.on("clientResponse", this.onClientResponse.bind(this));
+        socket.on("error", this.onError.bind(this));
+    }
+
+    private onNodeServiceInit(socket: Socket) {
+        return ({nodeId}: INodeEvent) => {
             this.log(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
-        });
-        socket.on("subscribe", (event: IClientSubscribeEvent) => {
+        };
+    }
+
+    private onClientResponse(data: IDeviceResponseEvent) {
+        const {ip, port, nodeId} = data;
+        const deviceId = `${ip}:${port}`;
+        this.clients
+            .get(nodeId)
+            ?.get(deviceId)
+            ?.forEach((socket) => socket.emit("result", data));
+        this.log(`Response was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`);
+    }
+
+    private onClientCommands(data: IClientCmdRequestEvent) {
+        const {nodeId} = data;
+        const nodeSocket = this.nodes.get(nodeId);
+        if (nodeSocket) {
+            this.log(`Commands to node: "${nodeId}" requested to device "${data.ip}:${data.port}"`);
+            nodeSocket.emit("request", data);
+        }
+    }
+
+    private onClientUnsubscribe(socket: Socket) {
+        return (data: IClientSubscribeEvent) => {
+            const {ip, port, nodeId} = data;
+            const deviceId = `${ip}:${port}`;
+            const devicesSubscribers = this.clients.get(nodeId);
+            if (devicesSubscribers && devicesSubscribers.has(deviceId)) {
+                devicesSubscribers.get(deviceId)?.delete(socket);
+                this.logger.log.info(
+                    `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
+                );
+            }
+        };
+    }
+
+    private onClientSubscribe(socket: Socket) {
+        return (event: IClientSubscribeEvent) => {
             const weShouldProceed = isClientSubscribeEvet(event);
             this.log(
                 `Client: ${socket.id} attempting to subscribed to ${
@@ -52,8 +99,11 @@ export class TeranexServiceModule extends MainServiceModule {
             //pass subscription message to node service
             if (this.nodes.has(nodeId))
                 this.nodes.get(nodeId)?.emit("subscribe", {socketId: socket.id, event});
-        });
-        socket.on("subscribed", (event: {socketId: string; event: IClientSubscribeEvent}) => {
+        };
+    }
+
+    private onClientSubscribed(socket: Socket) {
+        return (event: IClientSubscribedEvent) => {
             const deviceId = `${event.event.ip}:${event.event.port}`;
             const nodeSubscribers = this.clients.get(event.event.nodeId)?.get(deviceId);
             if (nodeSubscribers) {
@@ -69,37 +119,6 @@ export class TeranexServiceModule extends MainServiceModule {
                     client.emit("subscribed", event.event);
                 }
             }
-        });
-        socket.on("unsubscribe", ({nodeId, ip, port}: IClientSubscribeEvent) => {
-            const deviceId = `${ip}:${port}`;
-            const devicesSubscribers = this.clients.get(nodeId);
-            if (devicesSubscribers && devicesSubscribers.has(deviceId)) {
-                devicesSubscribers.get(deviceId)?.delete(socket);
-                this.logger.log.info(
-                    `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
-                );
-            }
-        });
-        socket.on("commands", ({nodeId, ...data}: IClientCmdRequestEvent) => {
-            const nodeSocket = this.nodes.get(nodeId);
-            if (nodeSocket) {
-                this.logger.log.info(
-                    `Commands to node: "${nodeId}" requested to device "${data.ip}:${data.port}"`
-                );
-                nodeSocket.emit("request", data);
-            }
-        });
-        socket.on("response", ({nodeId, ...data}: IDeviceResponseEvent) => {
-            const {ip, port} = data;
-            const deviceId = `${ip}:${port}`;
-            this.clients
-                .get(nodeId)
-                ?.get(deviceId)
-                ?.forEach((socket) => socket.emit("result", data));
-            this.log(
-                `Response was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`
-            );
-        });
-        socket.on("error", (error) => this.logger.log.error("Socket error: ", error));
+        };
     }
 }
