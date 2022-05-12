@@ -1,5 +1,5 @@
-import {createServer} from "http";
-import {Namespace, Server, Socket} from "socket.io";
+import {createServer} from "https";
+import {Namespace, Server} from "socket.io";
 import {readFileSync} from "fs";
 
 import type {IMainServiceModule, IPinoOptions, SSL} from "@socket/shared-types";
@@ -19,9 +19,9 @@ export class MainServiceServer {
 
     constructor(port: number, options: MainServiceServerOptions) {
         this.https = createServer({
-            // key: readFileSync(options.ssl.key),
-            // cert: readFileSync(options.ssl.cert),
-        }).listen(9000);
+            key: readFileSync(options.ssl.key),
+            cert: readFileSync(options.ssl.cert),
+        }).listen(port);
         //todo: handle cors more precisely
         this.io = new Server(this.https, {cors: {origin: "*"}});
         this.logger = new PinoLogger(
