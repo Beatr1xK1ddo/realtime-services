@@ -1,20 +1,47 @@
 export type IRealtimeAppEvent = IRealtimeAppStatusEvent | IRealtimeAppTimingEvent;
 
 export type IRealtimeAppStatusEvent = {
-    id: string;
+    id: number;
     type: string;
     status: string;
     statusChange: string;
 };
 
 export type IRealtimeAppTimingEvent = {
-    id: string;
+    id: number;
     type: string;
-    startTime: number;
+    startedAt: number;
 };
 
-export type IRedisClientEvent = {
+export type IRealtimeNodeEvent = IRealtimeNodePingEvent |  IRealtimeNodeSystemStateEvent | IRealtimeNodeStatusEvent;
+
+export type IRealtimeNodeEventType = "ping" | "system" | "status";
+
+export type IRealtimeNodePingEvent = {
+    type: IRealtimeNodeEventType;
+    lastPing: number;
+};
+
+export type IRealtimeNodeSystemStateEvent = {
+    type: IRealtimeNodeEventType;
+    cpu: number,
+    memoryUsed: number,
+    memoryTotal: number,
+    loadAverage: number
+};
+
+export type IRealtimeNodeStatusEvent = {
+    type: IRealtimeNodeEventType;
+    online: boolean
+};
+
+export type IRedisModuleAppDataSubscribeEvent = {
     nodeId: number;
-    type: string;
-    id: string;
+    appId: number;
+    appType: string;
+};
+
+export type IRedisModuleNodeDataSubscribeEvent = {
+    nodeId: number;
+    type: IRealtimeNodeEventType;
 };
