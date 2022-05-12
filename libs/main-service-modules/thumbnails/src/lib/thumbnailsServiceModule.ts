@@ -1,7 +1,7 @@
 import {createServer, Server} from "https";
+import {Socket} from "socket.io";
 import * as url from "url";
 import {readFileSync} from "fs";
-import {Namespace, Socket} from "socket.io";
 
 import type {IncomingMessage, ServerResponse} from "http";
 import type {SSL} from "@socket/shared-types";
@@ -31,15 +31,10 @@ export class ThumbnailsModule extends MainServiceModule {
             this.log(`API server running on port ${options.apiServerPort}`);
         });
         this.log("created");
-    }
+    };
 
-    override init(io: Namespace) {
-        super.init(io);
-        this.registerHandler("connection", this.handleClientConnection.bind(this));
-        this.log("initialized");
-    }
-
-    private handleClientConnection(socket: Socket) {
+    protected override onConnected(socket: Socket) {
+        super.onConnected(socket);
         socket.on("subscribe", (data: IThumbnailClientSubscription) => {
             const {channel} = data;
             this.log(`subscribe request from ${socket.id} for ${channel}`);
