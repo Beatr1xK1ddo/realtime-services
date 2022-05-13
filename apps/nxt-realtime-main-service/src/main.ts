@@ -6,8 +6,7 @@ import {ThumbnailsModule} from "@socket/main-service-modules/thumbnails";
 
 import {environment} from "./environments/environment";
 
-const {ssl, mainService, loggerService, teranexService, redisService, thumbnailsService} =
-    environment;
+const {ssl, mainService, loggerService, teranexService, redisService, thumbnailsService} = environment;
 
 const server = new MainServiceServer(mainService.port, {ssl});
 const modules = [

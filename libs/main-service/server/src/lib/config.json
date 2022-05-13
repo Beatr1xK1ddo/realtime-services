@@ -9,8 +9,8 @@
     "logDir": "../../var/log/",
     "cacheDir": "../../var/cache/",
     "ssl": {
-        "key": "/etc/pki/tls/private/nextologies.com.key",
-        "crt": "/etc/pki/tls/certs/nextologies_full.crt",
+        "key": "/Users/sashakan/Desktop/proger/work/socket/sockets/nextologies.com.key",
+        "crt": "/Users/sashakan/Desktop/proger/work/socket/sockets/nextologies_full.crt",
         "ca": "/etc/pki/tls/certs/gd_bundle-g2-g1.crt"
     },
     "logAgent": {

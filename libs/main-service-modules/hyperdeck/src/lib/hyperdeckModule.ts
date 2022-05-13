@@ -48,9 +48,7 @@ export class HyperdeckModule extends MainServiceModule {
             }
             if (!this.clients.get(nodeId)?.get(deviceId)?.has(socket)) {
                 this.clients.get(nodeId)?.get(deviceId)?.add(socket);
-                this.log(
-                    `Socket: "${socket.id}" subscribed to: "node: ${nodeId}" and "device ${deviceId}"`
-                );
+                this.log(`Socket: "${socket.id}" subscribed to: "node: ${nodeId}" and "device ${deviceId}"`);
             }
             if (this.nodes.has(nodeId)) {
                 this.nodes.get(nodeId)?.emit("subscribe", {socketId: socket.id, event});
@@ -63,14 +61,12 @@ export class HyperdeckModule extends MainServiceModule {
             const deviceId = `${event.event.ip}:${event.event.port}`;
             const nodeSubscribers = this.clients.get(event.event.nodeId)?.get(deviceId);
             if (nodeSubscribers) {
-                const client = Array.from(nodeSubscribers.values()).find(
-                    (socket) => socket.id === event.socketId
-                );
+                const client = Array.from(nodeSubscribers.values()).find((socket) => socket.id === event.socketId);
                 if (client) {
                     this.log(
-                        `Subscribed event to ${JSON.stringify(event.event)} received from ${
-                            socket.id
-                        } for ${client.id}"`
+                        `Subscribed event to ${JSON.stringify(event.event)} received from ${socket.id} for ${
+                            client.id
+                        }"`
                     );
                     client.emit("subscribed", event.event);
                 }
@@ -87,9 +83,7 @@ export class HyperdeckModule extends MainServiceModule {
                 return;
             }
             devicesSubscribers.get(deviceId)?.delete(socket);
-            this.log(
-                `Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`
-            );
+            this.log(`Socket: "${socket.id}" unsubscribed from "node: ${nodeId}" and "device ${deviceId}"`);
         };
     }
 
@@ -97,9 +91,7 @@ export class HyperdeckModule extends MainServiceModule {
         const {nodeId} = data;
         const nodeSocket = this.nodes.get(nodeId);
         if (nodeSocket) {
-            this.logger.log.info(
-                `Commands to node: "${nodeId}" requested to device: "${data.ip}:${data.port}"`
-            );
+            this.logger.log.info(`Commands to node: "${nodeId}" requested to device: "${data.ip}:${data.port}"`);
             nodeSocket.emit("request", data);
         }
     }
@@ -121,9 +113,7 @@ export class HyperdeckModule extends MainServiceModule {
             .get(nodeId)
             ?.get(deviceId)
             ?.forEach((socket) => socket.emit("responseError", data));
-        this.log(
-            `ResponseError was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`
-        );
+        this.log(`ResponseError was sent to clients with "node: ${nodeId}" and "device ${deviceId}"`);
     }
 
     protected override onConnected(socket: Socket) {
