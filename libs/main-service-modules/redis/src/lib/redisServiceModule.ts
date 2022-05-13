@@ -40,25 +40,26 @@ export class RedisServiceModule extends MainServiceModule {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
 
-            if (!this.appChannelClients.has(redisChannel)) {
-                const sockets = new Set<Socket>([socket]);
-                const typeToSocketsMap = new Map<number, Set<Socket>>([[appId, sockets]]);
-                this.appChannelClients.set(redisChannel, typeToSocketsMap);
-            }
-
-            if (!this.appChannelClients.get(redisChannel).has(appId)) {
-                this.appChannelClients.get(redisChannel).set(appId, new Set<Socket>([socket]));
-            } else {
-                this.appChannelClients.get(redisChannel).get(appId).add(socket);
-            }
-
-            this.redis.subscribe(redisChannel, (error, count) => {
-                if (error) {
-                    this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+            if (this.appChannelClients.has(redisChannel)) {
+                if (this.appChannelClients.get(redisChannel).has(appId)) {
+                    this.appChannelClients.get(redisChannel).get(appId).add(socket);
                 } else {
-                    this.log(`redis channel: ${redisChannel} subscribe success. Total channel subs: ${count}`);
+                    const sockets = new Set<Socket>([socket]);
+                    this.appChannelClients.get(redisChannel).set(appId, sockets);
                 }
-            });
+            } else {
+                this.redis.subscribe(redisChannel, (error) => {
+                    if (error) {
+                        this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+                    } else {
+                        this.log(`redis channel: ${redisChannel} subscribe success`);
+                    }
+                });
+                const sockets = new Set<Socket>([socket]);
+                const applicationToSocketsMap = new Map<number, Set<Socket>>([[appId, sockets]]);
+                this.appChannelClients.set(redisChannel, applicationToSocketsMap);
+            }
+            this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
         }
@@ -66,28 +67,29 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleNodeDataSubscribe = (socket: Socket) => (event: IRedisModuleNodeDataSubscribeEvent) => {
         try {
-            const {nodeId, type} = event;
+            const {type, nodeId} = event;
             const redisChannel = `realtime:node:${nodeId}`;
 
-            if (!this.nodeChannelClients.has(redisChannel)) {
-                const sockets = new Set<Socket>([socket]);
-                const typeToSocketsMap = new Map<string, Set<Socket>>([[type, sockets]]);
-                this.nodeChannelClients.set(redisChannel, typeToSocketsMap);
-            }
-
-            if (!this.nodeChannelClients.get(redisChannel).has(type)) {
-                this.nodeChannelClients.get(redisChannel).set(type, new Set<Socket>([socket]));
-            } else {
-                this.nodeChannelClients.get(redisChannel).get(type).add(socket);
-            }
-
-            this.redis.subscribe(redisChannel, (error, count) => {
-                if (error) {
-                    this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+            if (this.nodeChannelClients.has(redisChannel)) {
+                if (this.nodeChannelClients.get(redisChannel).has(type)) {
+                    this.nodeChannelClients.get(redisChannel).get(type).add(socket);
                 } else {
-                    this.log(`redis channel: ${redisChannel} subscribe success. Total channel subs: ${count}`);
+                    const sockets = new Set<Socket>([socket]);
+                    this.nodeChannelClients.get(redisChannel).set(type, sockets);
                 }
-            });
+            } else {
+                this.redis.subscribe(redisChannel, (error) => {
+                    if (error) {
+                        this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+                    } else {
+                        this.log(`redis channel: ${redisChannel} subscribe success`);
+                    }
+                });
+                const sockets = new Set<Socket>([socket]);
+                const applicationToSocketsMap = new Map<string, Set<Socket>>([[type, sockets]]);
+                this.nodeChannelClients.set(redisChannel, applicationToSocketsMap);
+            }
+            this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
         }
