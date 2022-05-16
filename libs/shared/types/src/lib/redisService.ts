@@ -54,7 +54,7 @@ export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeSi
 
 export type IRedisModuleNodeDataSubscribeEvent = {
     nodeId: number | number[];
-    type: IRealtimeNodeEventType | IRealtimeNodeEventType[];
+    type: IRealtimeNodeEventType;
 };
 
 export type IRedisModuleNodeDataSubscribeSingleEvent = {

@@ -2,14 +2,12 @@ import {Socket} from "socket.io";
 import Redis from "ioredis";
 
 import {
-    IRealtimeAppEvent,
     IRedisModuleAppDataSubscribeEvent,
     IRedisModuleNodeDataSubscribeEvent,
     IRedisModuleNodeDataUnsubscribeEvent,
     IRedisModuleAppDataUnsubscribeEvent,
     RedisServiceModuleOptions,
     IClients,
-    IRealtimeNodeEventType,
     IRedisMessageType,
     isRealtimeAppEvent,
     IRedisModuleNodeDataSubscribeSingleEvent,
@@ -91,47 +89,32 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     private handleNodeDataSubscribe = (socket: Socket) => (event: IRedisModuleNodeDataSubscribeEvent) => {
-        const {nodeId, type} = event;
-        if (Array.isArray(nodeId) && Array.isArray(type)) {
-            for (let i = 0; i < nodeId.length; i++) {
-                const sigleEvent: IRedisModuleNodeDataSubscribeSingleEvent = {
-                    type: type[i],
-                    nodeId: nodeId[i],
-                };
-                this.handleSingleNodeDataSubscribe(socket, sigleEvent);
-            }
-        }
-
-        if (isRedisModuleNodeDataSubscribeEvent(event)) {
-            this.handleSingleNodeDataSubscribe(socket, event);
-        }
-    };
-
-    private handleSingleNodeDataSubscribe = (socket: Socket, event: IRedisModuleNodeDataSubscribeSingleEvent) => {
         try {
             const {type, nodeId} = event;
-            const redisChannel = `realtime:node:${nodeId}`;
-
-            if (this.nodeChannelClients.has(redisChannel)) {
-                if (this.nodeChannelClients.get(redisChannel).has(type)) {
-                    this.nodeChannelClients.get(redisChannel).get(type).add(socket);
-                } else {
-                    const sockets = new Set<Socket>([socket]);
-                    this.nodeChannelClients.get(redisChannel).set(type, sockets);
-                }
-            } else {
-                this.redis.subscribe(redisChannel, (error) => {
-                    if (error) {
-                        this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+            const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
+            for (let index = 0; index < nodeIds.length; index++) {
+                const redisChannel = `realtime:node:${nodeIds[index]}`;
+                if (this.nodeChannelClients.has(redisChannel)) {
+                    if (this.nodeChannelClients.get(redisChannel).has(type)) {
+                        this.nodeChannelClients.get(redisChannel).get(type).add(socket);
                     } else {
-                        this.log(`redis channel: ${redisChannel} subscribe success`);
+                        const sockets = new Set<Socket>([socket]);
+                        this.nodeChannelClients.get(redisChannel).set(type, sockets);
                     }
-                });
-                const sockets = new Set<Socket>([socket]);
-                const applicationToSocketsMap = new Map<string, Set<Socket>>([[type, sockets]]);
-                this.nodeChannelClients.set(redisChannel, applicationToSocketsMap);
+                } else {
+                    this.redis.subscribe(redisChannel, (error) => {
+                        if (error) {
+                            this.log(`redis channel: ${redisChannel} subscribe failure: ${error.name}`, true);
+                        } else {
+                            this.log(`redis channel: ${redisChannel} subscribe success`);
+                        }
+                    });
+                    const sockets = new Set<Socket>([socket]);
+                    const applicationToSocketsMap = new Map<string, Set<Socket>>([[type, sockets]]);
+                    this.nodeChannelClients.set(redisChannel, applicationToSocketsMap);
+                }
+                this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
             }
-            this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
         }
