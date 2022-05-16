@@ -39,9 +39,9 @@ export type IRealtimeNodeStatusEvent = {
 };
 
 export type IRedisModuleAppDataSubscribeEvent = {
-    nodeId: number | number[];
-    appId: number | number[];
-    appType: string | string[];
+    nodeId: number;
+    appId: number;
+    appType: string;
 };
 
 export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeEvent;
