@@ -24,11 +24,7 @@ export class MainServiceServer {
         }).listen(port);
         //todo: handle cors more precisely
         this.io = new Server(this.https, {cors: {origin: "*"}});
-        this.logger = new PinoLogger(
-            options.logger?.name,
-            options.logger?.level,
-            options.logger?.path
-        );
+        this.logger = new PinoLogger(options.logger?.name, options.logger?.level, options.logger?.path);
     }
 
     registerModule(module: IMainServiceModule) {

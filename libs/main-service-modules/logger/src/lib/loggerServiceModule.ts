@@ -4,8 +4,7 @@ import {ELogTypes, ILogData, ILoggerRequestPayload, IPinoOptions} from "@socket/
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
 export class LoggerServiceModule extends MainServiceModule {
-    private dbURL =
-        "mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin";
+    private dbURL = "mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin";
     private db: Mongoose;
     private clients: Map<ELogTypes, Map<number, Set<Socket>>>;
 
@@ -43,9 +42,7 @@ export class LoggerServiceModule extends MainServiceModule {
             } else if (!this.clients.get(logType)?.get(nodeId)?.has(socket)) {
                 this.clients.get(logType)?.get(nodeId)?.add(socket);
             }
-            this.log(
-                `Socket "${socket.id}" was subscribed to "log: ${logType}" and "node: ${nodeId}"`
-            );
+            this.log(`Socket "${socket.id}" was subscribed to "log: ${logType}" and "node: ${nodeId}"`);
         };
     }
 
@@ -60,9 +57,7 @@ export class LoggerServiceModule extends MainServiceModule {
             }
 
             logtype.get(nodeId)?.delete(socket);
-            this.log(
-                `Socket "${socket.id}" was unsubscribed from "log: ${logType}" and "node: ${nodeId}"`
-            );
+            this.log(`Socket "${socket.id}" was unsubscribed from "log: ${logType}" and "node: ${nodeId}"`);
         };
     }
 

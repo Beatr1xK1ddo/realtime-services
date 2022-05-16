@@ -39,19 +39,30 @@ export type IRealtimeNodeStatusEvent = {
 };
 
 export type IRedisModuleAppDataSubscribeEvent = {
+    nodeId: number | number[];
+    appId: number | number[];
+    appType: string | string[];
+};
+
+export type IRedisModuleAppDataSubscribeSingleEvent = {
     nodeId: number;
     appId: number;
     appType: string;
 };
 
-export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeEvent;
+export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeSingleEvent;
 
 export type IRedisModuleNodeDataSubscribeEvent = {
+    nodeId: number | number[];
+    type: IRealtimeNodeEventType | IRealtimeNodeEventType[];
+};
+
+export type IRedisModuleNodeDataSubscribeSingleEvent = {
     nodeId: number;
     type: IRealtimeNodeEventType;
 };
 
-export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
+export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeSingleEvent;
 
 export type RedisServiceModuleOptions = {
     url: string;
@@ -59,3 +70,23 @@ export type RedisServiceModuleOptions = {
 };
 
 export type IClients = Map<string, Map<number, Set<Socket>>> | Map<string, Map<string, Set<Socket>>>;
+
+export type IRedisMessageType = IRealtimeAppEvent | IRealtimeNodeEvent;
+
+export const isRealtimeAppEvent = (type: IRedisMessageType): type is IRealtimeAppEvent => {
+    return "id" in type;
+};
+
+export const isRedisModuleNodeDataSubscribeEvent = (
+    data: IRedisModuleNodeDataSubscribeEvent
+): data is IRedisModuleNodeDataSubscribeSingleEvent => {
+    const {nodeId, type} = data;
+    return !Array.isArray(nodeId) && !Array.isArray(type);
+};
+
+export const isRedisModuleAppDataSubscribeSingleEvent = (
+    data: IRedisModuleAppDataSubscribeEvent
+): data is IRedisModuleAppDataSubscribeSingleEvent => {
+    const {nodeId, appId, appType} = data;
+    return !Array.isArray(nodeId) && !Array.isArray(appType) && !Array.isArray(appId);
+};

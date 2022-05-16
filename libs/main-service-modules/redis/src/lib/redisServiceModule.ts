@@ -9,6 +9,13 @@ import {
     IRedisModuleAppDataUnsubscribeEvent,
     RedisServiceModuleOptions,
     IClients,
+    IRealtimeNodeEventType,
+    IRedisMessageType,
+    isRealtimeAppEvent,
+    IRedisModuleNodeDataSubscribeSingleEvent,
+    IRedisModuleAppDataSubscribeSingleEvent,
+    isRedisModuleNodeDataSubscribeEvent,
+    isRedisModuleAppDataSubscribeSingleEvent,
 } from "@socket/shared-types";
 import {MainServiceModule} from "@socket/shared/entities";
 
@@ -28,14 +35,32 @@ export class RedisServiceModule extends MainServiceModule {
 
     protected onConnected(socket: Socket) {
         super.onConnected(socket);
-        socket.on("subscribeApp", this.handleAppDataSubscribe(socket));
-        socket.on("subscribeNode", this.handleNodeDataSubscribe(socket));
-        socket.on("unsubscribeApp", this.handleAppUnsubscribe(socket));
-        socket.on("unsubscribeNode", this.handleNodeUnsubscribe(socket));
-        socket.on("disconnect", this.handleDisconnect(socket));
+        socket.on("subscribeApp", this.handleAppDataSubscribe(socket).bind(this));
+        socket.on("subscribeNode", this.handleNodeDataSubscribe(socket).bind(this));
+        socket.on("unsubscribeApp", this.handleAppUnsubscribe(socket).bind(this));
+        socket.on("unsubscribeNode", this.handleNodeUnsubscribe(socket).bind(this));
+        socket.on("disconnect", this.handleDisconnect(socket).bind(this));
     }
 
     private handleAppDataSubscribe = (socket: Socket) => (event: IRedisModuleAppDataSubscribeEvent) => {
+        const {appId, nodeId, appType} = event;
+        if (Array.isArray(nodeId) && Array.isArray(appId) && Array.isArray(appType)) {
+            for (let i = 0; i < nodeId.length; i++) {
+                const sigleEvent: IRedisModuleAppDataSubscribeSingleEvent = {
+                    appId: appId[i],
+                    nodeId: nodeId[i],
+                    appType: appType[i],
+                };
+                this.handleSingeAppDataSubscribe(socket, sigleEvent);
+            }
+        }
+
+        if (isRedisModuleAppDataSubscribeSingleEvent(event)) {
+            this.handleSingeAppDataSubscribe(socket, event);
+        }
+    };
+
+    private handleSingeAppDataSubscribe = (socket: Socket, event: IRedisModuleAppDataSubscribeSingleEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
@@ -66,6 +91,23 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     private handleNodeDataSubscribe = (socket: Socket) => (event: IRedisModuleNodeDataSubscribeEvent) => {
+        const {nodeId, type} = event;
+        if (Array.isArray(nodeId) && Array.isArray(type)) {
+            for (let i = 0; i < nodeId.length; i++) {
+                const sigleEvent: IRedisModuleNodeDataSubscribeSingleEvent = {
+                    type: type[i],
+                    nodeId: nodeId[i],
+                };
+                this.handleSingleNodeDataSubscribe(socket, sigleEvent);
+            }
+        }
+
+        if (isRedisModuleNodeDataSubscribeEvent(event)) {
+            this.handleSingleNodeDataSubscribe(socket, event);
+        }
+    };
+
+    private handleSingleNodeDataSubscribe = (socket: Socket, event: IRedisModuleNodeDataSubscribeSingleEvent) => {
         try {
             const {type, nodeId} = event;
             const redisChannel = `realtime:node:${nodeId}`;
@@ -96,6 +138,24 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     private handleAppUnsubscribe = (socket: Socket) => (event: IRedisModuleAppDataUnsubscribeEvent) => {
+        const {appId, nodeId, appType} = event;
+        if (Array.isArray(nodeId) && Array.isArray(appId) && Array.isArray(appType)) {
+            for (let i = 0; i < nodeId.length; i++) {
+                const sigleEvent: IRedisModuleAppDataSubscribeSingleEvent = {
+                    appId: appId[i],
+                    nodeId: nodeId[i],
+                    appType: appType[i],
+                };
+                this.handleSingleAppUnsubscribe(socket, sigleEvent);
+            }
+        }
+
+        if (isRedisModuleAppDataSubscribeSingleEvent(event)) {
+            this.handleSingleAppUnsubscribe(socket, event);
+        }
+    };
+
+    private handleSingleAppUnsubscribe = (socket: Socket, event: IRedisModuleAppDataUnsubscribeEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
@@ -128,6 +188,23 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     private handleNodeUnsubscribe = (socket: Socket) => (event: IRedisModuleNodeDataUnsubscribeEvent) => {
+        const {nodeId, type} = event;
+        if (Array.isArray(nodeId) && Array.isArray(type)) {
+            for (let i = 0; i < nodeId.length; i++) {
+                const sigleEvent: IRedisModuleNodeDataSubscribeSingleEvent = {
+                    type: type[i],
+                    nodeId: nodeId[i],
+                };
+                this.handleSingleNodeUnsubscribe(socket, sigleEvent);
+            }
+        }
+
+        if (isRedisModuleNodeDataSubscribeEvent(event)) {
+            this.handleSingleNodeUnsubscribe(socket, event);
+        }
+    };
+
+    private handleSingleNodeUnsubscribe = (socket: Socket, event: IRedisModuleNodeDataUnsubscribeEvent) => {
         try {
             const {type, nodeId} = event;
             const redisChannel = `realtime:node:${nodeId}`;
@@ -215,14 +292,24 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleRedisError = (error) => this.log(`redis error: ${error}`, true);
 
-    private handleRedisEvent = (redisChannel: string, redisEvent) => {
+    private handleRedisEvent = (redisChannel: string, redisEvent: string) => {
         try {
-            const event: IRealtimeAppEvent = JSON.parse(redisEvent);
-            const {id} = event;
-            this.appChannelClients
-                .get(redisChannel)
-                ?.get(id)
-                ?.forEach((socket) => socket.emit("realtimeAppData", event));
+            const event: IRedisMessageType = JSON.parse(redisEvent);
+            const appEvent = isRealtimeAppEvent(event);
+
+            if (appEvent) {
+                const {id} = event;
+                this.appChannelClients
+                    .get(redisChannel)
+                    ?.get(id)
+                    ?.forEach((socket) => socket.emit("realtimeAppData", event));
+            } else {
+                const {type} = event;
+                this.nodeChannelClients
+                    .get(redisChannel)
+                    ?.get(type)
+                    ?.forEach((socket) => socket.emit("realtimeAppData", event));
+            }
         } catch (error) {
             this.log(`redis channel: ${redisChannel} event handling error ${error}`);
         }
