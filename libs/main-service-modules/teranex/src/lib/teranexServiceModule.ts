@@ -97,8 +97,7 @@ export class TeranexServiceModule extends MainServiceModule {
                 this.clients.get(nodeId)?.get(deviceId)?.add(socket);
             }
             //pass subscription message to node service
-            if (this.nodes.has(nodeId))
-                this.nodes.get(nodeId)?.emit("subscribe", {socketId: socket.id, event});
+            if (this.nodes.has(nodeId)) this.nodes.get(nodeId)?.emit("subscribe", {socketId: socket.id, event});
         };
     }
 
@@ -107,14 +106,12 @@ export class TeranexServiceModule extends MainServiceModule {
             const deviceId = `${event.event.ip}:${event.event.port}`;
             const nodeSubscribers = this.clients.get(event.event.nodeId)?.get(deviceId);
             if (nodeSubscribers) {
-                const client = Array.from(nodeSubscribers.values()).find(
-                    (socket) => socket.id === event.socketId
-                );
+                const client = Array.from(nodeSubscribers.values()).find((socket) => socket.id === event.socketId);
                 if (client) {
                     this.logger.log.info(
-                        `Subscribed event to ${JSON.stringify(event.event)} received from ${
-                            socket.id
-                        } for ${client.id}"`
+                        `Subscribed event to ${JSON.stringify(event.event)} received from ${socket.id} for ${
+                            client.id
+                        }"`
                     );
                     client.emit("subscribed", event.event);
                 }

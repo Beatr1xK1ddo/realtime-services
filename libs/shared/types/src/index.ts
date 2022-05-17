@@ -5,3 +5,4 @@ export * from "./lib/teranexService";
 export * from "./lib/nextomeetService";
 export * from "./lib/pinoLogerService";
 export * from "./lib/redisService";
+export * from "./lib/decklink";

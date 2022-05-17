@@ -2,7 +2,6 @@ import Redis from "ioredis";
 import {IRealtimeAppStatusEvent, IRealtimeAppTimingEvent} from "@socket/shared-types";
 
 export const redisTestRun = (url: string) => {
-
     const statusEvent: IRealtimeAppStatusEvent = {
         id: 391,
         type: "status",
@@ -25,4 +24,4 @@ export const redisTestRun = (url: string) => {
     const redis = new Redis(url);
     redis.on("connect", handleRedisConnection);
     redis.on("error", handleRedisError);
-}
+};

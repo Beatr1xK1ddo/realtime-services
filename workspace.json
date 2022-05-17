@@ -2,6 +2,7 @@
     "version": 2,
     "projects": {
         "main-service-modules-app-install": "libs/main-service-modules/app-install",
+        "main-service-modules-decklink-live-monitor": "libs/main-service-modules/decklink-live-monitor",
         "main-service-modules-hyperdeck": "libs/main-service-modules/hyperdeck",
         "main-service-modules-logger": "libs/main-service-modules/logger",
         "main-service-modules-monitor": "libs/main-service-modules/monitor",

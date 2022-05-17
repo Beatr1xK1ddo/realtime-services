@@ -7,12 +7,7 @@ import {
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
 
 export class TeranexNodeService extends NodeDeviceService {
-    constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.registerHandler("subscribe", this.handleSubscription.bind(this));
         this.registerHandler("request", this.handleRequest.bind(this));

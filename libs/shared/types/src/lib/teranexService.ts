@@ -47,9 +47,7 @@ export type INodeMessage = {
     reject: (reason?: unknown) => void;
 };
 
-export const isClientSubscribeEvet = (
-    event: IClientSubscribeEvent
-): event is IClientSubscribeEvent =>
+export const isClientSubscribeEvet = (event: IClientSubscribeEvent): event is IClientSubscribeEvent =>
     typeof event === "object" &&
     typeof event.nodeId === "number" &&
     typeof event.ip === "string" &&

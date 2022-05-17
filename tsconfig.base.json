@@ -16,57 +16,26 @@
         "resolveJsonModule": true,
         "baseUrl": ".",
         "paths": {
-            "@socket/main-service-modules-app-install": [
-                "libs/main-service-modules/app-install/src/index.ts"
+            "@socket/main-service-modules-app-install": ["libs/main-service-modules/app-install/src/index.ts"],
+            "@socket/main-service-modules-logger": ["libs/main-service-modules/logger/src/index.ts"],
+            "@socket/main-service-modules-monitor": ["libs/main-service-modules/monitor/src/index.ts"],
+            "@socket/main-service-modules-redis": ["libs/main-service-modules/redis/src/index.ts"],
+            "@socket/main-service-modules-udp-player": ["libs/main-service-modules/udp-player/src/index.ts"],
+            "@socket/main-service-modules/decklink-live-monitor": [
+                "libs/main-service-modules/decklink-live-monitor/src/index.ts"
             ],
-            "@socket/main-service-modules-logger": [
-                "libs/main-service-modules/logger/src/index.ts"
-            ],
-            "@socket/main-service-modules-monitor": [
-                "libs/main-service-modules/monitor/src/index.ts"
-            ],
-            "@socket/main-service-modules-redis": [
-                "libs/main-service-modules/redis/src/index.ts"
-            ],
-            "@socket/main-service-modules-udp-player": [
-                "libs/main-service-modules/udp-player/src/index.ts"
-            ],
-            "@socket/main-service-modules/hyperdeck": [
-                "libs/main-service-modules/hyperdeck/src/index.ts"
-            ],
-            "@socket/main-service-modules/nextomeet": [
-                "libs/main-service-modules/nextomeet/src/index.ts"
-            ],
-            "@socket/main-service-modules/teranex": [
-                "libs/main-service-modules/teranex/src/index.ts"
-            ],
-            "@socket/main-service-modules/thumbnails": [
-                "libs/main-service-modules/thumbnails/src/index.ts"
-            ],
-            "@socket/main-service-modules/types": [
-                "libs/main-service-modules/types/src/index.ts"
-            ],
-            "@socket/main-service-server": [
-                "libs/main-service/server/src/index.ts"
-            ],
-            "@socket/main-service/types": [
-                "libs/main-service/types/src/index.ts"
-            ],
-            "@socket/node-services-logger": [
-                "libs/node-services/logger/src/index.ts"
-            ],
-            "@socket/node-services-teranex": [
-                "libs/node-services/teranex/src/index.ts"
-            ],
-            "@socket/node-services/hyperdeck": [
-                "libs/node-services/hyperdeck/src/index.ts"
-            ],
-            "@socket/node-services/nextomeet": [
-                "libs/node-services/nextomeet/src/index.ts"
-            ],
-            "@socket/node-services/types": [
-                "libs/node-services/types/src/index.ts"
-            ],
+            "@socket/main-service-modules/hyperdeck": ["libs/main-service-modules/hyperdeck/src/index.ts"],
+            "@socket/main-service-modules/nextomeet": ["libs/main-service-modules/nextomeet/src/index.ts"],
+            "@socket/main-service-modules/teranex": ["libs/main-service-modules/teranex/src/index.ts"],
+            "@socket/main-service-modules/thumbnails": ["libs/main-service-modules/thumbnails/src/index.ts"],
+            "@socket/main-service-modules/types": ["libs/main-service-modules/types/src/index.ts"],
+            "@socket/main-service-server": ["libs/main-service/server/src/index.ts"],
+            "@socket/main-service/types": ["libs/main-service/types/src/index.ts"],
+            "@socket/node-services-logger": ["libs/node-services/logger/src/index.ts"],
+            "@socket/node-services-teranex": ["libs/node-services/teranex/src/index.ts"],
+            "@socket/node-services/hyperdeck": ["libs/node-services/hyperdeck/src/index.ts"],
+            "@socket/node-services/nextomeet": ["libs/node-services/nextomeet/src/index.ts"],
+            "@socket/node-services/types": ["libs/node-services/types/src/index.ts"],
             "@socket/shared-types": ["libs/shared/types/src/index.ts"],
             "@socket/shared-utils": ["libs/shared/utils/src/index.ts"],
             "@socket/shared/entities": ["libs/shared/entities/src/index.ts"],
