@@ -1,35 +1,53 @@
 import fetch from "node-fetch";
-import {
-    IClientSubscribeEvent,
-    IDecklinkClientEvent,
-    IDecklinkDeviceState,
-    IDecklinkLiveMonitor,
-    IDecklinkState,
-    isIDecklinkClientEvent,
-} from "@socket/shared-types";
+import {IDecklinkClientEvent, IDecklinkLiveMonitor, IDecklinkState, isIDecklinkClientEvent} from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 import {Socket} from "socket.io";
 
 export class DecklinkLiveMonitor extends MainServiceModule {
     private clients: Map<number, IDecklinkState>;
+    private timer?: NodeJS.Timer;
+    private timeout?: number;
 
-    constructor(name: string, options?: MainServiceModuleOptions) {
+    constructor(name: string, timeout?: number, options?: MainServiceModuleOptions) {
         super(name, options);
         this.clients = new Map();
+        this.timeout = timeout;
     }
 
     protected override onConnected(socket: Socket): void {
         super.onConnected(socket);
         socket.on("clientSubscribe", this.onClientSubscribe(socket));
         socket.on("clientUnsubscribe", this.onClientUnsubscribe(socket));
-        socket.on("sendMessage", this.hadleDeviceMessage.bind(this));
+    }
+
+    private initTimeoutRequest() {
+        this.timer = setInterval(async () => {
+            const decklinkList = await this.getListDecklikDevices();
+            if (!decklinkList) {
+                this.log("Can not get decklink list");
+                return;
+            }
+
+            for (const devidePortId of this.clients.keys()) {
+                const decklink = decklinkList.find((item) => item.id === devidePortId);
+
+                if (!decklink) {
+                    continue;
+                }
+
+                this.hadleDeviceMessage(decklink);
+            }
+        }, this.timeout || 5000);
     }
 
     private hadleDeviceMessage(message: IDecklinkLiveMonitor) {
         const {id} = message;
-        const deviceClients = this.clients?.get(id)?.sockets;
-        if (deviceClients?.size) {
-            deviceClients.forEach((socket) => socket.emit("deviceMessage", message));
+        const deviceState = this.clients?.get(id);
+        if (deviceState?.sockets.size) {
+            deviceState.deviceState = message;
+            deviceState.sockets.forEach((socket) => {
+                socket.emit("deviceMessage", message);
+            });
         }
     }
 
@@ -63,7 +81,11 @@ export class DecklinkLiveMonitor extends MainServiceModule {
             }
 
             if (this.clients.size === 1) {
-                this.getListDecklikDevices();
+                this.initTimeoutRequest();
+            }
+
+            if (!this.clients.size && this.timer) {
+                clearInterval(this.timer);
             }
         };
     }
@@ -86,13 +108,14 @@ export class DecklinkLiveMonitor extends MainServiceModule {
         };
     }
 
-    private async getListDecklikDevices() {
+    private async getListDecklikDevices(): Promise<IDecklinkLiveMonitor[] | undefined> {
         try {
             const response = await fetch("http://127.0.0.1:8096/api/v1/devices/status");
             const cleanResponse: IDecklinkLiveMonitor[] = await response.json();
-            console.log("cleanResponse", cleanResponse);
+            return cleanResponse;
         } catch (erros) {
             console.log("erros", erros);
+            return;
         }
     }
 
@@ -101,8 +124,8 @@ export class DecklinkLiveMonitor extends MainServiceModule {
             const response = await fetch(`http://127.0.0.1:8096/api/v1/device/${devidePortId}/0/status`);
             const cleanResponse: IDecklinkLiveMonitor = await response.json();
             return cleanResponse;
-        } catch (erros) {
-            console.log("erros", erros);
+        } catch (error) {
+            console.log("erros", error);
             return;
         }
     }
