@@ -237,7 +237,7 @@ export class RedisServiceModule extends MainServiceModule {
                 this.nodeChannelClients
                     .get(redisChannel)
                     ?.get(type)
-                    ?.forEach((socket) => socket.emit("realtimeAppData", event));
+                    ?.forEach((socket) => socket.emit("realtimeNodeData", event));
             }
         } catch (error) {
             this.log(`redis channel: ${redisChannel} event handling error ${error}`);

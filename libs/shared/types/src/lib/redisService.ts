@@ -21,11 +21,13 @@ export type IRealtimeNodeEvent = IRealtimeNodePingEvent | IRealtimeNodeSystemSta
 export type IRealtimeNodeEventType = "ping" | "system" | "status";
 
 export type IRealtimeNodePingEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     lastPing: number;
 };
 
 export type IRealtimeNodeSystemStateEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     cpu: number;
     memoryUsed: number;
@@ -34,6 +36,7 @@ export type IRealtimeNodeSystemStateEvent = {
 };
 
 export type IRealtimeNodeStatusEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     online: boolean;
 };
