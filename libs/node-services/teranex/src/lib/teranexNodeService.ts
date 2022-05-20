@@ -20,7 +20,7 @@ export class TeranexNodeService extends NodeDeviceService {
 
     protected onConnected() {
         super.onConnected();
-        this.emit("init", {nodeId: this.nodeId});
+        this.emit("nodeServiceInit", {nodeId: this.nodeId});
     }
 
     private async handleSubscription(event: {socketId: string; event: IClientSubscribeEvent}) {
