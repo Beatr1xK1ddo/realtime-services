@@ -29,7 +29,7 @@ export class TeranexNodeService extends NodeDeviceService {
             const device = await this.getDevice(ip, port);
             if (device) this.emit("clientSubscribed", event);
         } catch (error) {
-            this.emit("response", {
+            this.emit("clientResponse", {
                 nodeId: this.nodeId,
                 ip,
                 port,
@@ -48,14 +48,14 @@ export class TeranexNodeService extends NodeDeviceService {
                 result.push(TeranexNodeService.format(commandResult));
             }
             this.log(`Commands processed ${JSON.stringify(result)}`);
-            this.emit("response", {
+            this.emit("clientResponse", {
                 nodeId: this.nodeId,
                 ip,
                 port,
                 data: result,
             } as IDeviceResponseEvent);
         } catch (error) {
-            this.emit("response", {
+            this.emit("clientResponse", {
                 nodeId: this.nodeId,
                 ip,
                 port,
