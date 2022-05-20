@@ -27,7 +27,7 @@ export class TeranexNodeService extends NodeDeviceService {
         const {ip, port} = event.event;
         try {
             const device = await this.getDevice(ip, port);
-            if (device) this.emit("subscribed", event);
+            if (device) this.emit("clientSubscribed", event);
         } catch (error) {
             this.emit("response", {
                 nodeId: this.nodeId,
