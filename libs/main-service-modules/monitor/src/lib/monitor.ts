@@ -21,11 +21,7 @@ export class Monitor implements IMainServiceModule {
     constructor(name: string, urlRedis: string, loggerOptions?: Partial<IPinoOptions>) {
         this.name = name;
         this.redis = new Redis(urlRedis);
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
+        this.logger = new PinoLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
     }
 
     async init(io: Namespace) {
@@ -164,13 +160,7 @@ export class Monitor implements IMainServiceModule {
 
                     history = await util.getCache(app.uniqueID, () => this.fetchHistory(sqlRec));
                     this.logger.log.info('Sending "ts_errors"');
-                    this.sendData(
-                        "ts_errors",
-                        signalErrorTime,
-                        history,
-                        sqlRec,
-                        +results[0]! + "/" + +results[1]!
-                    );
+                    this.sendData("ts_errors", signalErrorTime, history, sqlRec, +results[0]! + "/" + +results[1]!);
                 }
             }
         } catch (e) {
@@ -218,13 +208,7 @@ export class Monitor implements IMainServiceModule {
         return result;
     }
 
-    sendData(
-        errorType: string,
-        errorTime: number | null,
-        errorHistory?: any,
-        sqlRec?: any,
-        replyCount?: any
-    ) {
+    sendData(errorType: string, errorTime: number | null, errorHistory?: any, sqlRec?: any, replyCount?: any) {
         const data = {
             appType: sqlRec.appType,
             appId: sqlRec.appId,

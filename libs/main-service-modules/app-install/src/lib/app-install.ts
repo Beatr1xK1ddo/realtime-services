@@ -28,11 +28,7 @@ export class AppInstall implements IMainServiceModule {
                 pollInterval: 100,
             },
         });
-        this.logger = new PinoLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
+        this.logger = new PinoLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
         // тут я оставил в комментариях его способ установления пути отслеживания файлов
         // щас реализована моя через конструктор
         // this.folder = config.app_install.logsDir;

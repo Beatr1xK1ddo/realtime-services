@@ -6,3 +6,4 @@ export * from "./lib/nextomeetService";
 export * from "./lib/pinoLogerService";
 export * from "./lib/redisService";
 export * from "./lib/decklink";
+export * from "./lib/hlsAalyzer";

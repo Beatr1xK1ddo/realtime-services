@@ -15,14 +15,7 @@ export class LoggerNodeService extends NodeService {
     private excludeSysLogRegexp?: RegExp;
     private mapFiles: Map<string, IFile> = new Map();
 
-    constructor(
-        name: string,
-        nodeId: number,
-        url: string,
-        appLogsPath: string,
-        sysLogsPath: string,
-        exclude?: any
-    ) {
+    constructor(name: string, nodeId: number, url: string, appLogsPath: string, sysLogsPath: string, exclude?: any) {
         super(name, nodeId, url);
         this.nodeId = nodeId;
         this.appLogsPath = appLogsPath;
@@ -130,10 +123,7 @@ export class LoggerNodeService extends NodeService {
     private parseFilename(filename: string) {
         this.log(`Watching file "${filename}"`);
         if (filename === sysLog) return {type: ELogTypes.sysLog};
-        const [appType, appId, appName, subType] = path
-            .basename(filename, ".log")
-            .replace("real--", "")
-            .split("--");
+        const [appType, appId, appName, subType] = path.basename(filename, ".log").replace("real--", "").split("--");
         if (appType && appId) {
             return {
                 type: ELogTypes.appLog,

@@ -1,8 +1,8 @@
 export const environment = {
     production: false,
     ssl: {
-        key: "src/nextologies.com.key",
-        cert: "src/nextologies_full.crt",
+        key: "/src/nextologies.com.key",
+        cert: "/src/nextologies_full.crt",
         ca: "/Users/bender/code/tls/gd_bundle-g2-g1.crt",
     },
     mainService: {

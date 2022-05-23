@@ -1,0 +1,5 @@
+{
+    "name": "@socket/node-services/hls-analyzer",
+    "version": "0.0.1",
+    "type": "commonjs"
+}

@@ -1,6 +1,6 @@
 import {Namespace, Socket} from "socket.io";
 import {Mongoose} from "mongoose";
-import {ELogTypes, ILogData, ILoggerRequestPayload, IPinoOptions} from "@socket/shared-types";
+import {ELogTypes, ILogData, ILoggerRequestPayload} from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
 export class LoggerServiceModule extends MainServiceModule {
