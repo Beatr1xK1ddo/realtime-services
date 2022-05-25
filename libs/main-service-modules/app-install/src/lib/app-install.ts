@@ -1,24 +1,22 @@
 import {watch, FSWatcher} from "chokidar";
 import {readFileSync} from "fs";
-import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {IMainServiceModule} from "@socket/shared-types";
 import {Namespace, Socket} from "socket.io";
 import * as path from "path";
 import {IAppInstallFiles} from "./types";
 import * as Diff from "diff";
-
-// import * as config from '../config.json';
-import {PinoLogger} from "@socket/shared-utils";
+import {BasicLogger, IBasicLoggerOptions} from "@socket/shared/entities";
 
 export class AppInstall implements IMainServiceModule {
     private watcher: FSWatcher;
     public name: string;
     private path: string;
     private io?: Namespace;
-    private logger: PinoLogger;
+    private logger: BasicLogger;
     public files: Map<string, IAppInstallFiles> = new Map();
     // private folder: string;
 
-    constructor(name: string, path: string, loggerOptions?: Partial<IPinoOptions>) {
+    constructor(name: string, path: string, loggerOptions?: Partial<IBasicLoggerOptions>) {
         this.name = name;
         this.path = path;
         this.watcher = watch(this.path, {
@@ -28,7 +26,7 @@ export class AppInstall implements IMainServiceModule {
                 pollInterval: 100,
             },
         });
-        this.logger = new PinoLogger(
+        this.logger = new BasicLogger(
             loggerOptions?.name,
             loggerOptions?.level,
             loggerOptions?.path

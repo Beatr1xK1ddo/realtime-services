@@ -1,18 +1,19 @@
 import {Socket as NetSocket} from "net";
 
-import {IPinoOptions} from "@socket/shared-types";
-import {debounce, PinoLogger} from "@socket/shared-utils";
+import {commonUtils} from "@socket/shared-utils";
 
-export type Devices<T extends Device = Device> = {
+import {BasicLogger, IBasicLoggerOptions} from "./basicLogger";
+
+export interface IDevices<T extends Device = Device> {
     [key: string]: T;
-};
+}
 
-export type DeviceOptions = {
+export interface IDeviceOptions {
     timeout?: number;
     reconnectionAttempts?: number;
     debounceDelay?: number;
-    loggerOptions?: Partial<IPinoOptions>;
-};
+    loggerOptions?: Partial<IBasicLoggerOptions>;
+}
 
 export class Device {
     protected ip: string;
@@ -26,14 +27,14 @@ export class Device {
         reject: (reason?: any) => void;
     };
 
-    private logger: PinoLogger;
+    private logger: BasicLogger;
 
     protected id: string;
     protected commandResult: string;
     protected responseDebounceDelay?: number;
     protected responseHandler?: (data: string) => void;
 
-    constructor(ip: string, port: number, options?: DeviceOptions) {
+    constructor(ip: string, port: number, options?: IDeviceOptions) {
         this.ip = ip;
         this.port = port;
         this.socket = new NetSocket();
@@ -44,7 +45,7 @@ export class Device {
             this.timeout = options.timeout;
             this.socket.setTimeout(this.timeout);
         }
-        this.logger = new PinoLogger(
+        this.logger = new BasicLogger(
             options?.loggerOptions?.name,
             options?.loggerOptions?.level,
             options?.loggerOptions?.path
@@ -117,7 +118,7 @@ export class Device {
                 resolve(data);
             };
             this.responseHandler = this.responseDebounceDelay
-                ? debounce(resultHandler, this.responseDebounceDelay)
+                ? commonUtils.debounce(resultHandler, this.responseDebounceDelay)
                 : resultHandler;
             this.socket.write(command, (error) => {
                 if (error) {

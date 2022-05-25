@@ -1,9 +1,9 @@
-import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
+import {IMainServiceModule} from "@socket/shared-types";
 import {Namespace, Socket} from "socket.io";
 import {IUdpPlayerData} from "./types";
 import {parse} from "url";
 import {spawn} from "child_process";
-import {PinoLogger} from "@socket/shared-utils";
+import {BasicLogger, IBasicLoggerOptions} from "@socket/shared/entities";
 
 const MAX_BUFFER_SIZE = 65536;
 
@@ -11,11 +11,11 @@ export class UdpPlayer implements IMainServiceModule {
     public name: string;
     private io?: Namespace;
     private streams: Map<string, IUdpPlayerData>;
-    private logger: PinoLogger;
+    private logger: BasicLogger;
 
-    constructor(name: string, loggerOptions?: Partial<IPinoOptions>) {
+    constructor(name: string, loggerOptions?: Partial<IBasicLoggerOptions>) {
         this.name = name;
-        this.logger = new PinoLogger(
+        this.logger = new BasicLogger(
             loggerOptions?.name,
             loggerOptions?.level,
             loggerOptions?.path

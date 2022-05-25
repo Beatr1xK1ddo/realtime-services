@@ -1,5 +1,5 @@
 import {Manager} from "socket.io-client";
-import {IClientCmdRequestEvent, IServerModuleMessage} from "@socket/shared-types";
+import {IMainServiceModuleDeviceCommandsEvent} from "@socket/shared-types";
 
 const nodeId = 356;
 const ip = "192.168.99.22";
@@ -18,11 +18,11 @@ export function teranexTestRun(url: string) {
     const manager = new Manager(url);
     const socket = manager.socket("/teranex");
 
-    socket.on("subscribed", (data: IServerModuleMessage) => {
+    socket.on("subscribed", (data: any) => {
         console.log(data.message);
     });
 
-    socket.on("unsubscribed", (data: IServerModuleMessage) => {
+    socket.on("unsubscribed", (data: any) => {
         console.log(data.message);
     });
 
@@ -35,7 +35,7 @@ export function teranexTestRun(url: string) {
             port,
             commands: ["TERANEX DEVICE\n\n"],
             // commands,
-        } as IClientCmdRequestEvent);
+        } as IMainServiceModuleDeviceCommandsEvent);
 
         // setTimeout(() => {
         //     socket.emit('commands', {

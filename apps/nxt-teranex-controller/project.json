@@ -46,7 +46,11 @@
             "executor": "@nrwl/web:dev-server",
             "options": {
                 "buildTarget": "nxt-teranex-controller:build:development",
-                "hmr": true
+                "hmr": true,
+                "host": "nxt-dev-env.nextologies.com",
+                "ssl": true,
+                "sslKey": "ssl/nextologies.com.key",
+                "sslCert": "ssl/nextologies_full.crt"
             },
             "configurations": {
                 "production": {

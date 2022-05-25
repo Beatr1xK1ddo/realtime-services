@@ -6,12 +6,16 @@ import {
     IRedisModuleNodeDataSubscribeEvent,
     IRedisModuleNodeDataUnsubscribeEvent,
     IRedisModuleAppDataUnsubscribeEvent,
-    RedisServiceModuleOptions,
     IClients,
     IRedisMessageType,
     isRealtimeAppEvent,
 } from "@socket/shared-types";
-import {MainServiceModule} from "@socket/shared/entities";
+import {IBasicLoggerOptions, MainServiceModule} from "@socket/shared/entities";
+
+export type RedisServiceModuleOptions = {
+    url: string;
+    logger?: Partial<IBasicLoggerOptions>;
+};
 
 export class RedisServiceModule extends MainServiceModule {
     private appChannelClients: Map<string, Map<number, Set<Socket>>>;

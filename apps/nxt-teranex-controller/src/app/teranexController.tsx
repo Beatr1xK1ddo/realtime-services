@@ -30,7 +30,7 @@ import {
 } from "./teranexControllerTypes";
 import {destructVideoMode} from "./teranexControllerUtils";
 
-const url = "wss://qa.nextologies.com:1987";
+const url = "wss://cp.nextologies.com:1987";
 const nodeId = 356;
 const ip = "192.168.99.22";
 const port = 9800;
@@ -54,10 +54,10 @@ export function TeranexController() {
         const ioSocket = (socket.current = io(`${url}/teranex`));
         ioSocket.on("connect", () => {
             updateScreenMessage("Nxt service connection established");
-            ioSocket.emit("subscribe", {nodeId, ip, port});
+            ioSocket.emit("clientSubscribe", {nodeId, ip, port});
             // @ts-ignore
             window.teranexCommand = (commands: Array<string>) =>
-                ioSocket.emit("commands", {
+                ioSocket.emit("clientCommands", {
                     nodeId,
                     ip,
                     port,
@@ -76,7 +76,7 @@ export function TeranexController() {
     useEffect(() => {
         if (initDone && socket.current) {
             updateScreenMessage("Updating device state");
-            socket.current.emit("commands", {
+            socket.current.emit("clientCommands", {
                 nodeId,
                 ip,
                 port,
@@ -260,7 +260,7 @@ export function TeranexController() {
             socket.current.on("error", handleCommandError);
         }
         return () => {
-            socket.current?.removeAllListeners("result");
+            socket.current?.removeAllListeners("clientResponse");
             socket.current?.removeAllListeners("error");
         };
     }, [handleCommandResult]);
@@ -304,7 +304,7 @@ export function TeranexController() {
     const processCommand = useCallback((teranexCommand: string, commands: Array<string>) => {
         console.log("CMD", commands);
         if (socket.current) {
-            socket.current.emit("commands", {nodeId, ip, port, commands});
+            socket.current.emit("clientCommands", {nodeId, ip, port, commands});
             setProcessingCommand(teranexCommand);
         }
     }, []);
