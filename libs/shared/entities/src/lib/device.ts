@@ -4,11 +4,11 @@ import {commonUtils} from "@socket/shared-utils";
 
 import {BasicLogger, IBasicLoggerOptions} from "./basicLogger";
 
-export type Devices<T extends Device = Device> = {
+export type IDevices<T extends Device = Device> = {
     [key: string]: T;
 };
 
-export type DeviceOptions = {
+export type IDeviceOptions = {
     timeout?: number;
     reconnectionAttempts?: number;
     debounceDelay?: number;
@@ -30,7 +30,7 @@ export class Device {
     protected responseDebounceDelay?: number;
     protected responseHandler?: (data: string) => void;
 
-    constructor(ip: string, port: number, options?: DeviceOptions) {
+    constructor(ip: string, port: number, options?: IDeviceOptions) {
         this.ip = ip;
         this.port = port;
         this.socket = new NetSocket();
