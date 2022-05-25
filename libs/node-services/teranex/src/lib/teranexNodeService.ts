@@ -8,6 +8,7 @@ import {
     StringId,
 } from "@socket/shared-types";
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
+import {nodeServiceUtils} from "@socket/shared-utils";
 
 export class TeranexNodeService extends NodeDeviceService {
     constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
@@ -23,13 +24,15 @@ export class TeranexNodeService extends NodeDeviceService {
 
     private async handleSubscribe(event: {clientId: StringId; origin: IMainServiceModuleDeviceSubscribeEvent}) {
         const {ip, port} = event.origin;
+        this.log(`client ${event.clientId} subscribing to ${nodeServiceUtils.eventToString(event.origin)}`);
         try {
             const device = await this.getDevice(ip, port);
+            this.log(`client ${event.clientId} subscribing device ${device ? "obtained" : "absent"}`);
             const subscribedEvent: INodeDeviceServiceSubscribedEvent = {
                 clientId: event.clientId,
                 origin: event.origin,
             };
-            if (device) this.emit("clientSubscribed", subscribedEvent);
+            if (device) this.emit("subscribed", subscribedEvent);
         } catch (error) {
             const errorEvent: IServiceErrorBaseEvent = {
                 request: "subscribe",
