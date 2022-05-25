@@ -22,7 +22,7 @@ export const testNodeDeviceServiceInitEvent = (event: INodeBaseEvent): boolean =
 
 export const testNodeDeviceServiceSubscribedEvent = (event: INodeDeviceServiceSubscribedEvent): boolean => {
     //todo: proper validation
-    return typeof event.clientId === "number";
+    return typeof event.clientId === "string";
 };
 
 export const testNodeDeviceServiceCommandsResultEvent = (event: INodeDeviceServiceCommandsResultEvent): boolean => {
@@ -31,5 +31,5 @@ export const testNodeDeviceServiceCommandsResultEvent = (event: INodeDeviceServi
 
 export const testNodeDeviceServiceCommandsFailureEvent = (event: INodeDeviceServiceCommandsFailureEvent): boolean => {
     //todo: proper validation
-    return typeof event.clientId === "number" && typeof event.error === "string";
+    return typeof event.clientId === "string" && typeof event.error === "string";
 };
