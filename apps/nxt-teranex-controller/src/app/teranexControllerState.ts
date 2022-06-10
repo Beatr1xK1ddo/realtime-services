@@ -12,6 +12,7 @@ import {
 } from "./teranexControllerTypes";
 
 type TeranexAction =
+    | {type: "reset";}
     | {type: "mode"; payload: Mode}
     | {type: "device"; payload: {panelLock: boolean; remLock: boolean}}
     | {type: "videoInput"; payload: {video: Video}}
@@ -56,6 +57,8 @@ export const teranexInitialState: Teranex = {
 
 export function teranexReducer(state: Teranex, action: TeranexAction): Teranex {
     switch (action.type) {
+        case "reset":
+            return teranexInitialState;
         case "mode":
             return {
                 ...state,

@@ -172,8 +172,7 @@ html {
     color: #8d8888;
     width: 18rem;
     padding: 0.45rem;
-    height: calc(100% - 3.5rem);
-    max-height: 14rem;
+    height: 14.5rem;
     margin-top: 0.9rem;
     border-radius: 0.3rem !important;
     background-color: #f4f4f4;
@@ -182,7 +181,7 @@ html {
     font-size: 1.15rem;
     text-align: center;
     font-weight: bold;
-    overflow: scroll;
+    overflow: auto;
 }
 .teranex-screen-title {
     font-size: 1.15rem;
