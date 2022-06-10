@@ -26,6 +26,7 @@ export class RedisServiceModule extends MainServiceModule {
     constructor(name: string, options: RedisServiceModuleOptions) {
         super(name, options);
         this.appChannelClients = new Map();
+        this.nodeChannelClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
         this.log("created");
