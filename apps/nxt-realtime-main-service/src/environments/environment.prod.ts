@@ -20,6 +20,7 @@ export const environment = {
     },
     thumbnailsService: {
         name: "thumbnails",
-        apiServerPort: 1988,
+        apiHttpServerPort: 30680,
+        apiHttpsServerPort: 30681,
     },
 };

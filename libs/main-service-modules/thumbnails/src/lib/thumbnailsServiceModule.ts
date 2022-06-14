@@ -1,4 +1,5 @@
-import {createServer, Server} from "https";
+import {createServer as createHttpsServer, Server as HttpsServer} from "https";
+import {createServer as createHttpServer, Server as HttpServer} from "http";
 import {Socket} from "socket.io";
 import * as url from "url";
 import {readFileSync} from "fs";
@@ -10,26 +11,34 @@ import type {IThumbnailClientSubscription, IThumbnailResponse} from "./types";
 import {MainServiceModule} from "@socket/shared/entities";
 
 type ThumbnailsModuleOptions = {
-    apiServerPort: number;
+    apiHttpServerPort: number;
+    apiHttpsServerPort: number;
     apiServerSsl: SSL;
 };
 
 export class ThumbnailsModule extends MainServiceModule {
-    private thumbnailsApiServer: Server;
+    private thumbnailsHttpsApiServer: HttpsServer;
+    private thumbnailsHttpApiServer: HttpServer;
     private clients: Map<string, Set<Socket>>;
 
     constructor(name: string, options: ThumbnailsModuleOptions) {
         super(name);
         this.clients = new Map();
-        this.thumbnailsApiServer = createServer(
+        this.thumbnailsHttpsApiServer = createHttpsServer(
             {
                 key: readFileSync(options.apiServerSsl.key),
                 cert: readFileSync(options.apiServerSsl.cert),
             },
             this.handleApiRequest.bind(this)
-        ).listen(options.apiServerPort, () => {
-            this.log(`API server running on port ${options.apiServerPort}`);
+        ).listen(options.apiHttpsServerPort, () => {
+            this.log(`HTTPS API server running on port ${options.apiHttpsServerPort}`);
         });
+        this.thumbnailsHttpApiServer = createHttpServer(this.handleApiRequest.bind(this)).listen(
+            options.apiHttpServerPort,
+            () => {
+                this.log(`HTTP API server running on port ${options.apiHttpServerPort}`);
+            }
+        );
         this.log("created");
     }
 
@@ -78,7 +87,7 @@ export class ThumbnailsModule extends MainServiceModule {
             const queryParams = url.parse(requestURL, true).query;
             const channel = queryParams["channel"];
             if (channel && typeof channel === "string" && this.clients.has(channel)) {
-                this.log(`got thumbnail for ${channel}`);
+                // this.log(`got thumbnail for ${channel}`);
                 const payload: Buffer[] = [];
                 request.on("data", (chunk) => {
                     payload.push(chunk as Buffer);

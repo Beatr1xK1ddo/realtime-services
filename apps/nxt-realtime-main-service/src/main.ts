@@ -14,7 +14,8 @@ const modules = [
     new TeranexServiceModule(teranexService.name),
     new RedisServiceModule(redisService.name, {url: redisService.url}),
     new ThumbnailsModule(thumbnailsService.name, {
-        apiServerPort: thumbnailsService.apiServerPort,
+        apiHttpsServerPort: thumbnailsService.apiHttpsServerPort,
+        apiHttpServerPort: thumbnailsService.apiHttpServerPort,
         apiServerSsl: ssl,
     }),
 ];

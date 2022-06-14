@@ -1,41 +1,53 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-import {
-    SyntheticEvent,
-    useCallback,
-    useEffect,
-    useLayoutEffect,
-    useReducer,
-    useRef,
-    useState,
-} from "react";
+import {SyntheticEvent, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState} from "react";
 import {io, Socket} from "socket.io-client";
 import clsx from "clsx";
 
 import "./teranexController.css";
-import {
-    commandInitialState,
-    commandReducer,
-    teranexInitialState,
-    teranexReducer,
-} from "./teranexControllerState";
+import {commandInitialState, commandReducer, teranexInitialState, teranexReducer} from "./teranexControllerState";
 import {TERANEX_COMMANDS_SET, TERANEX_RESPONSE, TERANEX_UPDATE} from "./blackMagicProtocol";
-import {
-    AspectRatio,
-    Audio,
-    AudioStatus,
-    Format,
-    Frame,
-    Rate,
-    Video,
-} from "./teranexControllerTypes";
+import {AspectRatio, Audio, AudioStatus, Format, Frame, Rate, Video} from "./teranexControllerTypes";
 import {destructVideoMode} from "./teranexControllerUtils";
 
-const url = "wss://cp.nextologies.com:1987";
-const nodeId = 356;
-const ip = "192.168.99.22";
-const port = 9800;
+// const url = "wss://cp.nextologies.com:1987";
+// const nodeId = 356;
+// const ip = "192.168.99.22";
+// const port = 9800;
+
+const readTeranexMetaData = () => {
+    try {
+        // @ts-ignore
+        const nodeId = Number.parseInt(document.getElementById("nl_davincibundle_teranex_node").value);
+        // @ts-ignore
+        const ip = document.getElementById("nl_davincibundle_teranex_sourceIp").value;
+        // @ts-ignore
+        const port = Number.parseInt(document.getElementById("nl_davincibundle_teranex_sourcePort").value);
+        return {nodeId, ip, port};
+    } catch (e) {
+        // console.log("error reading teranex device parameters");
+        return null;
+    }
+};
+
+const initialTeranexMetaData = readTeranexMetaData();
+const initialState = initialTeranexMetaData
+    ? {serviceUrl: "wss://cp.nextologies.com:1987", ...initialTeranexMetaData}
+    : {
+        serviceUrl: "wss://cp.nextologies.com:1987",
+        nodeId: 0,
+        ip: "",
+        port: 0,
+    };
+type State = {
+    serviceUrl: string,
+    nodeId: number,
+    ip: string,
+    port: number,
+};
 
 export function TeranexController() {
+    const [state, setState] = useState<State>(initialState);
+
     const socket = useRef<null | Socket>(null);
     const messagesRef = useRef<null | HTMLDivElement>(null);
     const [screenMessages, setScreenMessages] = useState<Array<string>>([]);
@@ -50,40 +62,49 @@ export function TeranexController() {
 
     useEffect(() => {
         updateScreenMessage("Connecting");
+        const {serviceUrl, nodeId, ip, port} = state;
 
-        const ioSocket = (socket.current = io(`${url}/teranex`));
-        ioSocket.on("connect", () => {
-            updateScreenMessage("Nxt service connection established");
-            ioSocket.emit("clientSubscribe", {nodeId, ip, port});
-            // @ts-ignore
-            window.teranexCommand = (commands: Array<string>) =>
-                ioSocket.emit("clientCommands", {
-                    nodeId,
-                    ip,
-                    port,
-                    commands,
-                });
-        });
-        ioSocket.on("subscribed", () => {
-            updateScreenMessage("Device connection established");
-            setInitDone(true);
-        });
-        return () => {
-            ioSocket.disconnect();
+        // @ts-ignore
+        window.teranex = {
+            initDevice: (rawDevice?: {nodeId: number, ip: string, port: number,}) => {
+                teranexDispatch({type: "reset"});
+                const device = rawDevice || readTeranexMetaData();
+                if (device) {
+                    setState(state => ({...state, ...device}));
+                }
+            },
         };
-    }, []);
+
+        if (serviceUrl && nodeId && ip && port) {
+            const ioSocket = (socket.current = io(`${serviceUrl}/teranex`));
+            ioSocket.on("connect", () => {
+                updateScreenMessage("Nxt service connection established");
+                ioSocket.emit("subscribe", {nodeId, ip, port});
+                // @ts-ignore
+                window.teranex.command = (commands: Array<string>) =>
+                    ioSocket.emit("commands", {nodeId, ip, port, commands});
+            });
+            ioSocket.on("subscribed", () => {
+                updateScreenMessage("Device connection established");
+                setInitDone(true);
+            });
+        } else {
+            updateScreenMessage("Nxt service connection can't be established");
+        }
+        return () => {
+            socket.current && socket.current.disconnect();
+            socket.current = null;
+            setInitDone(false);
+        };
+    }, [state]);
 
     useEffect(() => {
         if (initDone && socket.current) {
+            const {nodeId, ip, port} = state;
             updateScreenMessage("Updating device state");
-            socket.current.emit("clientCommands", {
-                nodeId,
-                ip,
-                port,
-                commands: TERANEX_COMMANDS_SET.INFO,
-            });
+            socket.current.emit("commands", {nodeId, ip, port, commands: TERANEX_COMMANDS_SET.INFO});
         }
-    }, [initDone]);
+    }, [state, initDone]);
 
     const handleDeviceCommandResult = useCallback((result: string) => {
         const panelLockIndex = result.indexOf("Panel lock: ");
@@ -91,9 +112,7 @@ export function TeranexController() {
             ? result.substring(panelLockIndex + 12, panelLockIndex + 17) === "true"
             : false;
         const remLockIndex = result.indexOf("Remote lock: ");
-        const remLock = remLockIndex
-            ? result.substring(remLockIndex + 13, remLockIndex + 18) === "true"
-            : false;
+        const remLock = remLockIndex ? result.substring(remLockIndex + 13, remLockIndex + 18) === "true" : false;
         teranexDispatch({type: "device", payload: {panelLock, remLock}});
     }, []);
 
@@ -113,8 +132,7 @@ export function TeranexController() {
                 const start = audioSourceIndex + 14;
                 if (result.startsWith("Embedded", start)) audio = "embed";
                 if (result.startsWith("AES", start)) audio = "aes";
-                if (result.startsWith("RCA", start) || result.startsWith("DB25", start))
-                    audio = "anlg";
+                if (result.startsWith("RCA", start) || result.startsWith("DB25", start)) audio = "anlg";
             }
             if (video) {
                 let tc: boolean = false;
@@ -167,7 +185,7 @@ export function TeranexController() {
                 setProcessingCommand(null);
             }
         },
-        [processingCommand]
+        [processingCommand],
     );
 
     const handleVideoOutputCommandResult = useCallback(
@@ -196,8 +214,7 @@ export function TeranexController() {
                 if (result.startsWith("CentreCut", start)) aspect = "ccut-zoom";
                 if (result.startsWith("Adj", start)) aspect = "adj";
             }
-            if (format && frame && rate)
-                teranexDispatch({type: "videoOutput", payload: {format, frame, rate}});
+            if (format && frame && rate) teranexDispatch({type: "videoOutput", payload: {format, frame, rate}});
             if (aspect) teranexDispatch({type: "aspectRatio", payload: {aspect}});
             if (processingCommand === TERANEX_UPDATE.VIDEO_OUTPUT) {
                 if (videoModeIndex !== -1) {
@@ -213,7 +230,7 @@ export function TeranexController() {
                 setProcessingCommand(null);
             }
         },
-        [teranex, command, processingCommand]
+        [teranex, command, processingCommand],
     );
 
     const handleAncillaryDataCommandResult = useCallback((result: string) => {
@@ -233,35 +250,34 @@ export function TeranexController() {
     }, []);
 
     const handleCommandResult = useCallback(
-        (data: any) => {
+        (data: {data: Array<any>}) => {
             data.data?.forEach((result: string) => {
                 if (result.startsWith(TERANEX_RESPONSE.DEVICE)) handleDeviceCommandResult(result);
-                if (result.startsWith(TERANEX_RESPONSE.VIDEO_INPUT))
-                    handleVideoInputCommandResult(result);
-                if (result.startsWith(TERANEX_RESPONSE.VIDEO_OUTPUT))
-                    handleVideoOutputCommandResult(result);
-                if (result.startsWith(TERANEX_RESPONSE.ANCILLARY_DATA))
-                    handleAncillaryDataCommandResult(result);
+                if (result.startsWith(TERANEX_RESPONSE.VIDEO_INPUT)) handleVideoInputCommandResult(result);
+                if (result.startsWith(TERANEX_RESPONSE.VIDEO_OUTPUT)) handleVideoOutputCommandResult(result);
+                if (result.startsWith(TERANEX_RESPONSE.ANCILLARY_DATA)) handleAncillaryDataCommandResult(result);
                 if (result.startsWith(TERANEX_RESPONSE.GENLOCK)) handleGenlockCommandResult(result);
             });
+            if (!data.data || data.data.every(item => !item)) setProcessingCommand(null);
             console.log(`Teranex response ${JSON.stringify(data)}`);
         },
         [
+            state,
             handleDeviceCommandResult,
             handleVideoInputCommandResult,
             handleVideoOutputCommandResult,
             handleAncillaryDataCommandResult,
-        ]
+        ],
     );
 
     useEffect(() => {
         if (socket.current) {
             socket.current.on("result", handleCommandResult);
-            socket.current.on("error", handleCommandError);
+            socket.current.on("serviceError", handleCommandError);
         }
         return () => {
-            socket.current?.removeAllListeners("clientResponse");
-            socket.current?.removeAllListeners("error");
+            socket.current?.removeAllListeners("result");
+            socket.current?.removeAllListeners("serviceError");
         };
     }, [handleCommandResult]);
 
@@ -294,20 +310,22 @@ export function TeranexController() {
 
     const handleSetupChanged = useCallback(
         (type: string) => (event: SyntheticEvent<HTMLButtonElement>) => {
+            event.stopPropagation();
+            event.preventDefault();
             const payload = event.currentTarget.dataset[type];
             // @ts-ignore
             commandDispatch({type, payload});
         },
-        [teranex]
+        [teranex],
     );
 
     const processCommand = useCallback((teranexCommand: string, commands: Array<string>) => {
-        console.log("CMD", commands);
         if (socket.current) {
-            socket.current.emit("clientCommands", {nodeId, ip, port, commands});
+            const {nodeId, ip, port} = state;
+            socket.current.emit("commands", {nodeId, ip, port, commands});
             setProcessingCommand(teranexCommand);
         }
-    }, []);
+    }, [state]);
 
     const handleApply = useCallback(() => {
         //todo: make it better
@@ -339,7 +357,7 @@ export function TeranexController() {
                 }
                 commands.push(`${TERANEX_UPDATE.VIDEO_INPUT}Audio source: ${audioInput}\n\n`);
             }
-            processCommand(TERANEX_UPDATE.VIDEO_INPUT, commands);
+            commands.length && processCommand(TERANEX_UPDATE.VIDEO_INPUT, commands);
         } else {
             const format = command.format || teranex.format;
             const frame = command.frame || teranex.frame;
@@ -371,18 +389,15 @@ export function TeranexController() {
             //todo: how to combine this commands together?
             const videModeUpdateCommand = `${TERANEX_UPDATE.VIDEO_OUTPUT}Video mode: ${videoMode}\n\n`;
             const aspectRatioUpdateCommand = `${TERANEX_UPDATE.VIDEO_OUTPUT}Aspect ratio: ${aspectRatio}\n\n`;
-            processCommand(TERANEX_UPDATE.VIDEO_OUTPUT, [
-                videModeUpdateCommand,
-                aspectRatioUpdateCommand,
-            ]);
+            processCommand(TERANEX_UPDATE.VIDEO_OUTPUT, [videModeUpdateCommand, aspectRatioUpdateCommand]);
         }
     }, [teranex, command]);
 
     return (
-        <div className="teranex-container">
-            <div className="teranex">
-                <div className="teranex-block">
-                    <div className="teranex-title">&nbsp;</div>
+        <div className='teranex-container'>
+            <div className='teranex'>
+                <div className='teranex-block'>
+                    <div className='teranex-title'>&nbsp;</div>
                     <button
                         data-mode={"in"}
                         disabled={teranex.mode === null}
@@ -390,11 +405,11 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === null && "disabled",
-                            teranex.mode === "in" && "active"
+                            teranex.mode === "in" && "active",
                         )}>
                         IN
                     </button>
-                    <div className="teranex-logo">NXT</div>
+                    <div className='teranex-logo'>NXT</div>
                     <button
                         data-mode={"out"}
                         disabled={teranex.mode === null}
@@ -402,7 +417,7 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === null && "disabled",
-                            teranex.mode === "out" && "active"
+                            teranex.mode === "out" && "active",
                         )}>
                         OUT
                     </button>
@@ -413,13 +428,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.video === "sdi" && "active"
-                                : "disabled",
-                            teranex.mode === "in" &&
-                                teranex.video !== "sdi" &&
-                                command.video === "sdi" &&
-                                "selected"
+                            teranex.mode === "in" ? teranex.video === "sdi" && "active" : "disabled",
+                            teranex.mode === "in" && teranex.video !== "sdi" && command.video === "sdi" && "selected",
                         )}
                         data-video={"sdi"}
                         onClick={handleSetupChanged("video")}>
@@ -429,13 +439,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.video === "hdmi" && "active"
-                                : "disabled",
-                            teranex.mode === "in" &&
-                                teranex.video !== "hdmi" &&
-                                command.video === "hdmi" &&
-                                "selected"
+                            teranex.mode === "in" ? teranex.video === "hdmi" && "active" : "disabled",
+                            teranex.mode === "in" && teranex.video !== "hdmi" && command.video === "hdmi" && "selected",
                         )}
                         data-video={"hdmi"}
                         onClick={handleSetupChanged("video")}>
@@ -445,13 +450,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.video === "opt" && "active"
-                                : "disabled",
-                            teranex.mode === "in" &&
-                                teranex.video !== "opt" &&
-                                command.video === "opt" &&
-                                "selected"
+                            teranex.mode === "in" ? teranex.video === "opt" && "active" : "disabled",
+                            teranex.mode === "in" && teranex.video !== "opt" && command.video === "opt" && "selected",
                         )}
                         data-video={"opt"}
                         onClick={handleSetupChanged("video")}>
@@ -464,13 +464,11 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.audio === "embed" && "active"
-                                : "disabled",
+                            teranex.mode === "in" ? teranex.audio === "embed" && "active" : "disabled",
                             teranex.mode === "in" &&
-                                teranex.audio !== "embed" &&
-                                command.audio === "embed" &&
-                                "selected"
+                            teranex.audio !== "embed" &&
+                            command.audio === "embed" &&
+                            "selected",
                         )}
                         data-audio={"embed"}
                         onClick={handleSetupChanged("audio")}>
@@ -480,13 +478,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.audio === "aes" && "active"
-                                : "disabled",
-                            teranex.mode === "in" &&
-                                teranex.audio !== "aes" &&
-                                command.audio === "aes" &&
-                                "selected"
+                            teranex.mode === "in" ? teranex.audio === "aes" && "active" : "disabled",
+                            teranex.mode === "in" && teranex.audio !== "aes" && command.audio === "aes" && "selected",
                         )}
                         data-audio={"aes"}
                         onClick={handleSetupChanged("audio")}>
@@ -496,13 +489,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "out"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "in"
-                                ? teranex.audio === "anlg" && "active"
-                                : "disabled",
-                            teranex.mode === "in" &&
-                                teranex.audio !== "anlg" &&
-                                command.audio === "anlg" &&
-                                "selected"
+                            teranex.mode === "in" ? teranex.audio === "anlg" && "active" : "disabled",
+                            teranex.mode === "in" && teranex.audio !== "anlg" && command.audio === "anlg" && "selected",
                         )}
                         data-audio={"anlg"}
                         onClick={handleSetupChanged("audio")}>
@@ -510,20 +498,18 @@ export function TeranexController() {
                     </button>
                 </div>
                 <div className={"teranex-block"}>
-                    <div className="teranex-title teranex-title-border">Format</div>
+                    <div className='teranex-title teranex-title-border'>Format</div>
                     <ul className={"teranex-group"}>
                         <li>
                             <button
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "486" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "486" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "486" &&
-                                        command.format === "486" &&
-                                        "selected"
+                                    teranex.format !== "486" &&
+                                    command.format === "486" &&
+                                    "selected",
                                 )}
                                 data-format={"486"}
                                 onClick={handleSetupChanged("format")}>
@@ -533,13 +519,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "720" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "720" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "720" &&
-                                        command.format === "720" &&
-                                        "selected"
+                                    teranex.format !== "720" &&
+                                    command.format === "720" &&
+                                    "selected",
                                 )}
                                 data-format={"720"}
                                 onClick={handleSetupChanged("format")}>
@@ -549,13 +533,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "2k" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "2k" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "2k" &&
-                                        command.format === "2k" &&
-                                        "selected"
+                                    teranex.format !== "2k" &&
+                                    command.format === "2k" &&
+                                    "selected",
                                 )}
                                 data-format={"2k"}
                                 onClick={handleSetupChanged("format")}>
@@ -567,13 +549,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "576" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "576" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "576" &&
-                                        command.format === "576" &&
-                                        "selected"
+                                    teranex.format !== "576" &&
+                                    command.format === "576" &&
+                                    "selected",
                                 )}
                                 data-format={"576"}
                                 onClick={handleSetupChanged("format")}>
@@ -583,13 +563,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "1080" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "1080" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "1080" &&
-                                        command.format === "1080" &&
-                                        "selected"
+                                    teranex.format !== "1080" &&
+                                    command.format === "1080" &&
+                                    "selected",
                                 )}
                                 data-format={"1080"}
                                 onClick={handleSetupChanged("format")}>
@@ -599,13 +577,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.format === "ultraHd" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.format === "ultraHd" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.format !== "ultraHd" &&
-                                        command.format === "ultraHd" &&
-                                        "selected"
+                                    teranex.format !== "ultraHd" &&
+                                    command.format === "ultraHd" &&
+                                    "selected",
                                 )}
                                 data-format={"ultraHd"}
                                 onClick={handleSetupChanged("format")}>
@@ -621,10 +597,7 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === "out" ? teranex.frame === "p" && "active" : "disabled",
-                            teranex.mode === "out" &&
-                                teranex.frame !== "p" &&
-                                command.frame === "p" &&
-                                "selected"
+                            teranex.mode === "out" && teranex.frame !== "p" && command.frame === "p" && "selected",
                         )}
                         data-frame={"p"}
                         onClick={handleSetupChanged("frame")}>
@@ -635,10 +608,7 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === "out" ? teranex.frame === "i" && "active" : "disabled",
-                            teranex.mode === "out" &&
-                                teranex.frame !== "i" &&
-                                command.frame === "i" &&
-                                "selected"
+                            teranex.mode === "out" && teranex.frame !== "i" && command.frame === "i" && "selected",
                         )}
                         data-frame={"i"}
                         onClick={handleSetupChanged("frame")}>
@@ -648,13 +618,8 @@ export function TeranexController() {
                         disabled={teranex.mode === "in"}
                         className={clsx(
                             "teranex-button",
-                            teranex.mode === "out"
-                                ? teranex.frame === "psf" && "active"
-                                : "disabled",
-                            teranex.mode === "out" &&
-                                teranex.frame !== "psf" &&
-                                command.frame === "psf" &&
-                                "selected"
+                            teranex.mode === "out" ? teranex.frame === "psf" && "active" : "disabled",
+                            teranex.mode === "out" && teranex.frame !== "psf" && command.frame === "psf" && "selected",
                         )}
                         data-frame={"psf"}
                         onClick={handleSetupChanged("frame")}>
@@ -662,20 +627,18 @@ export function TeranexController() {
                     </button>
                 </div>
                 <div className={"teranex-block"}>
-                    <div className="teranex-title teranex-title-border">Rate</div>
+                    <div className='teranex-title teranex-title-border'>Rate</div>
                     <ul className={"teranex-group"}>
                         <li>
                             <button
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "23.98" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "23.98" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "23.98" &&
-                                        command.rate === "23.98" &&
-                                        "selected"
+                                    teranex.rate !== "23.98" &&
+                                    command.rate === "23.98" &&
+                                    "selected",
                                 )}
                                 data-rate={"23.98"}
                                 onClick={handleSetupChanged("rate")}>
@@ -685,13 +648,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "29.97" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "29.97" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "29.97" &&
-                                        command.rate === "29.97" &&
-                                        "selected"
+                                    teranex.rate !== "29.97" &&
+                                    command.rate === "29.97" &&
+                                    "selected",
                                 )}
                                 data-rate={"29.97"}
                                 onClick={handleSetupChanged("rate")}>
@@ -701,13 +662,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "59.94" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "59.94" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "59.94" &&
-                                        command.rate === "59.94" &&
-                                        "selected"
+                                    teranex.rate !== "59.94" &&
+                                    command.rate === "59.94" &&
+                                    "selected",
                                 )}
                                 data-rate={"59.94"}
                                 onClick={handleSetupChanged("rate")}>
@@ -719,13 +678,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "24" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "24" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "24" &&
-                                        command.rate === "24" &&
-                                        "selected"
+                                    teranex.rate !== "24" &&
+                                    command.rate === "24" &&
+                                    "selected",
                                 )}
                                 data-rate={"24"}
                                 onClick={handleSetupChanged("rate")}>
@@ -735,13 +692,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "30" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "30" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "30" &&
-                                        command.rate === "30" &&
-                                        "selected"
+                                    teranex.rate !== "30" &&
+                                    command.rate === "30" &&
+                                    "selected",
                                 )}
                                 data-rate={"30"}
                                 onClick={handleSetupChanged("rate")}>
@@ -751,13 +706,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "60" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "60" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "60" &&
-                                        command.rate === "60" &&
-                                        "selected"
+                                    teranex.rate !== "60" &&
+                                    command.rate === "60" &&
+                                    "selected",
                                 )}
                                 data-rate={"60"}
                                 onClick={handleSetupChanged("rate")}>
@@ -769,13 +722,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "25" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "25" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "25" &&
-                                        command.rate === "25" &&
-                                        "selected"
+                                    teranex.rate !== "25" &&
+                                    command.rate === "25" &&
+                                    "selected",
                                 )}
                                 data-rate={"25"}
                                 onClick={handleSetupChanged("rate")}>
@@ -785,13 +736,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.rate === "50" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.rate === "50" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.rate !== "50" &&
-                                        command.rate === "50" &&
-                                        "selected"
+                                    teranex.rate !== "50" &&
+                                    command.rate === "50" &&
+                                    "selected",
                                 )}
                                 data-rate={"50"}
                                 onClick={handleSetupChanged("rate")}>
@@ -801,7 +750,7 @@ export function TeranexController() {
                     </ul>
                 </div>
                 <div className={"teranex-block"}>
-                    <div id="teranex-screen" className="teranex-screen">
+                    <div id='teranex-screen' className='teranex-screen'>
                         {screenMessages.map((message, index) => (
                             <div key={index}>{message}</div>
                         ))}
@@ -809,20 +758,18 @@ export function TeranexController() {
                     </div>
                 </div>
                 <div className={"teranex-block"}>
-                    <div className="teranex-title teranex-title-border">Aspect</div>
+                    <div className='teranex-title teranex-title-border'>Aspect</div>
                     <ul className={"teranex-group"}>
                         <li>
                             <button
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "anam" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "anam" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "anam" &&
-                                        command.aspect === "anam" &&
-                                        "selected"
+                                    teranex.aspect !== "anam" &&
+                                    command.aspect === "anam" &&
+                                    "selected",
                                 )}
                                 data-aspect={"anam"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -832,13 +779,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "lbox-pbox" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "lbox-pbox" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "lbox-pbox" &&
-                                        command.aspect === "lbox-pbox" &&
-                                        "selected"
+                                    teranex.aspect !== "lbox-pbox" &&
+                                    command.aspect === "lbox-pbox" &&
+                                    "selected",
                                 )}
                                 data-aspect={"lbox-pbox"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -848,13 +793,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "smart" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "smart" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "smart" &&
-                                        command.aspect === "smart" &&
-                                        "selected"
+                                    teranex.aspect !== "smart" &&
+                                    command.aspect === "smart" &&
+                                    "selected",
                                 )}
                                 data-aspect={"smart"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -866,13 +809,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "14:9" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "14:9" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "14:9" &&
-                                        command.aspect === "14:9" &&
-                                        "selected"
+                                    teranex.aspect !== "14:9" &&
+                                    command.aspect === "14:9" &&
+                                    "selected",
                                 )}
                                 data-aspect={"14:9"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -882,13 +823,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "ccut-zoom" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "ccut-zoom" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "ccut-zoom" &&
-                                        command.aspect === "ccut-zoom" &&
-                                        "selected"
+                                    teranex.aspect !== "ccut-zoom" &&
+                                    command.aspect === "ccut-zoom" &&
+                                    "selected",
                                 )}
                                 data-aspect={"ccut-zoom"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -898,13 +837,11 @@ export function TeranexController() {
                                 disabled={teranex.mode === "in"}
                                 className={clsx(
                                     "teranex-button",
-                                    teranex.mode === "out"
-                                        ? teranex.aspect === "adj" && "active"
-                                        : "disabled",
+                                    teranex.mode === "out" ? teranex.aspect === "adj" && "active" : "disabled",
                                     teranex.mode === "out" &&
-                                        teranex.aspect !== "adj" &&
-                                        command.aspect === "adj" &&
-                                        "selected"
+                                    teranex.aspect !== "adj" &&
+                                    command.aspect === "adj" &&
+                                    "selected",
                                 )}
                                 data-aspect={"adj"}
                                 onClick={handleSetupChanged("aspect")}>
@@ -913,36 +850,36 @@ export function TeranexController() {
                         </li>
                     </ul>
                 </div>
-                <div className="teranex-block stretch">
+                <div className='teranex-block stretch'>
                     <div>
                         <div className={"teranex-title"}>AUDIO STATUS</div>
-                        <ul className="teranex-group horizontal">
+                        <ul className='teranex-group horizontal'>
                             <li>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["1"] && "active"
+                                        teranex.audioStatus["1"] && "active",
                                     )}>
                                     1
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["2"] && "active"
+                                        teranex.audioStatus["2"] && "active",
                                     )}>
                                     2
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["3"] && "active"
+                                        teranex.audioStatus["3"] && "active",
                                     )}>
                                     3
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["4"] && "active"
+                                        teranex.audioStatus["4"] && "active",
                                     )}>
                                     4
                                 </button>
@@ -951,28 +888,28 @@ export function TeranexController() {
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["5"] && "active"
+                                        teranex.audioStatus["5"] && "active",
                                     )}>
                                     5
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["6"] && "active"
+                                        teranex.audioStatus["6"] && "active",
                                     )}>
                                     6
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["7"] && "active"
+                                        teranex.audioStatus["7"] && "active",
                                     )}>
                                     7
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["8"] && "active"
+                                        teranex.audioStatus["8"] && "active",
                                     )}>
                                     8
                                 </button>
@@ -981,28 +918,28 @@ export function TeranexController() {
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["9"] && "active"
+                                        teranex.audioStatus["9"] && "active",
                                     )}>
                                     9
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["10"] && "active"
+                                        teranex.audioStatus["10"] && "active",
                                     )}>
                                     10
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["11"] && "active"
+                                        teranex.audioStatus["11"] && "active",
                                     )}>
                                     11
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["12"] && "active"
+                                        teranex.audioStatus["12"] && "active",
                                     )}>
                                     12
                                 </button>
@@ -1011,28 +948,28 @@ export function TeranexController() {
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["13"] && "active"
+                                        teranex.audioStatus["13"] && "active",
                                     )}>
                                     13
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["14"] && "active"
+                                        teranex.audioStatus["14"] && "active",
                                     )}>
                                     14
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["15"] && "active"
+                                        teranex.audioStatus["15"] && "active",
                                     )}>
                                     15
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.audioStatus["16"] && "active"
+                                        teranex.audioStatus["16"] && "active",
                                     )}>
                                     16
                                 </button>
@@ -1041,56 +978,54 @@ export function TeranexController() {
                     </div>
                     <div style={{marginTop: ".6rem"}}>
                         <div className={"teranex-title"}>SYSTEM STATUS</div>
-                        <ul className="teranex-group horizontal">
+                        <ul className='teranex-group horizontal'>
                             <li>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.vid && "active"
+                                        teranex.systemStatus.vid && "active",
                                     )}>
                                     VID
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.ref && "active"
+                                        teranex.systemStatus.ref && "active",
                                     )}>
                                     REF
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.ps && "active"
+                                        teranex.systemStatus.ps && "active",
                                     )}>
                                     PS
                                 </button>
-                                <button className="teranex-button small uncontrolled">
-                                    &nbsp;
-                                </button>
+                                <button className='teranex-button small uncontrolled'>&nbsp;</button>
                             </li>
                             <li>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.tc && "active"
+                                        teranex.systemStatus.tc && "active",
                                     )}>
                                     TC
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.cc && "active"
+                                        teranex.systemStatus.cc && "active",
                                     )}>
                                     CC
                                 </button>
                                 <button
                                     className={clsx(
                                         "teranex-button small uncontrolled",
-                                        teranex.systemStatus.eth && "active"
+                                        teranex.systemStatus.eth && "active",
                                     )}>
                                     &#8672;&#8674;
                                 </button>
-                                <button className="teranex-button small uncontrolled" />
+                                <button className='teranex-button small uncontrolled' />
                             </li>
                         </ul>
                     </div>
@@ -1102,7 +1037,7 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === null && "disabled",
-                            teranex.panelLock && "active"
+                            teranex.panelLock && "active",
                         )}>
                         PANEL LOCK
                     </button>
@@ -1112,15 +1047,15 @@ export function TeranexController() {
                             "teranex-button",
                             (teranex.mode === null || processingCommand !== null) && "disabled",
                             teranex.mode === "in" &&
-                                ((command.video && command.video !== teranex.video) ||
-                                    (command.audio && command.audio !== teranex.audio)) &&
-                                "selected",
+                            ((command.video && command.video !== teranex.video) ||
+                                (command.audio && command.audio !== teranex.audio)) &&
+                            "selected",
                             teranex.mode === "out" &&
-                                ((command.format && command.format !== teranex.format) ||
-                                    (command.frame && command.frame !== teranex.frame) ||
-                                    (command.rate && command.rate !== teranex.rate) ||
-                                    (command.aspect && command.aspect !== teranex.aspect)) &&
-                                "selected"
+                            ((command.format && command.format !== teranex.format) ||
+                                (command.frame && command.frame !== teranex.frame) ||
+                                (command.rate && command.rate !== teranex.rate) ||
+                                (command.aspect && command.aspect !== teranex.aspect)) &&
+                            "selected",
                         )}
                         onClick={handleApply}>
                         APPLY
@@ -1130,7 +1065,7 @@ export function TeranexController() {
                         className={clsx(
                             "teranex-button",
                             teranex.mode === null && "disabled",
-                            teranex.remLock && "active"
+                            teranex.remLock && "active",
                         )}>
                         REM LOCK
                     </button>
