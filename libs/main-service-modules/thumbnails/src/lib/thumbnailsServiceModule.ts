@@ -31,17 +31,19 @@ export class ThumbnailsModule extends MainServiceModule {
             this.log(`API server running on port ${options.apiServerPort}`);
         });
         this.log("created");
-    };
+    }
 
     protected override onConnected(socket: Socket) {
         super.onConnected(socket);
         socket.on("subscribe", (data: IThumbnailClientSubscription) => {
             const {channel} = data;
+            console.log("size is", this.clients.get("test")?.size);
             this.log(`subscribe request from ${socket.id} for ${channel}`);
             if (!this.clients.has(channel)) {
                 this.clients.set(channel, new Set());
             }
             this.clients.get(channel)!.add(socket);
+            console.log("size is", this.clients.get("test")?.size);
             this.log(`subscribe request from ${socket.id} for ${channel} succeed`);
         });
         socket.on("unsubscribe", (data: IThumbnailClientSubscription) => {
@@ -55,10 +57,20 @@ export class ThumbnailsModule extends MainServiceModule {
                 this.log(`Unsubscribe request from ${socket.id} for ${channel}`);
             }
         });
+        socket.on("disconnect", this.handleDisconnect(socket).bind(this));
         socket.on("error", (error) => {
             this.log(`${socket.id} error: ${error.message}`, true);
         });
     }
+
+    private handleDisconnect = (unsubscribed: Socket) => () => {
+        const clientChannels = this.clients.keys();
+        for (const key of clientChannels) {
+            const sockets = this.clients.get(key);
+            sockets?.delete(unsubscribed);
+        }
+        this.log(`client: ${unsubscribed.id} disconnected`);
+    };
 
     private handleApiRequest(request: IncomingMessage, response: ServerResponse) {
         const requestURL = request.url;
