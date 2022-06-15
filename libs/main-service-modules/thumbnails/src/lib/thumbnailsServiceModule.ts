@@ -46,13 +46,11 @@ export class ThumbnailsModule extends MainServiceModule {
         super.onConnected(socket);
         socket.on("subscribe", (data: IThumbnailClientSubscription) => {
             const {channel} = data;
-            console.log("size is", this.clients.get("test")?.size);
             this.log(`subscribe request from ${socket.id} for ${channel}`);
             if (!this.clients.has(channel)) {
                 this.clients.set(channel, new Set());
             }
             this.clients.get(channel)!.add(socket);
-            console.log("size is", this.clients.get("test")?.size);
             this.log(`subscribe request from ${socket.id} for ${channel} succeed`);
         });
         socket.on("unsubscribe", (data: IThumbnailClientSubscription) => {
