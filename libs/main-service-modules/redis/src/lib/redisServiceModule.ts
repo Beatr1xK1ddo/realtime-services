@@ -79,8 +79,6 @@ export class RedisServiceModule extends MainServiceModule {
                         this.log(err.message, true);
                     } else {
                         const socket = this.appChannelBitrateClients.get(socketId);
-                        console.log(socket.value);
-                        console.log(result);
                         if (socket.value !== result) {
                             socket.value = result;
                             this.handleRedisGetEvent(socket);
@@ -103,8 +101,6 @@ export class RedisServiceModule extends MainServiceModule {
                         this.log(err.message, true);
                     } else {
                         const socket = this.appChannelBitrateClients.get(socketId);
-                        console.log(socket.value);
-                        console.log(result);
                         if (socket.value !== result) {
                             socket.value = result;
                             this.handleRedisGetEvent(socket);
@@ -192,12 +188,10 @@ export class RedisServiceModule extends MainServiceModule {
         const clientsMap = messageType === "bitrate" ? this.appChannelBitrateClients : this.appChannelErrorClients;
         const socketId = socket.id;
         const socketObject = clientsMap.get(socketId);
-        console.log(clientsMap.size);
         if (socketObject) {
             clearInterval(socketObject.timer);
             socketObject.socket.disconnect();
             clientsMap.delete(socketId);
-            console.log(clientsMap.size);
         }
     };
 
@@ -284,12 +278,9 @@ export class RedisServiceModule extends MainServiceModule {
                 if (specificClients) {
                     specificClients.forEach((sockets: Set<Socket>) => {
                         if (sockets && sockets.has(socket)) {
-                            console.log("before", sockets.size);
                             sockets.delete(socket);
-                            console.log("after", sockets.size);
                             removed = true;
                             channel = redisChannel;
-                            console.log(this.nodeChannelClients.size);
                         }
                     });
                 }
@@ -320,13 +311,11 @@ export class RedisServiceModule extends MainServiceModule {
 
         for (const clientsType of [this.appChannelBitrateClients, this.appChannelErrorClients]) {
             clientsType.forEach((socketObject) => {
-                console.log("before in get", clientsType.size);
                 if (socketObject.socket === socket) {
                     clearInterval(socketObject.timer);
                     socketObject.socket.disconnect();
                     removed = true;
                     clientsType.delete(socket.id);
-                    console.log("after in get", clientsType.size);
                 }
             });
         }
