@@ -81,7 +81,7 @@ export class RedisServiceModule extends MainServiceModule {
                         const socket = this.appChannelBitrateClients.get(socketId);
                         if (socket.value !== result) {
                             socket.value = result;
-                            this.handleRedisGetEvent(socket);
+                            this.handleRedisGetEvent(socket, EMessageType.error);
                         }
                     }
                 });
@@ -103,7 +103,7 @@ export class RedisServiceModule extends MainServiceModule {
                         const socket = this.appChannelBitrateClients.get(socketId);
                         if (socket.value !== result) {
                             socket.value = result;
-                            this.handleRedisGetEvent(socket);
+                            this.handleRedisGetEvent(socket, EMessageType.bitrate);
                         }
                     }
                 });
@@ -336,8 +336,12 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleRedisError = (error) => this.log(`redis error: ${error}`, true);
 
-    private handleRedisGetEvent = (data: IAppChannelClient) => {
-        data.socket.emit("realtimeAppData", data.value);
+    private handleRedisGetEvent = (data: IAppChannelClient, messageType: EMessageType) => {
+        if (messageType === EMessageType.bitrate) {
+            data.socket.emit("realtimeAppDataBitrate", data.value);
+        } else {
+            data.socket.emit("realtimeAppDataError", data.value);
+        }
     };
 
     private handleRedisSubEvent = (redisChannel: string, redisEvent: string) => {
