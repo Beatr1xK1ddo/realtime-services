@@ -2,24 +2,39 @@ import {Socket} from "socket.io";
 import Redis from "ioredis";
 
 import {
-    IRedisModuleAppDataSubscribeEvent,
     IRedisModuleNodeDataSubscribeEvent,
     IRedisModuleNodeDataUnsubscribeEvent,
-    IRedisModuleAppDataUnsubscribeEvent,
     IClients,
     IRedisMessageType,
     isRealtimeAppEvent,
+    IRedisSubAppSubscribeEvent,
+    IRedisSubAppUnsubscribeEvent,
+    IRedisGetAppBitrateEvent,
+    IRedisGetAppErrorEvent,
+    IRedisModuleAppSubscribeEvent,
+    IRedisModuleAppUnsubscribeEvent,
+    IRedisGetAppUnsubscribeEvent,
+    EMessageType,
 } from "@socket/shared-types";
 import {IBasicLoggerOptions, MainServiceModule} from "@socket/shared/entities";
+import {redisModule} from "@socket/shared-utils";
 
 export type RedisServiceModuleOptions = {
     url: string;
     logger?: Partial<IBasicLoggerOptions>;
 };
 
+type IAppChannelClient = {
+    value: string | null;
+    timer: NodeJS.Timer | null;
+    socket: Socket;
+};
+
 export class RedisServiceModule extends MainServiceModule {
     private appChannelClients: Map<string, Map<number, Set<Socket>>>;
     private nodeChannelClients: Map<string, Map<string, Set<Socket>>>;
+    private appChannelBitrateClients: Map<string, IAppChannelClient>;
+    private appChannelErrorClients: Map<string, IAppChannelClient>;
     private redisUrl: string;
     private redis: Redis;
 
@@ -27,6 +42,8 @@ export class RedisServiceModule extends MainServiceModule {
         super(name, options);
         this.appChannelClients = new Map();
         this.nodeChannelClients = new Map();
+        this.appChannelBitrateClients = new Map();
+        this.appChannelErrorClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
         this.log("created");
@@ -40,8 +57,66 @@ export class RedisServiceModule extends MainServiceModule {
         socket.on("unsubscribeNode", this.handleNodeUnsubscribe(socket).bind(this));
         socket.on("disconnect", this.handleDisconnect(socket).bind(this));
     }
+    // Subscribe
+    private handleAppDataSubscribe = (socket: Socket) => (event: IRedisModuleAppSubscribeEvent) => {
+        if (redisModule.isIRedisSubAppSubscribeEvent(event)) {
+            this.handleRedisSubAppDataSubscribe(socket, event);
+        } else if (redisModule.isIRedisGetAppErrorEvent(event)) {
+            this.handleRedisGetAppErrorSubscribe(socket, event);
+        } else {
+            this.handleRedisGetAppBitrateSubscribe(socket, event);
+        }
+    };
 
-    private handleAppDataSubscribe = (socket: Socket) => (event: IRedisModuleAppDataSubscribeEvent) => {
+    private handleRedisGetAppErrorSubscribe = (socket: Socket, event: IRedisGetAppErrorEvent) => {
+        const {nodeId, ip, port, appId, appType} = event;
+        const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}`;
+        const socketId = socket.id;
+        if (!this.appChannelErrorClients.has(socketId)) {
+            const timer = setInterval(() => {
+                this.redis.get(channel, (err, result) => {
+                    if (err) {
+                        this.log(err.message, true);
+                    } else {
+                        const socket = this.appChannelBitrateClients.get(socketId);
+                        console.log(socket.value);
+                        console.log(result);
+                        if (socket.value !== result) {
+                            socket.value = result;
+                            this.handleRedisGetEvent(socket);
+                        }
+                    }
+                });
+            }, 5000);
+            this.appChannelBitrateClients.set(socketId, {value: null, timer, socket});
+        }
+    };
+
+    private handleRedisGetAppBitrateSubscribe = (socket: Socket, event: IRedisGetAppBitrateEvent) => {
+        const {nodeId, ip, port} = event;
+        const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
+        const socketId = socket.id;
+        if (!this.appChannelBitrateClients.has(socketId)) {
+            const timer = setInterval(() => {
+                this.redis.get(channel, (err, result) => {
+                    if (err) {
+                        this.log(err.message, true);
+                    } else {
+                        const socket = this.appChannelBitrateClients.get(socketId);
+                        console.log(socket.value);
+                        console.log(result);
+                        if (socket.value !== result) {
+                            socket.value = result;
+                            this.handleRedisGetEvent(socket);
+                        }
+                    }
+                });
+            }, 5000);
+            this.appChannelBitrateClients.set(socketId, {value: null, timer, socket});
+        }
+    };
+
+    private handleRedisSubAppDataSubscribe = (socket: Socket, event: IRedisSubAppSubscribeEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
@@ -102,8 +177,31 @@ export class RedisServiceModule extends MainServiceModule {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
         }
     };
+    // Unsubscribe
+    private handleAppUnsubscribe = (socket: Socket) => (event: IRedisModuleAppUnsubscribeEvent) => {
+        const subEvent = redisModule.isIRedisSubModuleAppUnsubscribeEvent(event);
+        if (subEvent) {
+            this.handleRedisSubAppDataUnsubscribe(socket, event);
+        } else {
+            const {messageType} = event;
+            this.handleRedisGetAppUnsubscribe(socket, messageType);
+        }
+    };
 
-    private handleAppUnsubscribe = (socket: Socket) => (event: IRedisModuleAppDataUnsubscribeEvent) => {
+    private handleRedisGetAppUnsubscribe = (socket: Socket, messageType: EMessageType) => {
+        const clientsMap = messageType === "bitrate" ? this.appChannelBitrateClients : this.appChannelErrorClients;
+        const socketId = socket.id;
+        const socketObject = clientsMap.get(socketId);
+        console.log(clientsMap.size);
+        if (socketObject) {
+            clearInterval(socketObject.timer);
+            socketObject.socket.disconnect();
+            clientsMap.delete(socketId);
+            console.log(clientsMap.size);
+        }
+    };
+
+    private handleRedisSubAppDataUnsubscribe = (socket: Socket, event: IRedisSubAppUnsubscribeEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
@@ -170,48 +268,68 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     private handleDisconnect = (socket: Socket) => () => {
-        const removedFromAppClients = this.removeSocketFromClientChannel(this.appChannelClients, socket);
-        if (!removedFromAppClients) {
-            this.removeSocketFromClientChannel(this.nodeChannelClients, socket);
-        }
+        this.removeSocketFromClientChannel(socket);
         this.log(`client: ${socket.id} disconnected`);
     };
 
-    private removeSocketFromClientChannel(clients: IClients, socket: Socket) {
+    private removeSocketFromClientChannel(socket: Socket) {
         //todo kan: what if one socket was subscribed to a lot of channels? let channel should become Array<string>
         let removed = false;
         let channel: string | null = null;
 
-        for (const redisChannel of clients.keys()) {
-            const specificClients = clients.get(redisChannel);
-            if (specificClients) {
-                specificClients.forEach((sockets: Set<Socket>) => {
-                    if (sockets && sockets.has(socket)) {
-                        sockets.delete(socket);
-                        removed = true;
-                        channel = redisChannel;
-                    }
-                });
-            }
-        }
-
-        if (channel) {
-            let emptyChannel = true;
-            const clientSocketsMap = clients.get(channel);
-            const clientSocketsMapKeys = clientSocketsMap.keys();
-
-            for (const key of clientSocketsMapKeys) {
-                if (clientSocketsMap.get(key as never).size) {
-                    emptyChannel = false;
-                    return;
+        for (const clientsType of [this.nodeChannelClients, this.appChannelClients]) {
+            for (const redisChannel of clientsType.keys()) {
+                if (removed) break;
+                const specificClients = clientsType.get(redisChannel);
+                if (specificClients) {
+                    specificClients.forEach((sockets: Set<Socket>) => {
+                        if (sockets && sockets.has(socket)) {
+                            console.log("before", sockets.size);
+                            sockets.delete(socket);
+                            console.log("after", sockets.size);
+                            removed = true;
+                            channel = redisChannel;
+                            console.log(this.nodeChannelClients.size);
+                        }
+                    });
                 }
             }
 
-            if (emptyChannel) {
-                this.redis.unsubscribe(channel);
+            if (channel) {
+                let emptyChannel = true;
+                const clientSocketsMap = clientsType.get(channel);
+                const clientSocketsMapKeys = clientSocketsMap.keys();
+
+                for (const key of clientSocketsMapKeys) {
+                    if (clientSocketsMap.get(key as never).size) {
+                        emptyChannel = false;
+                        return;
+                    }
+                }
+
+                if (emptyChannel) {
+                    this.redis.unsubscribe(channel);
+                }
             }
+            if (removed) break;
         }
-        return removed;
+
+        if (removed) {
+            return;
+        }
+
+        for (const clientsType of [this.appChannelBitrateClients, this.appChannelErrorClients]) {
+            clientsType.forEach((socketObject) => {
+                console.log("before in get", clientsType.size);
+                if (socketObject.socket === socket) {
+                    clearInterval(socketObject.timer);
+                    socketObject.socket.disconnect();
+                    removed = true;
+                    clientsType.delete(socket.id);
+                    console.log("after in get", clientsType.size);
+                }
+            });
+        }
     }
 
     private initRedis(): void {
@@ -219,7 +337,7 @@ export class RedisServiceModule extends MainServiceModule {
             this.redis = new Redis(this.redisUrl);
             this.redis.on("connect", this.handleRedisConnection);
             this.redis.on("error", this.handleRedisError);
-            this.redis.on("message", this.handleRedisEvent);
+            this.redis.on("message", this.handleRedisSubEvent);
         } catch (error) {
             this.log(`redis initializing error ${error}`);
         }
@@ -229,7 +347,11 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleRedisError = (error) => this.log(`redis error: ${error}`, true);
 
-    private handleRedisEvent = (redisChannel: string, redisEvent: string) => {
+    private handleRedisGetEvent = (data: IAppChannelClient) => {
+        data.socket.emit("realtimeAppData", data.value);
+    };
+
+    private handleRedisSubEvent = (redisChannel: string, redisEvent: string) => {
         try {
             const event: IRedisMessageType = JSON.parse(redisEvent);
             const appEvent = isRealtimeAppEvent(event);

@@ -1,27 +1,26 @@
 import Redis from "ioredis";
-import {IRealtimeAppStatusEvent, IRealtimeAppTimingEvent} from "@socket/shared-types";
+import {io} from "socket.io-client";
+import {
+    IRealtimeAppStatusEvent,
+    IRealtimeAppTimingEvent,
+    IRedisGetAppBitrateEvent,
+    IRedisSubAppSubscribeEvent,
+} from "@socket/shared-types";
 
 export const redisTestRun = (url: string) => {
-    const statusEvent: IRealtimeAppStatusEvent = {
-        id: 391,
-        type: "status",
-        status: "stopped",
-        statusChange: null,
+    const statusEvent: IRedisSubAppSubscribeEvent = {
+        nodeId: 11,
+        appType: "127.0.0.1",
+        appId: 3000,
     };
-    const timingEvent: IRealtimeAppTimingEvent = {
-        id: 391,
-        type: "timing",
-        startedAt: new Date().getTime(),
-    };
+    const socket = io(`${url}/redis`);
 
-    const handleRedisError = (error) => console.log(`redis error: ${error}`);
-    const handleRedisConnection = () => {
-        console.log("redis connection success");
-        redis.publish("realtime:app:1088:ipbe", JSON.stringify(statusEvent));
-        redis.publish("realtime:app:1088:ipbe", JSON.stringify(timingEvent));
-    };
+    socket.on("connect", () => {
+        console.log("Client connected to RedisModule");
+        socket.emit("subscribeApp", statusEvent);
+    });
 
-    const redis = new Redis(url);
-    redis.on("connect", handleRedisConnection);
-    redis.on("error", handleRedisError);
+    socket.on("realtimeAppData", (data) => {
+        console.log(`Logger data ${JSON.stringify(data)}`);
+    });
 };

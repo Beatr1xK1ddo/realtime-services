@@ -40,13 +40,43 @@ export type IRealtimeNodeStatusEvent = {
     online: boolean;
 };
 
-export type IRedisModuleAppDataSubscribeEvent = {
+export type IRedisSubAppSubscribeEvent = {
     nodeId: number;
     appId: number;
     appType: string;
 };
 
-export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeEvent;
+export type IRedisGetAppBitrateEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+};
+
+export type IRedisGetAppErrorEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+    appType: string;
+    appId: number;
+};
+
+export enum EMessageType {
+    error = "errors",
+    bitrate = "bitrate",
+}
+
+export type IRedisModuleAppSubscribeEvent =
+    | IRedisGetAppErrorEvent
+    | IRedisGetAppBitrateEvent
+    | IRedisSubAppSubscribeEvent;
+
+export type IRedisSubAppUnsubscribeEvent = IRedisSubAppSubscribeEvent;
+
+export type IRedisGetAppUnsubscribeEvent = {
+    messageType: EMessageType;
+};
+
+export type IRedisModuleAppUnsubscribeEvent = IRedisGetAppUnsubscribeEvent | IRedisSubAppUnsubscribeEvent;
 
 export type IRedisModuleNodeDataSubscribeEvent = {
     nodeId: number | number[];
