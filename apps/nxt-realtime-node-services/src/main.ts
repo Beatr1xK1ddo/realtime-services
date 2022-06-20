@@ -1,4 +1,4 @@
-import {getNodeId} from "@socket/shared-utils";
+import {nodeUtils} from "@socket/shared-utils";
 import {LoggerNodeService} from "@socket/node-services-logger";
 import {TeranexNodeService} from "@socket/node-services-teranex";
 import {HlsAnalyzerNodeService} from "@socket/node-services/hls-analyzer";
@@ -10,7 +10,7 @@ const {
     teranex: {serviceUrl: teranexServiceUrl},
 } = config;
 
-getNodeId().then((id) => {
+nodeUtils.getNodeId().then((id) => {
     if (id === null) return;
     new LoggerNodeService("Logger", id, loggerServiceUrl, applogDir, syslogFile, excludeMessages);
     new TeranexNodeService("Teranex", id, teranexServiceUrl);

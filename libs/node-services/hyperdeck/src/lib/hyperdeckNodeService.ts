@@ -1,18 +1,13 @@
 import {
-    IClientCmdRequestEvent,
-    IClientSubscribeEvent,
+    IMainServiceModuleDeviceCommandsEvent,
     IDeviceResponseError,
-    IDeviceResponseEvent,
+    INodeDeviceServiceCommandsResultEvent,
+    IMainServiceModuleDeviceSubscribeEvent,
 } from "@socket/shared-types";
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
 
 export class HyperdeckNodeService extends NodeDeviceService {
-    constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.registerHandler("subscribe", this.handleSubscription.bind(this));
         this.registerHandler("request", this.handleRequest.bind(this));
@@ -23,7 +18,7 @@ export class HyperdeckNodeService extends NodeDeviceService {
         this.emit("init", {nodeId: this.nodeId});
     }
 
-    private async handleSubscription(event: {socketId: string; event: IClientSubscribeEvent}) {
+    private async handleSubscription(event: {socketId: string; event: IMainServiceModuleDeviceSubscribeEvent}) {
         const {ip, port} = event.event;
         try {
             const device = await this.getDevice(ip, port);
@@ -40,7 +35,7 @@ export class HyperdeckNodeService extends NodeDeviceService {
         }
     }
 
-    private async handleRequest(data: IClientCmdRequestEvent) {
+    private async handleRequest(data: IMainServiceModuleDeviceCommandsEvent) {
         const {ip, port, commands} = data;
         try {
             const device = await this.getDevice(ip, port);
@@ -56,7 +51,7 @@ export class HyperdeckNodeService extends NodeDeviceService {
                 ip,
                 port,
                 data,
-            } as IDeviceResponseEvent);
+            } as INodeDeviceServiceCommandsResultEvent);
         } catch (error) {
             this.emit("subscriptionError", {
                 nodeId: this.nodeId,
@@ -89,7 +84,6 @@ export class HyperdeckNodeService extends NodeDeviceService {
             await device.sendCommand("ping\r\n");
             return device;
         } catch (e) {
-            console.log("start catch");
             return null;
         }
     }

@@ -1,5 +1,4 @@
 import {Socket} from "socket.io";
-import {IPinoOptions} from "./pinoLogerService";
 
 export type IRealtimeAppEvent = IRealtimeAppStatusEvent | IRealtimeAppTimingEvent;
 
@@ -21,11 +20,13 @@ export type IRealtimeNodeEvent = IRealtimeNodePingEvent | IRealtimeNodeSystemSta
 export type IRealtimeNodeEventType = "ping" | "system" | "status";
 
 export type IRealtimeNodePingEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     lastPing: number;
 };
 
 export type IRealtimeNodeSystemStateEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     cpu: number;
     memoryUsed: number;
@@ -34,6 +35,7 @@ export type IRealtimeNodeSystemStateEvent = {
 };
 
 export type IRealtimeNodeStatusEvent = {
+    id: number;
     type: IRealtimeNodeEventType;
     online: boolean;
 };
@@ -52,11 +54,6 @@ export type IRedisModuleNodeDataSubscribeEvent = {
 };
 
 export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
-
-export type RedisServiceModuleOptions = {
-    url: string;
-    logger?: Partial<IPinoOptions>;
-};
 
 export type IClients = Map<string, Map<number, Set<Socket>>> | Map<string, Map<string, Set<Socket>>>;
 

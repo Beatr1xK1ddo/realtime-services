@@ -14,7 +14,7 @@
         "ca": "../cert/gd_bundle-g2-g1.crt"
     },
     "logAgent": {
-        "serviceUrl": "https://qa.nextologies.com:1987/logger",
+        "serviceUrl": "https://cp.nextologies.com:1987/logger",
         "applogDir": "/home/dv2/data/logs/real--*.log",
         "syslogFile": "/var/log/syslog",
         "excludeMessages": {
@@ -23,7 +23,7 @@
         }
     },
     "teranex": {
-        "serviceUrl": "https://qa.nextologies.com:1987/teranex"
+        "serviceUrl": "https://cp.nextologies.com:1987/teranex"
     },
     "live_monitor": {
         "history": {

@@ -1,21 +1,22 @@
 import {Namespace, Socket} from "socket.io";
 
-import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
-import {PinoLogger} from "@socket/shared-utils";
+import {IMainServiceModule, StringId} from "@socket/shared-types";
+
+import {BasicLogger, IBasicLoggerOptions} from "./basicLogger";
 
 export type MainServiceModuleOptions = {
-    logger?: Partial<IPinoOptions>;
+    logger?: Partial<IBasicLoggerOptions>;
 };
 
 export class MainServiceModule implements IMainServiceModule {
     name: string;
     options?: MainServiceModuleOptions;
     protected socket?: Namespace;
-    protected logger: PinoLogger;
+    protected logger: BasicLogger;
 
     constructor(name: string, options?: MainServiceModuleOptions) {
         const loggerOptions = this.options?.logger;
-        this.logger = new PinoLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
+        this.logger = new BasicLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
         this.name = name;
         this.options = options;
         this.log("creating");
@@ -52,6 +53,10 @@ export class MainServiceModule implements IMainServiceModule {
         if (this.validateInit()) {
             this.socket!.emit(event, data);
         }
+    }
+
+    protected getClientById(clientId: StringId): Socket {
+        return this.socket.sockets.get(clientId);
     }
 
     protected log(message: string, error?: boolean): void {

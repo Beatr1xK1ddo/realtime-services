@@ -1,14 +1,13 @@
 import {
-    IClientCmdRequestEvent,
-    IDeviceResponseEvent,
-    IClientSubscribeEvent,
-    INodeEvent,
-    isClientSubscribeEvet,
+    IMainServiceModuleDeviceCommandsEvent,
+    INodeDeviceServiceCommandsResultEvent,
+    INodeBaseEvent,
     IDeviceResponseError,
-    IClientSubscribedEvent,
+    INodeDeviceServiceSubscribedEvent, IMainServiceModuleDeviceSubscribeEvent, IMainServiceModuleDeviceUnsubscribeEvent,
 } from "@socket/shared-types";
 import {Socket} from "socket.io";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
+import {mainServiceModuleUtils} from "@socket/shared-utils";
 
 export class HyperdeckModule extends MainServiceModule {
     private nodes: Map<number, Socket>;
@@ -21,17 +20,17 @@ export class HyperdeckModule extends MainServiceModule {
     }
 
     private onNodeServiceInit(socket: Socket) {
-        return ({nodeId}: INodeEvent) => {
+        return ({nodeId}: INodeBaseEvent) => {
             this.log(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         };
     }
 
     private onClientSubscribe(socket: Socket) {
-        return (event: IClientSubscribeEvent) => {
+        return (event: IMainServiceModuleDeviceSubscribeEvent) => {
             const {nodeId, ip, port} = event;
             const deviceId = `${ip}:${port}`;
-            const weShouldProceed = isClientSubscribeEvet(event);
+            const weShouldProceed = mainServiceModuleUtils.testMainServiceModuleDeviceSubscribeEvent(event);
 
             if (!weShouldProceed) {
                 socket.emit("responseError", {
@@ -57,25 +56,25 @@ export class HyperdeckModule extends MainServiceModule {
     }
 
     private onClientSubscribed(socket: Socket) {
-        return (event: IClientSubscribedEvent) => {
-            const deviceId = `${event.event.ip}:${event.event.port}`;
-            const nodeSubscribers = this.clients.get(event.event.nodeId)?.get(deviceId);
+        return (event: INodeDeviceServiceSubscribedEvent) => {
+            const deviceId = `${event.origin.ip}:${event.origin.port}`;
+            const nodeSubscribers = this.clients.get(event.origin.nodeId)?.get(deviceId);
             if (nodeSubscribers) {
-                const client = Array.from(nodeSubscribers.values()).find((socket) => socket.id === event.socketId);
+                const client = Array.from(nodeSubscribers.values()).find((socket) => socket.id === event.clientId);
                 if (client) {
                     this.log(
-                        `Subscribed event to ${JSON.stringify(event.event)} received from ${socket.id} for ${
+                        `Subscribed event to ${JSON.stringify(event.origin)} received from ${socket.id} for ${
                             client.id
                         }"`
                     );
-                    client.emit("subscribed", event.event);
+                    client.emit("subscribed", event.origin);
                 }
             }
         };
     }
 
     private onClientUnsubscribed(socket: Socket) {
-        return (data: IClientSubscribeEvent) => {
+        return (data: IMainServiceModuleDeviceUnsubscribeEvent) => {
             const {ip, port, nodeId} = data;
             const deviceId = `${ip}:${port}`;
             const devicesSubscribers = this.clients.get(nodeId);
@@ -87,7 +86,7 @@ export class HyperdeckModule extends MainServiceModule {
         };
     }
 
-    private onClientCommands(data: IClientCmdRequestEvent) {
+    private onClientCommands(data: IMainServiceModuleDeviceCommandsEvent) {
         const {nodeId} = data;
         const nodeSocket = this.nodes.get(nodeId);
         if (nodeSocket) {
@@ -96,7 +95,7 @@ export class HyperdeckModule extends MainServiceModule {
         }
     }
 
-    private onClientResponse(data: IDeviceResponseEvent) {
+    private onClientResponse(data: INodeDeviceServiceCommandsResultEvent) {
         const {ip, port, nodeId} = data;
         const deviceId = `${ip}:${port}`;
         this.clients

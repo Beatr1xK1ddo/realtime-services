@@ -1,4 +1,4 @@
-import {IClientNextomeetResEvent, INodeEvent, IClientNextomeetReqEvent} from "@socket/shared-types";
+import {IClientNextomeetResEvent, INodeBaseEvent, IClientNextomeetReqEvent} from "@socket/shared-types";
 import {Socket} from "socket.io";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 
@@ -21,14 +21,14 @@ export class NextomeetModule extends MainServiceModule {
     }
 
     private onNodeServiceInit(socket: Socket) {
-        return ({nodeId}: INodeEvent) => {
+        return ({nodeId}: INodeBaseEvent) => {
             this.log(`Init node: ${nodeId}`);
             this.nodes.set(nodeId, socket);
         };
     }
 
     private onClientSubscribe(socket: Socket) {
-        return ({nodeId}: INodeEvent) => {
+        return ({nodeId}: INodeBaseEvent) => {
             if (!this.clients.has(nodeId)) {
                 this.clients.set(nodeId, new Set([socket]));
             } else if (!this.clients.get(nodeId)?.has(socket)) {
@@ -39,7 +39,7 @@ export class NextomeetModule extends MainServiceModule {
     }
 
     private onClientUnsubscribe(socket: Socket) {
-        return ({nodeId}: INodeEvent) => {
+        return ({nodeId}: INodeBaseEvent) => {
             const devicesSubscribers = this.clients.get(nodeId);
             if (!devicesSubscribers) {
                 return;

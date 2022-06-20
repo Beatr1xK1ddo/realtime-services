@@ -2,20 +2,20 @@ import {createServer} from "https";
 import {Namespace, Server} from "socket.io";
 import {readFileSync} from "fs";
 
-import type {IMainServiceModule, IPinoOptions, SSL} from "@socket/shared-types";
+import type {IMainServiceModule, SSL} from "@socket/shared-types";
+import {BasicLogger, IBasicLoggerOptions} from "@socket/shared/entities";
 
-import {PinoLogger} from "@socket/shared-utils";
 
 type MainServiceServerOptions = {
     ssl: SSL;
-    logger?: Partial<IPinoOptions>;
+    logger?: Partial<IBasicLoggerOptions>;
 };
 
 export class MainServiceServer {
     static namespaces: Map<string, Namespace> = new Map();
     private https;
     private io: Server;
-    private logger: PinoLogger;
+    private logger: BasicLogger;
 
     constructor(port: number, options: MainServiceServerOptions) {
         this.https = createServer({
@@ -24,7 +24,7 @@ export class MainServiceServer {
         }).listen(port);
         //todo: handle cors more precisely
         this.io = new Server(this.https, {cors: {origin: "*"}});
-        this.logger = new PinoLogger(options.logger?.name, options.logger?.level, options.logger?.path);
+        this.logger = new BasicLogger(options.logger?.name, options.logger?.level, options.logger?.path);
     }
 
     registerModule(module: IMainServiceModule) {

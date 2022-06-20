@@ -1,8 +1,7 @@
 import {Manager} from "socket.io-client";
 import {
-    IClientCmdRequestEvent,
+    IMainServiceModuleDeviceCommandsEvent,
     IDeviceResponseError,
-    IServerModuleMessage,
 } from "@socket/shared-types";
 
 const nodeId = 1337;
@@ -22,11 +21,11 @@ export function hyperdeckTestRun(url: string) {
     const manager = new Manager(url);
     const socket = manager.socket("/hyperdeck");
 
-    socket.on("subscribed", (data: IServerModuleMessage) => {
+    socket.on("subscribed", (data: any) => {
         console.log("subscribed client ", data);
     });
 
-    socket.on("unsubscribed", (data: IServerModuleMessage) => {
+    socket.on("unsubscribed", (data: any) => {
         console.log(data.message);
     });
 
@@ -43,7 +42,7 @@ export function hyperdeckTestRun(url: string) {
             port,
             commands: ["TERANEX DEVICE\n\n"],
             // commands,
-        } as IClientCmdRequestEvent);
+        } as IMainServiceModuleDeviceCommandsEvent);
 
         // setTimeout(() => {
         //     socket.emit("commands", {

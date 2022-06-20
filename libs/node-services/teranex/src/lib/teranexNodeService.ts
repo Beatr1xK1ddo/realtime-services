@@ -1,16 +1,19 @@
 import {
-    IClientCmdRequestEvent,
-    IClientSubscribeEvent,
-    IDeviceResponseError,
-    IDeviceResponseEvent,
+    IMainServiceModuleDeviceCommandsEvent,
+    IMainServiceModuleDeviceSubscribeEvent,
+    INodeDeviceServiceCommandsFailureEvent,
+    INodeDeviceServiceCommandsResultEvent,
+    INodeDeviceServiceSubscribedEvent,
+    IServiceErrorBaseEvent,
+    StringId,
 } from "@socket/shared-types";
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
 
 export class TeranexNodeService extends NodeDeviceService {
     constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
-        this.registerHandler("subscribe", this.handleSubscription.bind(this));
-        this.registerHandler("request", this.handleRequest.bind(this));
+        this.registerHandler("subscribe", this.handleSubscribe.bind(this));
+        this.registerHandler("commands", this.handleCommands.bind(this));
     }
 
     protected onConnected() {
@@ -18,44 +21,51 @@ export class TeranexNodeService extends NodeDeviceService {
         this.emit("init", {nodeId: this.nodeId});
     }
 
-    private async handleSubscription(event: {socketId: string; event: IClientSubscribeEvent}) {
-        const {ip, port} = event.event;
+    private async handleSubscribe(event: {clientId: StringId; origin: IMainServiceModuleDeviceSubscribeEvent}) {
+        const {ip, port} = event.origin;
         try {
             const device = await this.getDevice(ip, port);
-            if (device) this.emit("subscribed", event);
+            const subscribedEvent: INodeDeviceServiceSubscribedEvent = {
+                clientId: event.clientId,
+                origin: event.origin,
+            };
+            if (device) this.emit("clientSubscribed", subscribedEvent);
         } catch (error) {
-            this.emit("response", {
-                nodeId: this.nodeId,
-                ip,
-                port,
-                error,
-            } as IDeviceResponseError);
+            const errorEvent: IServiceErrorBaseEvent = {
+                request: "subscribe",
+                message: error,
+            };
+            this.emit("serviceError", errorEvent);
         }
     }
 
-    private async handleRequest(data: IClientCmdRequestEvent) {
-        const {ip, port, commands} = data;
+    private async handleCommands(event: IMainServiceModuleDeviceCommandsEvent) {
+        const {nodeId, ip, port, commands} = event;
         try {
             const device = await this.getDevice(ip, port);
-            const result = [];
-            for (const command of commands) {
-                const commandResult = await device.sendCommand(command);
-                result.push(TeranexNodeService.format(commandResult));
+            if (device) {
+                const result = [];
+                for (const command of commands) {
+                    const commandResult = await device.sendCommand(command);
+                    result.push(TeranexNodeService.format(commandResult));
+                }
+                this.log(`commands processed ${result}`);
+                const resultEvent: INodeDeviceServiceCommandsResultEvent = {
+                    nodeId,
+                    ip,
+                    port,
+                    data: result,
+                };
+                this.emit("result", resultEvent);
             }
-            this.log(`Commands processed ${JSON.stringify(result)}`);
-            this.emit("response", {
-                nodeId: this.nodeId,
-                ip,
-                port,
-                data: result,
-            } as IDeviceResponseEvent);
         } catch (error) {
-            this.emit("response", {
-                nodeId: this.nodeId,
-                ip,
-                port,
+            //todo: fix this clientId
+            const failureEvent: INodeDeviceServiceCommandsFailureEvent = {
+                clientId: "0",
+                origin: event,
                 error,
-            } as IDeviceResponseError);
+            };
+            this.emit("failure", failureEvent);
         }
     }
 
@@ -66,8 +76,8 @@ export class TeranexNodeService extends NodeDeviceService {
         }
         const newDevice = await TeranexNodeService.createDevice(ip, port);
         if (!newDevice) {
-            this.log(`Can't create device ${deviceId}`, true);
-            throw new Error(`Can't create device ${deviceId}`);
+            this.log(`can't create device ${deviceId}`, true);
+            return null;
         }
         this.devices[deviceId] = newDevice;
         return this.devices[deviceId];
@@ -76,7 +86,7 @@ export class TeranexNodeService extends NodeDeviceService {
     private static async createDevice(ip: string, port: number): Promise<Device | null> {
         try {
             const device = new Device(ip, port, {debounceDelay: 300});
-            device.connect();
+            await device.connect();
             await device.sendCommand("ping\r\n");
             return device;
         } catch (e) {

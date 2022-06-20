@@ -1,13 +1,17 @@
-import {IMainServiceModule, IPinoOptions} from "@socket/shared-types";
 import {Socket, Namespace} from "socket.io";
 import * as mysql from "mysql";
-import * as conf from "../../config.json";
 import * as _ from "lodash";
+import Redis from "ioredis";
+
+import {IMainServiceModule} from "@socket/shared-types";
+import {BasicLogger, IBasicLoggerOptions} from "@socket/shared/entities";
+import {commonUtils, nodeUtils} from "@socket/shared-utils";
+
 import sqlQueries from "./sql-queries";
 import {IAppTypeKeyes} from "./types";
-import Redis from "ioredis";
-import * as util from "@socket/shared-utils";
-import {PinoLogger} from "@socket/shared-utils";
+
+//todo: get rid of config
+import * as conf from "../../config.json";
 
 export class Monitor implements IMainServiceModule {
     public name: string;
@@ -16,12 +20,12 @@ export class Monitor implements IMainServiceModule {
     private queries = sqlQueries;
     private redis: Redis;
     private lastRuntime?: number;
-    private logger: PinoLogger;
+    private logger: BasicLogger;
 
-    constructor(name: string, urlRedis: string, loggerOptions?: Partial<IPinoOptions>) {
+    constructor(name: string, urlRedis: string, loggerOptions?: Partial<IBasicLoggerOptions>) {
         this.name = name;
         this.redis = new Redis(urlRedis);
-        this.logger = new PinoLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
+        this.logger = new BasicLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
     }
 
     async init(io: Namespace) {
@@ -104,7 +108,7 @@ export class Monitor implements IMainServiceModule {
             this.logger.log.info("Handle alerts: ", alerts);
         }
 
-        this.lastRuntime = util.currentTime();
+        this.lastRuntime = commonUtils.nowInSeconds();
     }
 
     async handleErrors(app: any, sqlRec: any) {
@@ -146,9 +150,9 @@ export class Monitor implements IMainServiceModule {
 
                 const signalLostTime = +results[0]!;
                 const signalErrorTime = +results[1]!;
-
+                const file = `${conf.logDir}${app.uniqueID}`;
                 if (signalLostTime) {
-                    history = await util.getCache(app.uniqueID, () => this.fetchHistory(sqlRec));
+                    history = await nodeUtils.getCache(file, () => this.fetchHistory(sqlRec));
 
                     this.logger.log.info('Sending "status_error"');
                     this.sendData("status_error", signalLostTime, history, sqlRec, 0);
@@ -158,7 +162,7 @@ export class Monitor implements IMainServiceModule {
                         this.redis.get(`${app.cachePrefix}-past-interval-cc-amount`),
                     ]);
 
-                    history = await util.getCache(app.uniqueID, () => this.fetchHistory(sqlRec));
+                    history = await nodeUtils.getCache(file, () => this.fetchHistory(sqlRec));
                     this.logger.log.info('Sending "ts_errors"');
                     this.sendData("ts_errors", signalErrorTime, history, sqlRec, +results[0]! + "/" + +results[1]!);
                 }
@@ -240,10 +244,10 @@ export class Monitor implements IMainServiceModule {
     fetchHistory(sqlRec: any) {
         const {appId, appType, nodeId, nodeIp, nodePort} = sqlRec;
 
-        const fromTime = util.currentTime() - conf.live_monitor.history.depth;
-        const toTime = util.currentTime();
+        const fromTime = commonUtils.nowInSeconds() - conf.live_monitor.history.depth;
+        const toTime = commonUtils.nowInSeconds();
 
-        return util
+        return nodeUtils
             .exec(
                 `php ${conf.live_monitor.history.bin} ${appType} ${appId} ${fromTime} ${toTime} ${nodeId} ${nodeIp} ${nodePort}`
             )
