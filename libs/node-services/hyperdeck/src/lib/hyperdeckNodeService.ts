@@ -84,7 +84,6 @@ export class HyperdeckNodeService extends NodeDeviceService {
             await device.sendCommand("ping\r\n");
             return device;
         } catch (e) {
-            console.log("start catch");
             return null;
         }
     }

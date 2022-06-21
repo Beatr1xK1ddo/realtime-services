@@ -26,6 +26,7 @@ export class RedisServiceModule extends MainServiceModule {
     constructor(name: string, options: RedisServiceModuleOptions) {
         super(name, options);
         this.appChannelClients = new Map();
+        this.nodeChannelClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
         this.log("created");
@@ -176,24 +177,27 @@ export class RedisServiceModule extends MainServiceModule {
         this.log(`client: ${socket.id} disconnected`);
     };
 
-    private removeSocketFromClientChannel(client: IClients, socket: Socket) {
+    private removeSocketFromClientChannel(clients: IClients, socket: Socket) {
+        //todo kan: what if one socket was subscribed to a lot of channels? let channel should become Array<string>
         let removed = false;
-        let socketRoom: string | null = null;
-        const clientChannels = client.keys();
+        let channel: string | null = null;
 
-        for (const key of clientChannels) {
-            client.get(key).forEach((sockets: Set<Socket>) => {
-                if (sockets.has(socket)) {
-                    sockets.delete(socket);
-                    removed = true;
-                    socketRoom = key;
-                }
-            });
+        for (const redisChannel of clients.keys()) {
+            const specificClients = clients.get(redisChannel);
+            if (specificClients) {
+                specificClients.forEach((sockets: Set<Socket>) => {
+                    if (sockets && sockets.has(socket)) {
+                        sockets.delete(socket);
+                        removed = true;
+                        channel = redisChannel;
+                    }
+                });
+            }
         }
 
-        if (socketRoom) {
+        if (channel) {
             let emptyChannel = true;
-            const clientSocketsMap = client.get(socketRoom);
+            const clientSocketsMap = clients.get(channel);
             const clientSocketsMapKeys = clientSocketsMap.keys();
 
             for (const key of clientSocketsMapKeys) {
@@ -204,7 +208,7 @@ export class RedisServiceModule extends MainServiceModule {
             }
 
             if (emptyChannel) {
-                this.redis.unsubscribe(socketRoom);
+                this.redis.unsubscribe(channel);
             }
         }
         return removed;
