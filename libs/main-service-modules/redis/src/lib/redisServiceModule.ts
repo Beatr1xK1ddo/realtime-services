@@ -73,7 +73,7 @@ export class RedisServiceModule extends MainServiceModule {
             const {appId, nodeId, appType} = event;
             const specificId = appId.toString();
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
-            this.subscribeToChannel("test", "test2", socket, this.appChannelClients);
+            this.subscribeToChannel(redisChannel, specificId, socket, this.appChannelClients);
             this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
@@ -83,11 +83,10 @@ export class RedisServiceModule extends MainServiceModule {
     private handleNodeDataSubscribe = (socket: Socket, event: IRedisModuleNodeDataSubscribeEvent) => {
         try {
             const {type, nodeId} = event;
-            console.log("lalilali");
             const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
             for (let index = 0; index < nodeIds.length; index++) {
                 const redisChannel = `realtime:node:${nodeIds[index]}`;
-                this.subscribeToChannel("test", "test2", socket, this.nodeChannelClients);
+                this.subscribeToChannel(redisChannel, type, socket, this.nodeChannelClients);
                 this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
             }
         } catch (error) {
@@ -116,11 +115,9 @@ export class RedisServiceModule extends MainServiceModule {
         if (storage.has(channel)) {
             if (storage.get(channel).has(subChannel)) {
                 storage.get(channel).get(subChannel).add(socket);
-                console.log("if", storage.get(channel).get(subChannel).size);
             } else {
                 const sockets = new Set<Socket>([socket]);
                 storage.get(channel).set(subChannel, sockets);
-                console.log("else", storage.get(channel).get(subChannel).size);
             }
         } else {
             this.redis.subscribe(channel, (error) => {
@@ -133,27 +130,25 @@ export class RedisServiceModule extends MainServiceModule {
             const sockets = new Set<Socket>([socket]);
             const applicationToSocketsMap = new Map<string, Set<Socket>>([[subChannel, sockets]]);
             storage.set(channel, applicationToSocketsMap);
-            console.log("1337", storage.get(channel).get(subChannel).size);
         }
     };
 
     private subscribeToKey = (channel: string, socket: Socket, storage: IRedisToKeyStorage) => {
-        const channelObject = storage.get("test");
+        const channelObject = storage.get(channel);
         if (channelObject) {
             if (channelObject.sockets.has(socket)) {
                 this.log(`redis channel: socket ${socket.id} already exists`);
                 return;
             }
             channelObject.sockets.add(socket);
-            console.log("bitrate before", channelObject.sockets.size);
             return;
         }
         const timer = setInterval(() => {
-            this.redis.get("test", (err, result) => {
+            this.redis.get(channel, (err, result) => {
                 if (err) {
                     this.log(err.message, true);
                 } else {
-                    const channelObject = storage.get("test");
+                    const channelObject = storage.get(channel);
                     if (channelObject.value !== result) {
                         channelObject.value = result;
                         channelObject.sockets.forEach((socket) => {
@@ -163,8 +158,7 @@ export class RedisServiceModule extends MainServiceModule {
                 }
             });
         }, 5000);
-        storage.set("test", {value: null, timer, sockets: new Set([socket])});
-        console.log("bitrate after", storage.get("test").sockets.size);
+        storage.set(channel, {value: null, timer, sockets: new Set([socket])});
     };
 
     // Unsubscribe
@@ -197,7 +191,7 @@ export class RedisServiceModule extends MainServiceModule {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
             const specificId = appId.toString();
-            this.unsubscribeFromChannel("test", "test2", socket, this.appChannelClients);
+            this.unsubscribeFromChannel(redisChannel, specificId, socket, this.appChannelClients);
             this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription removed`);
         } catch (error) {
             this.log(`client: ${socket.id} unsubscribe handling error ${error}`);
@@ -247,7 +241,7 @@ export class RedisServiceModule extends MainServiceModule {
             const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
             for (let index = 0; index < nodeIds.length; index++) {
                 const redisChannel = `realtime:node:${nodeIds[index]}`;
-                this.unsubscribeFromChannel("test", "test2", socket, this.nodeChannelClients);
+                this.unsubscribeFromChannel(redisChannel, type, socket, this.nodeChannelClients);
                 this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription removed`);
             }
         } catch (error) {
