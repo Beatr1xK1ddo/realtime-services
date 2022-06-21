@@ -1,23 +1,27 @@
 import {
-    IRedisGetAppErrorEvent,
+    IRedisAppChannelEvent,
     IRedisModuleAppSubscribeEvent,
-    IRedisModuleAppUnsubscribeEvent,
-    IRedisSubAppSubscribeEvent,
-    IRedisSubAppUnsubscribeEvent,
+    IRedisModuleNodeDataSubscribeEvent,
+    IRedisToKeyAppBitrateEvent,
+    IRedisToKeyAppErrorEvent,
 } from "@socket/shared-types";
 
-export const isIRedisSubAppSubscribeEvent = (
-    data: IRedisModuleAppSubscribeEvent
-): data is IRedisSubAppSubscribeEvent => {
+export const isIRedisAppChannelEvent = (data: IRedisModuleAppSubscribeEvent): data is IRedisAppChannelEvent => {
     return data && "appType" in data && "appId" in data && !("ip" in data);
 };
 
-export const isIRedisGetAppErrorEvent = (data: IRedisModuleAppSubscribeEvent): data is IRedisGetAppErrorEvent => {
+export const isIRedisToKeyAppErrorEvent = (data: IRedisModuleAppSubscribeEvent): data is IRedisToKeyAppErrorEvent => {
     return data && "appType" in data && "appId" in data && "ip" in data && "port" in data && "nodeId" in data;
 };
 
-export const isIRedisSubModuleAppUnsubscribeEvent = (
-    data: IRedisModuleAppUnsubscribeEvent
-): data is IRedisSubAppUnsubscribeEvent => {
-    return data && !("messageType" in data);
+export const isIRedisToKeyAppBitrateEvent = (
+    data: IRedisModuleAppSubscribeEvent
+): data is IRedisToKeyAppBitrateEvent => {
+    return data && "ip" in data && "port" in data && "nodeId" in data;
+};
+
+export const isIRedisModuleNodeDataSubscribeEvent = (
+    data: IRedisModuleAppSubscribeEvent
+): data is IRedisModuleNodeDataSubscribeEvent => {
+    return data && "type" in data && "nodeId" in data;
 };

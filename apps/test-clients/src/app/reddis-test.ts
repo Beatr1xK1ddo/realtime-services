@@ -3,21 +3,25 @@ import {io} from "socket.io-client";
 import {
     IRealtimeAppStatusEvent,
     IRealtimeAppTimingEvent,
-    IRedisGetAppBitrateEvent,
-    IRedisSubAppSubscribeEvent,
+    IRedisAppChannelEvent,
+    IRedisModuleNodeDataSubscribeEvent,
+    IRedisToKeyAppBitrateEvent,
 } from "@socket/shared-types";
 
 export const redisTestRun = (url: string) => {
-    const statusEvent: IRedisSubAppSubscribeEvent = {
+    const statusEvent: IRedisModuleNodeDataSubscribeEvent = {
         nodeId: 11,
-        appType: "127.0.0.1",
-        appId: 3000,
+        type: "ping",
     };
     const socket = io(`${url}/redis`);
 
     socket.on("connect", () => {
         console.log("Client connected to RedisModule");
-        socket.emit("subscribeApp", statusEvent);
+        socket.emit("subscribe", statusEvent);
+
+        setTimeout(() => {
+            socket.emit("unsubscribe", statusEvent);
+        }, 3000);
     });
 
     socket.on("realtimeAppData", (data) => {

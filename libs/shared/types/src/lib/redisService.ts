@@ -40,19 +40,19 @@ export type IRealtimeNodeStatusEvent = {
     online: boolean;
 };
 
-export type IRedisSubAppSubscribeEvent = {
+export type IRedisAppChannelEvent = {
     nodeId: number;
     appId: number;
     appType: string;
 };
 
-export type IRedisGetAppBitrateEvent = {
+export type IRedisToKeyAppBitrateEvent = {
     nodeId: number;
     ip: string;
     port: number;
 };
 
-export type IRedisGetAppErrorEvent = {
+export type IRedisToKeyAppErrorEvent = {
     nodeId: number;
     ip: string;
     port: number;
@@ -60,32 +60,20 @@ export type IRedisGetAppErrorEvent = {
     appId: number;
 };
 
-export enum EMessageType {
-    error = "errors",
-    bitrate = "bitrate",
-}
-
-export type IRedisModuleAppSubscribeEvent =
-    | IRedisGetAppErrorEvent
-    | IRedisGetAppBitrateEvent
-    | IRedisSubAppSubscribeEvent;
-
-export type IRedisSubAppUnsubscribeEvent = IRedisSubAppSubscribeEvent;
-
-export type IRedisGetAppUnsubscribeEvent = {
-    messageType: EMessageType;
-};
-
-export type IRedisModuleAppUnsubscribeEvent = IRedisGetAppUnsubscribeEvent | IRedisSubAppUnsubscribeEvent;
+export type IRedisModuleAppUnsubscribeEvent = IRedisModuleAppSubscribeEvent;
 
 export type IRedisModuleNodeDataSubscribeEvent = {
     nodeId: number | number[];
     type: IRealtimeNodeEventType;
 };
 
-export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
+export type IRedisModuleAppSubscribeEvent =
+    | IRedisToKeyAppErrorEvent
+    | IRedisToKeyAppBitrateEvent
+    | IRedisAppChannelEvent
+    | IRedisModuleNodeDataSubscribeEvent;
 
-export type IClients = Map<string, Map<number, Set<Socket>>> | Map<string, Map<string, Set<Socket>>>;
+export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
 
 export type IRedisMessageType = IRealtimeAppEvent | IRealtimeNodeEvent;
 
