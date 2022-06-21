@@ -83,7 +83,7 @@ export class TeranexNodeService extends NodeDeviceService {
             return null;
         }
         this.devices[deviceId] = newDevice;
-        return this.devices[deviceId];
+        return newDevice;
     }
 
     private static async createDevice(ip: string, port: number): Promise<Device | null> {

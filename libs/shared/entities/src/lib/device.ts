@@ -29,6 +29,7 @@ export class Device {
     protected commandResult: string;
     protected responseDebounceDelay?: number;
     protected responseHandler?: (data: string) => void;
+    protected pingIntervalId: NodeJS.Timer
 
     constructor(ip: string, port: number, options?: IDeviceOptions) {
         this.ip = ip;
@@ -49,7 +50,7 @@ export class Device {
         this.id = `${this.ip}:${this.port}`;
         this.commandResult = "";
         this.responseDebounceDelay = options?.debounceDelay;
-    }
+    };
 
     connect(): void {
         this.socket.connect({host: this.ip, port: this.port}, this.handleConnectionEstablished.bind(this));
@@ -57,17 +58,27 @@ export class Device {
         this.socket.on("error", this.handleConnectionError.bind(this));
         this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
         this.socket.on("data", this.handleCommandResult.bind(this));
+        this.initDevicePing();
     }
 
+    private initDevicePing(): void {
+        const pingCommand = () => this.sendCommand("ping\r\n").catch(() => this.log("can't ping device"));
+        this.pingIntervalId = setInterval(pingCommand, 5000);
+    };
+
     private reconnect(): void {
+        this.log(`reconnecting #${this.reconnectionAttemptsUsed}`);
         this.socket.removeAllListeners();
+        this.socket = new NetSocket();
+        this.socket.setEncoding("utf8");
+        clearInterval(this.pingIntervalId);
         setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
         this.reconnectionAttemptsUsed++;
-    }
+    };
 
     protected handleConnectionEstablished() {
         this.log("connected");
-    }
+    };
 
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
@@ -76,19 +87,19 @@ export class Device {
         } else {
             this.handleDisconnect();
         }
-    }
+    };
 
     protected handleDisconnect(): void {
         this.log(`disconnected`);
-    }
+    };
 
     protected handleConnectionError(error: Error): void {
         this.log(`error: ${error.message}`, true);
-    }
+    };
 
     protected handleConnectionTimeout(): void {
         this.log("connection inactive");
-    }
+    };
 
     sendCommand(command: string): Promise<any> {
         this.log(`sending command ${command}`);
@@ -109,13 +120,13 @@ export class Device {
                 }
             });
         });
-    }
+    };
 
     protected handleCommandResult(response: string): void {
         // this.log(`command response ${response}`);
         this.commandResult += response;
         this.responseHandler && this.responseHandler(this.commandResult);
-    }
+    };
 
     protected log(message: string, error?: boolean): void {
         const loggingMessage = `Device ${this.id}: ${message}`;
@@ -124,5 +135,5 @@ export class Device {
         } else {
             this.logger.log.info(loggingMessage);
         }
-    }
+    };
 }
