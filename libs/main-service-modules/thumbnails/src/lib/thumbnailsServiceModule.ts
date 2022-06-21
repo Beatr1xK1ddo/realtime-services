@@ -30,15 +30,16 @@ export class ThumbnailsModule extends MainServiceModule {
                 cert: readFileSync(options.apiServerSsl.cert),
             },
             this.handleApiRequest.bind(this)
-        ).listen(options.apiHttpsServerPort, () => {
-            this.log(`HTTPS API server running on port ${options.apiHttpsServerPort}`);
-        });
-        this.thumbnailsHttpApiServer = createHttpServer(this.handleApiRequest.bind(this)).listen(
-            options.apiHttpServerPort,
-            () => {
+        )
+            .on("error", (error) => this.log(`HTTPS API server ${error.message}`, true))
+            .listen(options.apiHttpsServerPort, () => {
+                this.log(`HTTPS API server running on port ${options.apiHttpsServerPort}`);
+            });
+        this.thumbnailsHttpApiServer = createHttpServer(this.handleApiRequest.bind(this))
+            .on("error", (error) => this.log(`HTTP API server ${error.message}`, true))
+            .listen(options.apiHttpServerPort, () => {
                 this.log(`HTTP API server running on port ${options.apiHttpServerPort}`);
-            }
-        );
+            });
         this.log("created");
     }
 
