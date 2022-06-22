@@ -21,7 +21,6 @@ export type RedisServiceModuleOptions = {
 };
 
 type IRedisToKeyChannel = {
-    value: string | null;
     timer: NodeJS.Timer;
     sockets: Set<Socket>;
 };
@@ -50,8 +49,8 @@ type IRedisChannelStorage = Map<string, Map<string, Set<Socket>>>;
 export class RedisServiceModule extends MainServiceModule {
     private appChannelClients: IRedisChannelStorage;
     private nodeChannelClients: IRedisChannelStorage;
-    private appToKeyBitrateClients: IRedisToKeyStorage;
-    private appToKeyErrorClients: IRedisToKeyStorage;
+    private monitoringClients: IRedisToKeyStorage;
+    private monitoringErrorClients: IRedisToKeyStorage;
     private redisUrl: string;
     private redis: Redis;
 
@@ -59,8 +58,8 @@ export class RedisServiceModule extends MainServiceModule {
         super(name, options);
         this.appChannelClients = new Map();
         this.nodeChannelClients = new Map();
-        this.appToKeyBitrateClients = new Map();
-        this.appToKeyErrorClients = new Map();
+        this.monitoringClients = new Map();
+        this.monitoringErrorClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
         this.log("created");
@@ -115,36 +114,70 @@ export class RedisServiceModule extends MainServiceModule {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
 
-        const cb = (result: string) => {
-            const ccErrors = parseInt(result);
-            const data = {
-                moment: +new Date(),
-                syncLoss: 0,
-                syncByte: 0,
-                pat: 0,
-                cc: ccErrors,
-                transport: 0,
-                pcrR: 0,
-                pcrD: 0,
-            } as IMonitoringErrorsData;
-            socket.emit("realtimeMonitoringErrors", JSON.stringify(data));
-        };
-        this.subscribeToKey(channel, socket, this.appToKeyErrorClients, cb);
+        if (this.monitoringErrorClients.get(channel)) {
+            if (this.monitoringErrorClients.get(channel).sockets.has(socket)) {
+                this.log(`client ${socket.id} already subscribed to key: ${channel}`);
+            } else {
+                this.monitoringErrorClients.get(channel).sockets.add(socket);
+                this.log(`client ${socket.id} subscribed to key: ${channel}`);
+            }
+        } else {
+            const sockets = new Set([socket]);
+            const dataHandler = (result: string) => {
+                const ccErrors = parseInt(result);
+                const data = {
+                    moment: +new Date(),
+                    syncLoss: 0,
+                    syncByte: 0,
+                    pat: 0,
+                    cc: ccErrors,
+                    transport: 0,
+                    pcrR: 0,
+                    pcrD: 0,
+                } as IMonitoringErrorsData;
+                socket.emit("realtimeMonitoringErrors", JSON.stringify(data));
+            };
+            const timer = this.subscribeToKey(channel, dataHandler, true);
+            const channelHolder = {
+                timer,
+                sockets,
+            };
+            this.monitoringClients.set(channel, channelHolder);
+        }
     };
 
     private handleRedisToKeyBitrateSubscribe = (socket: Socket, event: IRedisToKeyAppBitrateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
-        const cb = (result: string) => {
-            const bitrate = parseInt(result);
-            const data = {
-                moment: +new Date(),
-                bitrate,
-                muxrate: 0,
-            } as IMonitoringData;
-            socket.emit("realtimeMonitoring", JSON.stringify(data));
-        };
-        this.subscribeToKey(channel, socket, this.appToKeyBitrateClients, cb);
+        if (this.monitoringClients.get(channel)) {
+            if (this.monitoringClients.get(channel).sockets.has(socket)) {
+                this.log(`client ${socket.id} already subscribed to key: ${channel}`);
+            } else {
+                this.monitoringClients.get(channel).sockets.add(socket);
+                this.log(`client ${socket.id} subscribed to key: ${channel}`);
+            }
+        } else {
+            const sockets = new Set([socket]);
+            const dataHandler = (result: string) => {
+                const bitrate = parseInt(result);
+
+                const data = {
+                    moment: +new Date(),
+                    bitrate,
+                    muxrate: 0,
+                } as IMonitoringData;
+
+                sockets.forEach((socket) => {
+                    socket.emit("realtimeMonitoring", JSON.stringify(data));
+                });
+            };
+            const timer = this.subscribeToKey(channel, dataHandler);
+            const channelHolder = {
+                timer,
+                sockets,
+            };
+            this.monitoringClients.set(channel, channelHolder);
+        }
     };
 
     private subscribeToChannel = (
@@ -174,36 +207,25 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private subscribeToKey = (
-        channel: string,
-        socket: Socket,
-        storage: IRedisToKeyStorage,
-        cb: (result: string) => void
-    ) => {
-        const channelObject = storage.get(channel);
-        if (channelObject) {
-            if (channelObject.sockets.has(socket)) {
-                this.log(`redis channel: socket ${socket.id} already exists`);
-                return;
-            }
-            channelObject.sockets.add(socket);
-            return;
-        }
+    private subscribeToKey = (channel: string, onData: (data: string) => void, memoized?: boolean) => {
+        let data = null;
         const timer = setInterval(() => {
             this.redis.get(channel, (err, result) => {
                 if (err) {
                     this.log(err.message, true);
                 } else {
-                    const channelObject = storage.get(channel);
-                    if (!channelObject || channelObject.value === result) {
-                        return;
+                    if (memoized) {
+                        if (data !== result) {
+                            data = result;
+                            onData(result);
+                        }
+                    } else {
+                        onData(result);
                     }
-                    channelObject.value = result;
-                    channelObject.sockets.forEach(() => cb(result));
                 }
             });
-        }, 500);
-        storage.set(channel, {value: null, timer, sockets: new Set([socket])});
+        }, 1000);
+        return timer;
     };
 
     // Unsubscribe
@@ -222,13 +244,13 @@ export class RedisServiceModule extends MainServiceModule {
     private handleRedisToKeyBitrateUnsubscribe = (socket: Socket, event: IRedisToKeyAppBitrateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
-        this.unsubscribeFromKey(channel, socket, this.appToKeyBitrateClients);
+        this.unsubscribeFromKey(channel, socket, this.monitoringClients);
     };
 
     private handleRedisToKeyErrorUnsubscribe = (socket: Socket, event: IRedisToKeyAppErrorEvent) => {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
-        this.unsubscribeFromKey(channel, socket, this.appToKeyErrorClients);
+        this.unsubscribeFromKey(channel, socket, this.monitoringErrorClients);
     };
 
     private handleRedisAppChannelUnsubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
@@ -338,7 +360,7 @@ export class RedisServiceModule extends MainServiceModule {
         if (removed) {
             return;
         }
-        for (const clientsToKeyType of [this.appToKeyBitrateClients, this.appToKeyErrorClients]) {
+        for (const clientsToKeyType of [this.monitoringClients, this.monitoringErrorClients]) {
             if (removed) break;
             for (const redisChannel of clientsToKeyType.keys()) {
                 if (clientsToKeyType.get(redisChannel)?.sockets?.has(socket)) {
