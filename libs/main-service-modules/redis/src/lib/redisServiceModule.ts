@@ -195,7 +195,7 @@ export class RedisServiceModule extends MainServiceModule {
                     this.log(err.message, true);
                 } else {
                     const channelObject = storage.get(channel);
-                    if (channelObject && channelObject.value === result) {
+                    if (!channelObject || channelObject.value === result) {
                         return;
                     }
                     channelObject.value = result;
