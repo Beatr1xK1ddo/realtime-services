@@ -133,7 +133,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private subscribeToKey = (channel: string, socket: Socket, storage: IRedisToKeyStorage) => {
+    private subscribeToKey = (channel: string, socket: Socket, storage: IRedisToKeyStorage, errors?: boolean) => {
         const channelObject = storage.get(channel);
         if (channelObject) {
             if (channelObject.sockets.has(socket)) {
@@ -149,12 +149,17 @@ export class RedisServiceModule extends MainServiceModule {
                     this.log(err.message, true);
                 } else {
                     const channelObject = storage.get(channel);
-                    if (channelObject.value !== result) {
-                        channelObject.value = result;
-                        channelObject.sockets.forEach((socket) => {
-                            socket.emit("realtimeMonitoring", result);
-                        });
+                    if (channelObject.value === result) {
+                        return;
                     }
+                    channelObject.value = result;
+                    channelObject.sockets.forEach((socket) => {
+                        if (errors) {
+                            socket.emit("realtimeMonitoringErrors", result);
+                        } else {
+                            socket.emit("realtimeMonitoring", result);
+                        }
+                    });
                 }
             });
         }, 5000);
@@ -226,12 +231,15 @@ export class RedisServiceModule extends MainServiceModule {
     private unsubscribeFromKey = (channel: string, socket: Socket, storage: IRedisToKeyStorage) => {
         if (!storage.get(channel)?.sockets.has(socket)) {
             this.log(`redis channel: ${channel} client: ${socket.id} can't unsubscribe`, true);
+            return;
         }
         const sockets = storage.get(channel).sockets;
         sockets.delete(socket);
+        this.log(`redis channel: ${channel} client: ${socket.id} was unsubscribed`);
         if (!sockets.size) {
             clearInterval(storage.get(channel).timer);
             storage.delete(channel);
+            this.log(`redis channel: ${channel} is empty. Unsubscribing from this key`);
         }
     };
 
@@ -303,7 +311,8 @@ export class RedisServiceModule extends MainServiceModule {
                     if (!channelObject.sockets.size) {
                         clearInterval(channelObject.timer);
                         clientsToKeyType.delete(redisChannel);
-                        this.log(`channel: ${channel} is empty. Removing redis subscription`);
+                        socket.disconnect(true);
+                        this.log(`redis channel: ${channel} is empty. Unsubscribing from this key`);
                     }
                     break;
                 }
