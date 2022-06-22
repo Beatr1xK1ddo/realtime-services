@@ -26,6 +26,23 @@ type IRedisToKeyChannel = {
     sockets: Set<Socket>;
 };
 
+type IMonitoringData = {
+    moment: number;
+    bitrate: number;
+    muxrate: number;
+};
+
+type IMonitoringErrorsData = {
+    moment: number;
+    syncLoss: number;
+    syncByte: number;
+    pat: number;
+    cc: number;
+    transport: number;
+    pcrR: number;
+    pcrD: number;
+};
+
 type IRedisToKeyStorage = Map<string, IRedisToKeyChannel>;
 
 type IRedisChannelStorage = Map<string, Map<string, Set<Socket>>>;
@@ -97,13 +114,37 @@ export class RedisServiceModule extends MainServiceModule {
     private handleRedisToKeyErrorSubscribe = (socket: Socket, event: IRedisToKeyAppErrorEvent) => {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
-        this.subscribeToKey(channel, socket, this.appToKeyErrorClients);
+
+        const cb = (result: string) => {
+            const ccErrors = parseInt(result);
+            const data = {
+                moment: +new Date(),
+                syncLoss: 0,
+                syncByte: 0,
+                pat: 0,
+                cc: ccErrors,
+                transport: 0,
+                pcrR: 0,
+                pcrD: 0,
+            } as IMonitoringErrorsData;
+            socket.emit("realtimeMonitoringErrors", JSON.stringify(data));
+        };
+        this.subscribeToKey(channel, socket, this.appToKeyErrorClients, cb);
     };
 
     private handleRedisToKeyBitrateSubscribe = (socket: Socket, event: IRedisToKeyAppBitrateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
-        this.subscribeToKey(channel, socket, this.appToKeyBitrateClients);
+        const cb = (result: string) => {
+            const bitrate = parseInt(result);
+            const data = {
+                moment: +new Date(),
+                bitrate,
+                muxrate: 0,
+            } as IMonitoringData;
+            socket.emit("realtimeMonitoring", JSON.stringify(data));
+        };
+        this.subscribeToKey(channel, socket, this.appToKeyBitrateClients, cb);
     };
 
     private subscribeToChannel = (
@@ -133,7 +174,12 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private subscribeToKey = (channel: string, socket: Socket, storage: IRedisToKeyStorage, errors?: boolean) => {
+    private subscribeToKey = (
+        channel: string,
+        socket: Socket,
+        storage: IRedisToKeyStorage,
+        cb: (result: string) => void
+    ) => {
         const channelObject = storage.get(channel);
         if (channelObject) {
             if (channelObject.sockets.has(socket)) {
@@ -149,20 +195,14 @@ export class RedisServiceModule extends MainServiceModule {
                     this.log(err.message, true);
                 } else {
                     const channelObject = storage.get(channel);
-                    if (channelObject.value === result) {
+                    if (channelObject && channelObject.value === result) {
                         return;
                     }
                     channelObject.value = result;
-                    channelObject.sockets.forEach((socket) => {
-                        if (errors) {
-                            socket.emit("realtimeMonitoringErrors", result);
-                        } else {
-                            socket.emit("realtimeMonitoring", result);
-                        }
-                    });
+                    channelObject.sockets.forEach(() => cb(result));
                 }
             });
-        }, 5000);
+        }, 500);
         storage.set(channel, {value: null, timer, sockets: new Set([socket])});
     };
 
@@ -322,7 +362,7 @@ export class RedisServiceModule extends MainServiceModule {
 
     private initRedis(): void {
         try {
-            this.redis = new Redis("localhost:6379");
+            this.redis = new Redis(this.redisUrl);
             this.redis.on("connect", this.handleRedisConnection);
             this.redis.on("error", this.handleRedisError);
             this.redis.on("message", this.handleRedisSubEvent);
