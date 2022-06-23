@@ -37,13 +37,10 @@ export class Device {
     constructor(ip: string, port: number, options?: IDeviceOptions) {
         this.ip = ip;
         this.port = port;
-        this.socket = new NetSocket();
-        this.socket.setEncoding("utf8");
         this.reconnectionAttempts = options?.reconnectionAttempts || 10;
         this.reconnectionAttemptsUsed = 0;
         if (options?.timeout) {
             this.timeout = options.timeout;
-            this.socket.setTimeout(this.timeout);
         }
         this.logger = new BasicLogger(
             options?.loggerOptions?.name,
@@ -61,17 +58,18 @@ export class Device {
         const socket = new NetSocket();
         socket.setEncoding("utf8");
         socket.setTimeout(1000);
-        socket.write("ping\r\n", (error) => {
-            if (error) this.log("keep alive write failed", true);
-        });
-        let alive = false;
-        socket.on("data", () => (alive = true));
+        socket.connect({host: this.ip, port: this.port});
         socket.on("timeout", () => {
-            this.online = alive;
-            if (!alive) {
-                this.log("connection lost", true);
+            const online = !socket.connecting;
+            if (online && !this.online) {
+                this.log("connection up", true);
                 this.reconnect();
             }
+            if (this.online && !online) {
+                this.log("connection lost", true);
+                this.cleanUp();
+            }
+            this.online = online;
             socket.destroy();
         });
     }
@@ -79,19 +77,28 @@ export class Device {
     connect(): void {
         this.log("connecting");
         this.online = false;
+        this.socket = new NetSocket();
+        this.socket.setEncoding("utf8");
+        this.socket.setKeepAlive(true);
         this.socket.connect({host: this.ip, port: this.port}, this.handleConnectionEstablished.bind(this));
         this.socket.on("close", this.handleConnectionClosed.bind(this));
         this.socket.on("error", this.handleConnectionError.bind(this));
         this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
         this.socket.on("data", this.handleCommandResult.bind(this));
+        if (this.timeout) {
+            this.socket.setTimeout(this.timeout);
+        }
+    }
+
+    private cleanUp() {
+        this.log("performing cleanup");
+        this.responseHandler && this.responseHandler.reject(new Error("connection lost"));
+        this.socket.removeAllListeners();
+        this.socket.destroy();
     }
 
     private reconnect(): void {
         this.log(`reconnecting #${this.reconnectionAttemptsUsed}`);
-        this.responseHandler && this.responseHandler.reject(new Error("connection lost"));
-        this.socket.removeAllListeners();
-        this.socket = new NetSocket();
-        this.socket.setEncoding("utf8");
         setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
         this.reconnectionAttemptsUsed++;
     }
@@ -103,6 +110,7 @@ export class Device {
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
         if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
+            this.cleanUp();
             this.reconnect();
         } else {
             this.handleDisconnect();
