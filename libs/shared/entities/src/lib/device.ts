@@ -22,16 +22,17 @@ export class Device {
     protected reconnectionAttemptsUsed: number;
     protected timeout?: number;
 
-    private logger: BasicLogger;
-
     protected id: string;
     protected commandResult: string;
     protected responseDebounceDelay?: number;
-    protected responseHandler?: (data: string) => void;
+    protected responseHandler?: {
+        resolve: (data: string) => void;
+        reject: (error?: Error) => void;
+    };
     protected online: boolean;
 
+    private logger: BasicLogger;
     private keepAliveIntervalId: NodeJS.Timer;
-    private alive: boolean;
 
     constructor(ip: string, port: number, options?: IDeviceOptions) {
         this.ip = ip;
@@ -53,6 +54,26 @@ export class Device {
         this.commandResult = "";
         this.responseDebounceDelay = options?.debounceDelay;
         this.online = false;
+        this.keepAliveIntervalId = setInterval(this.keepAliveHandler.bind(this), 2500);
+    }
+
+    private keepAliveHandler(): void {
+        const socket = new NetSocket();
+        socket.setEncoding("utf8");
+        socket.setTimeout(1000);
+        socket.write("ping\r\n", (error) => {
+            if (error) this.log("keep alive write failed", true);
+        });
+        let alive = false;
+        socket.on("data", () => (alive = true));
+        socket.on("timeout", () => {
+            this.online = alive;
+            if (!alive) {
+                this.log("connection lost", true);
+                this.reconnect();
+            }
+            socket.destroy();
+        });
     }
 
     connect(): void {
@@ -63,22 +84,11 @@ export class Device {
         this.socket.on("error", this.handleConnectionError.bind(this));
         this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
         this.socket.on("data", this.handleCommandResult.bind(this));
-        this.keepAliveIntervalId = setInterval(this.keepAliveHandler.bind(this), 3000);
-    }
-
-    private keepAliveHandler(): void {
-        if (this.alive) {
-            this.alive = false;
-            this.sendCommand("ping\r\n", false).then(() => (this.alive = true));
-        } else {
-            this.log("connection lost");
-            this.reconnect();
-        }
     }
 
     private reconnect(): void {
-        clearInterval(this.keepAliveIntervalId);
         this.log(`reconnecting #${this.reconnectionAttemptsUsed}`);
+        this.responseHandler && this.responseHandler.reject(new Error("connection lost"));
         this.socket.removeAllListeners();
         this.socket = new NetSocket();
         this.socket.setEncoding("utf8");
@@ -88,7 +98,6 @@ export class Device {
 
     protected handleConnectionEstablished() {
         this.log("connected");
-        this.online = true;
     }
 
     protected handleConnectionClosed(error: boolean) {
@@ -121,9 +130,12 @@ export class Device {
                 logging && this.log(`resolving command ${command} with ${data}`);
                 resolve(data);
             };
-            this.responseHandler = this.responseDebounceDelay
-                ? debounce(resultHandler, this.responseDebounceDelay)
-                : resultHandler;
+            this.responseHandler = {
+                resolve: this.responseDebounceDelay
+                    ? debounce(resultHandler, this.responseDebounceDelay)
+                    : resultHandler,
+                reject,
+            };
             this.socket.write(command, (error) => {
                 if (error) {
                     this.log(`sending command end up with error: ${error.message}`, true);
@@ -136,7 +148,7 @@ export class Device {
     protected handleCommandResult(response: string): void {
         // this.log(`command response ${response}`);
         this.commandResult += response;
-        this.responseHandler && this.responseHandler(this.commandResult);
+        this.responseHandler && this.responseHandler.resolve(this.commandResult);
     }
 
     protected log(message: string, error?: boolean): void {
