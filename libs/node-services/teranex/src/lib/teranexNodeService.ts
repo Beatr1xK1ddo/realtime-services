@@ -26,13 +26,12 @@ export class TeranexNodeService extends NodeDeviceService {
         const {ip, port} = event.origin;
         this.log(`client ${event.clientId} subscribing to ${nodeServiceUtils.eventToString(event.origin)}`);
         try {
-            const device = await this.getDevice(ip, port);
-            this.log(`client ${event.clientId} subscribing device ${device ? "obtained" : "absent"}`);
+            await this.getDevice(ip, port);
             const subscribedEvent: INodeDeviceServiceSubscribedEvent = {
                 clientId: event.clientId,
                 origin: event.origin,
             };
-            if (device) this.emit("subscribed", subscribedEvent);
+            this.emit("subscribed", subscribedEvent);
         } catch (error) {
             const errorEvent: IServiceErrorBaseEvent = {
                 request: "subscribe",
@@ -44,23 +43,22 @@ export class TeranexNodeService extends NodeDeviceService {
 
     private async handleCommands(event: IMainServiceModuleDeviceCommandsEvent) {
         const {nodeId, ip, port, commands} = event;
+        this.log(`commands ${commands} received for ${ip}:${port}`);
         try {
             const device = await this.getDevice(ip, port);
-            if (device) {
-                const result = [];
-                for (const command of commands) {
-                    const commandResult = await device.sendCommand(command);
-                    result.push(TeranexNodeService.format(commandResult));
-                }
-                this.log(`commands processed ${result}`);
-                const resultEvent: INodeDeviceServiceCommandsResultEvent = {
-                    nodeId,
-                    ip,
-                    port,
-                    data: result,
-                };
-                this.emit("result", resultEvent);
+            const result = [];
+            for (const command of commands) {
+                const commandResult = await device.sendCommand(command);
+                result.push(TeranexNodeService.format(commandResult));
             }
+            this.log(`commands ${commands} processed by ${ip}:${port}`);
+            const resultEvent: INodeDeviceServiceCommandsResultEvent = {
+                nodeId,
+                ip,
+                port,
+                data: result,
+            };
+            this.emit("result", resultEvent);
         } catch (error) {
             //todo: fix this clientId
             const failureEvent: INodeDeviceServiceCommandsFailureEvent = {
@@ -72,29 +70,21 @@ export class TeranexNodeService extends NodeDeviceService {
         }
     }
 
-    private async getDevice(ip: string, port: number): Promise<Device> {
-        const deviceId = `${ip}:${port}`;
-        if (this.devices[deviceId]) {
-            return this.devices[deviceId];
-        }
-        this.log(`creating device ${deviceId}`);
-        const newDevice = await TeranexNodeService.createDevice(ip, port);
-        if (!newDevice) {
-            this.log(`can't create device ${deviceId}`, true);
-            return null;
-        }
-        this.devices[deviceId] = newDevice;
-        return newDevice;
+    private handleDeviceOnlineStatusChanged(ip: string, port: number): (online: boolean) => void {
+        return (online: boolean) => this.emit("status", {ip, port, online});
     }
 
-    private static async createDevice(ip: string, port: number): Promise<Device | null> {
-        try {
-            const device = new Device(ip, port, {debounceDelay: 300});
-            await device.connect();
-            return device;
-        } catch (e) {
-            return null;
+    private getDevice(ip: string, port: number): Device {
+        const deviceId = `${ip}:${port}`;
+        if (!this.devices[deviceId]) {
+            this.log(`creating device ${deviceId}`);
+            this.devices[deviceId] = new Device(ip, port, {
+                debounceDelay: 300,
+                onOnlineStatusChanged: this.handleDeviceOnlineStatusChanged(ip, port),
+            }).connect();
         }
+        this.log(`device ${deviceId} obtained`);
+        return this.devices[deviceId];
     }
 
     private static format(str: string) {

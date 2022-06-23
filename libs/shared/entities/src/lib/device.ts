@@ -79,7 +79,7 @@ export class Device {
         });
     }
 
-    connect(): void {
+    connect(): Device {
         this.log("connecting");
         this.socket = new NetSocket();
         this.socket.setEncoding("utf8");
@@ -92,6 +92,7 @@ export class Device {
         if (this.timeout) {
             this.socket.setTimeout(this.timeout);
         }
+        return this;
     }
 
     disconnect(): void {
