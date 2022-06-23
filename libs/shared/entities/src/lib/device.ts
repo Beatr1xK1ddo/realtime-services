@@ -50,7 +50,7 @@ export class Device {
         this.id = `${this.ip}:${this.port}`;
         this.commandResult = "";
         this.responseDebounceDelay = options?.debounceDelay;
-        this.online = false;
+        this.online = true;
         this.keepAliveIntervalId = setInterval(this.keepAliveHandler.bind(this), 2500);
     }
 
@@ -76,7 +76,6 @@ export class Device {
 
     connect(): void {
         this.log("connecting");
-        this.online = false;
         this.socket = new NetSocket();
         this.socket.setEncoding("utf8");
         this.socket.setKeepAlive(true);
