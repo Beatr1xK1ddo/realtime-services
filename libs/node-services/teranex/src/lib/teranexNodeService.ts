@@ -77,6 +77,7 @@ export class TeranexNodeService extends NodeDeviceService {
         if (this.devices[deviceId]) {
             return this.devices[deviceId];
         }
+        this.log(`creating device ${deviceId}`);
         const newDevice = await TeranexNodeService.createDevice(ip, port);
         if (!newDevice) {
             this.log(`can't create device ${deviceId}`, true);
@@ -90,7 +91,6 @@ export class TeranexNodeService extends NodeDeviceService {
         try {
             const device = new Device(ip, port, {debounceDelay: 300});
             await device.connect();
-            await device.sendCommand("ping\r\n");
             return device;
         } catch (e) {
             return null;
