@@ -1,5 +1,3 @@
-import {Socket} from "socket.io";
-
 export type IDecklinkLiveMonitor = {
     current_flags: string;
     current_mode: string;
@@ -15,19 +13,7 @@ export type IDecklinkLiveMonitor = {
     status: string;
 };
 
-export type IDecklinkDeviceState = {
-    [key: number]: IDecklinkLiveMonitor;
-};
-
-export type IDecklinkState = {
-    sockets: Set<Socket>;
-    deviceState?: IDecklinkDeviceState;
-};
-
-export type IDecklinkClientEvent = {
-    devidePortId: number;
-};
-
-export const isIDecklinkClientEvent = (data: any): data is IDecklinkClientEvent => {
-    return "devidePortId" in data && typeof data.devidePortId === "number";
+export type IDecklinkNodeEvent = {
+    nodeId: number;
+    data: IDecklinkLiveMonitor;
 };

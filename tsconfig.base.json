@@ -34,6 +34,7 @@
             "@socket/main-service/types": ["libs/main-service/types/src/index.ts"],
             "@socket/node-services-logger": ["libs/node-services/logger/src/index.ts"],
             "@socket/node-services-teranex": ["libs/node-services/teranex/src/index.ts"],
+            "@socket/node-services/decklik": ["libs/node-services/decklik/src/index.ts"],
             "@socket/node-services/hls-analyzer": ["libs/node-services/hls-analyzer/src/index.ts"],
             "@socket/node-services/hyperdeck": ["libs/node-services/hyperdeck/src/index.ts"],
             "@socket/node-services/nextomeet": ["libs/node-services/nextomeet/src/index.ts"],

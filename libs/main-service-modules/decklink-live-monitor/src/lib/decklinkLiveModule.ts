@@ -1,132 +1,108 @@
-import fetch from "node-fetch";
-import {IDecklinkClientEvent, IDecklinkLiveMonitor, IDecklinkState, isIDecklinkClientEvent} from "@socket/shared-types";
+import {IDecklinkNodeEvent} from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 import {Socket} from "socket.io";
 
 export class DecklinkLiveMonitor extends MainServiceModule {
-    private clients: Map<number, IDecklinkState>;
-    private timer?: NodeJS.Timer;
-    private timeout?: number;
+    private clients: Map<number, Set<Socket>>;
+    private nodes: Map<number, Socket>;
 
-    constructor(name: string, timeout?: number, options?: MainServiceModuleOptions) {
+    constructor(name: string, options?: MainServiceModuleOptions) {
         super(name, options);
         this.clients = new Map();
-        this.timeout = timeout;
+        this.nodes = new Map();
     }
 
-    protected override onConnected(socket: Socket): void {
+    protected override onConnected(socket: Socket) {
         super.onConnected(socket);
-        socket.on("clientSubscribe", this.onClientSubscribe(socket));
-        socket.on("clientUnsubscribe", this.onClientUnsubscribe(socket));
+        socket.on("subscribe", this.onSubscribeClient(socket));
+        socket.on("unsubscribe", this.onUnsubscribeClient(socket));
+        socket.on("disconnect", this.onDisconnect(socket));
+        socket.on("data", this.onData);
+        socket.on("init", this.onSubscribeNode(socket));
     }
 
-    private initTimeoutRequest() {
-        this.timer = setInterval(async () => {
-            const decklinkList = await this.getListDecklikDevices();
-            if (!decklinkList) {
-                this.log("Can not get decklink list");
+    private onSubscribeClient = (socket: Socket) => (nodeId: number) => {
+        if (this.clients.get(nodeId)?.has(socket)) {
+            this.log(`client ${socket.id} already subscribed to node: ${nodeId}`);
+            return;
+        }
+        if (!this.clients.has(nodeId)) {
+            this.clients.set(nodeId, new Set([socket]));
+        } else if (!this.clients.get(nodeId)?.has(socket)) {
+            this.clients.get(nodeId)?.add(socket);
+        }
+        const node = this.nodes.get(nodeId);
+        if (node) {
+            node.emit("subscribe");
+        }
+        this.log(`client ${socket.id} subscribed successfuly`);
+    };
+
+    private onUnsubscribeClient = (socket: Socket) => (nodeId: number) => {
+        const nodeClients = this.clients.get(nodeId);
+        if (nodeClients && nodeClients.has(socket)) {
+            nodeClients.delete(socket);
+            this.log(`client ${socket.id} was unsubscribed from node: ${nodeId}`);
+            if (nodeClients.size) {
                 return;
             }
+            const node = this.nodes.get(nodeId);
+            if (node) {
+                node.emit("unsubscribed");
+                this.log(`unsubscribing from empty node: ${nodeId}`);
+            }
+        } else {
+            this.log(`client ${socket.id} unable to unsubscribe from node: ${nodeId}`);
+        }
 
-            for (const devidePortId of this.clients.keys()) {
-                const decklink = decklinkList.find((item) => item.id === devidePortId);
+        this.log(`client ${socket.id} subscribed successfuly`);
+    };
 
-                if (!decklink) {
-                    continue;
+    private onDisconnect = (socket: Socket) => (reason: string) => {
+        super.onDisconnected(reason);
+        let removed = false;
+        this.clients.forEach((set, key) => {
+            if (set.has(socket)) {
+                set.delete(socket);
+                removed = true;
+                this.log(`client ${socket.id} was unsubscribed`);
+                if (set.size) {
+                    return;
                 }
-
-                this.hadleDeviceMessage(decklink);
+                const node = this.nodes.get(key);
+                if (node) {
+                    node.emit("unsubscribe");
+                }
             }
-        }, this.timeout || 5000);
-    }
-
-    private hadleDeviceMessage(message: IDecklinkLiveMonitor) {
-        const {id} = message;
-        const deviceState = this.clients?.get(id);
-        if (deviceState?.sockets.size) {
-            deviceState.deviceState = message;
-            deviceState.sockets.forEach((socket) => {
-                socket.emit("deviceMessage", message);
-            });
-        }
-    }
-
-    private onClientSubscribe(socket: Socket) {
-        return async (event: IDecklinkClientEvent) => {
-            const shouldProcess = isIDecklinkClientEvent(event);
-
-            if (!shouldProcess) {
-                socket.emit("subscribeError", {
-                    request: "subscribe",
-                    message: "bad request",
-                });
-                return;
-            }
-            const {devidePortId} = event;
-            const response = await this.getSingleDecklikDevices(devidePortId);
-
-            if (!response) {
-                socket.emit("subscribeError", {
-                    request: "subscribe",
-                    message: `Can not get device with deviceId ${event.devidePortId}`,
-                });
-                this.log(`Can not get device with deviceId ${event.devidePortId}`);
-                return;
-            }
-
-            if (!this.clients.has(devidePortId)) {
-                this.clients.set(devidePortId, {sockets: new Set([socket]), deviceState: response});
-            } else {
-                this.clients.get(devidePortId)?.sockets.add(socket);
-            }
-
-            if (this.clients.size === 1) {
-                this.initTimeoutRequest();
-            }
-
-            if (!this.clients.size && this.timer) {
-                clearInterval(this.timer);
-            }
-        };
-    }
-
-    private onClientUnsubscribe(socket: Socket) {
-        return (data: IDecklinkClientEvent) => {
-            const {devidePortId} = data;
-            if (!this.clients.has(devidePortId)) {
-                this.log(`DecklinkLiveMonitor has no device with device por id ${devidePortId}`);
-                return;
-            }
-
-            this.clients.get(devidePortId)?.sockets.delete(socket);
-
-            if (!this.clients.get(devidePortId)?.sockets.size) {
-                this.clients.delete(devidePortId);
-            }
-
-            this.log(`Socket: "${socket.id}" unsubscribed from device port id: ${devidePortId}`);
-        };
-    }
-
-    private async getListDecklikDevices(): Promise<IDecklinkLiveMonitor[] | undefined> {
-        try {
-            const response = await fetch("http://127.0.0.1:8096/api/v1/devices/status");
-            const cleanResponse: IDecklinkLiveMonitor[] = await response.json();
-            return cleanResponse;
-        } catch (erros) {
-            console.log("erros", erros);
+        });
+        if (removed) {
             return;
         }
-    }
+        this.nodes.forEach((nodeSocket, key) => {
+            if (nodeSocket === socket) {
+                this.nodes.delete(key);
+                this.log(`node ${socket.id} was unsubscribed`);
+            }
+        });
+    };
 
-    private async getSingleDecklikDevices(devidePortId: number): Promise<IDecklinkLiveMonitor | undefined> {
-        try {
-            const response = await fetch(`http://127.0.0.1:8096/api/v1/device/${devidePortId}/0/status`);
-            const cleanResponse: IDecklinkLiveMonitor = await response.json();
-            return cleanResponse;
-        } catch (error) {
-            console.log("erros", error);
-            return;
+    private onSubscribeNode = (socket: Socket) => (nodeId: number) => {
+        if (this.nodes.has(nodeId)) {
+            this.log(`node ${socket.id} already subscribed`);
+        } else {
+            this.nodes.set(nodeId, socket);
+            this.log(`node ${socket.id} subscribed successfuly`);
+            const nodeClients = this.clients.get(nodeId);
+            if (nodeClients) {
+                socket.emit("subscribe");
+            }
         }
-    }
+    };
+    private onData = (event: IDecklinkNodeEvent) => {
+        const {nodeId, data} = event;
+        const nodeClients = this.clients.get(nodeId);
+        if (nodeClients) {
+            nodeClients.forEach((socket) => socket.emit("data", data));
+        }
+    };
 }

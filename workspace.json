@@ -15,6 +15,7 @@
         "main-service-modules-udp-player": "libs/main-service-modules/udp-player",
         "main-service-server": "libs/main-service/server",
         "main-service-types": "libs/main-service/types",
+        "node-services-decklik": "libs/node-services/decklik",
         "node-services-hls-analyzer": "libs/node-services/hls-analyzer",
         "node-services-hyperdeck": "libs/node-services/hyperdeck",
         "node-services-logger": "libs/node-services/logger",

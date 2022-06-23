@@ -1,0 +1,32 @@
+{
+    "root": "libs/node-services/decklik",
+    "sourceRoot": "libs/node-services/decklik/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/node-services/decklik",
+                "main": "libs/node-services/decklik/src/index.ts",
+                "tsConfig": "libs/node-services/decklik/tsconfig.lib.json",
+                "assets": ["libs/node-services/decklik/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/node-services/decklik/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/node-services/decklik"],
+            "options": {
+                "jestConfig": "libs/node-services/decklik/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}
