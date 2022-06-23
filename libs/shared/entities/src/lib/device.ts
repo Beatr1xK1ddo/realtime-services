@@ -11,6 +11,7 @@ export type IDeviceOptions = {
     timeout?: number;
     reconnectionAttempts?: number;
     debounceDelay?: number;
+    onOnlineStatusChanged?: (online: boolean) => void;
     loggerOptions?: Partial<IBasicLoggerOptions>;
 };
 
@@ -23,6 +24,7 @@ export class Device {
     protected timeout?: number;
 
     protected id: string;
+    protected onOnlineStatusChangedHandler: (online: boolean) => void;
     protected commandResult: string;
     protected responseDebounceDelay?: number;
     protected responseHandler?: {
@@ -48,6 +50,9 @@ export class Device {
             options?.loggerOptions?.path
         );
         this.id = `${this.ip}:${this.port}`;
+        if (options?.onOnlineStatusChanged) {
+            this.onOnlineStatusChangedHandler = options.onOnlineStatusChanged;
+        }
         this.commandResult = "";
         this.responseDebounceDelay = options?.debounceDelay;
         this.online = true;
@@ -62,12 +67,12 @@ export class Device {
         socket.on("timeout", () => {
             const online = !socket.connecting;
             if (online && !this.online) {
-                this.log("connection up", true);
+                this.log("connection up");
                 this.reconnect();
             }
             if (this.online && !online) {
                 this.log("connection lost", true);
-                this.cleanUp();
+                this.cleanup();
             }
             this.online = online;
             socket.destroy();
@@ -89,11 +94,19 @@ export class Device {
         }
     }
 
-    private cleanUp() {
+    disconnect(): void {
+        this.cleanup();
+        clearInterval(this.keepAliveIntervalId);
+    }
+
+    private cleanup() {
         this.log("performing cleanup");
-        this.responseHandler && this.responseHandler.reject(new Error("connection lost"));
+        this.responseHandler && this.responseHandler.reject();
+        this.onOnlineStatusChangedHandler && this.onOnlineStatusChangedHandler(false);
+        this.online = false;
         this.socket.removeAllListeners();
         this.socket.destroy();
+        this.socket = null;
     }
 
     private reconnect(): void {
@@ -104,12 +117,13 @@ export class Device {
 
     protected handleConnectionEstablished() {
         this.log("connected");
+        this.onOnlineStatusChangedHandler && this.onOnlineStatusChangedHandler(true);
     }
 
     protected handleConnectionClosed(error: boolean) {
         this.log(`connection closed`);
         if (error || this.reconnectionAttemptsUsed < this.reconnectionAttempts) {
-            this.cleanUp();
+            this.cleanup();
             this.reconnect();
         } else {
             this.handleDisconnect();
@@ -130,26 +144,30 @@ export class Device {
 
     sendCommand(command: string, logging: boolean = true): Promise<any> {
         logging && this.log(`sending command ${command}`);
-        this.commandResult = "";
-        this.responseHandler = undefined;
-        return new Promise((resolve, reject) => {
-            const resultHandler = (data: string) => {
-                logging && this.log(`resolving command ${command} with ${data}`);
-                resolve(data);
-            };
-            this.responseHandler = {
-                resolve: this.responseDebounceDelay
-                    ? debounce(resultHandler, this.responseDebounceDelay)
-                    : resultHandler,
-                reject,
-            };
-            this.socket.write(command, (error) => {
-                if (error) {
-                    this.log(`sending command end up with error: ${error.message}`, true);
-                    reject(error);
-                }
+        if (this.online) {
+            this.commandResult = "";
+            this.responseHandler = undefined;
+            return new Promise((resolve, reject) => {
+                const resultHandler = (data: string) => {
+                    logging && this.log(`resolving command ${command} with ${data}`);
+                    resolve(data);
+                };
+                this.responseHandler = {
+                    resolve: this.responseDebounceDelay
+                        ? debounce(resultHandler, this.responseDebounceDelay)
+                        : resultHandler,
+                    reject,
+                };
+                this.socket.write(command, (error) => {
+                    if (error) {
+                        this.log(`sending command end up with error: ${error.message}`, true);
+                        reject(error);
+                    }
+                });
             });
-        });
+        } else {
+            return Promise.reject(new Error("offline"));
+        }
     }
 
     protected handleCommandResult(response: string): void {
