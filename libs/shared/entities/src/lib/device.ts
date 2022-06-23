@@ -63,7 +63,7 @@ export class Device {
         this.socket.on("error", this.handleConnectionError.bind(this));
         this.socket.on("timeout", this.handleConnectionTimeout.bind(this));
         this.socket.on("data", this.handleCommandResult.bind(this));
-        this.keepAliveIntervalId = setInterval(this.keepAliveHandler, 3000);
+        this.keepAliveIntervalId = setInterval(this.keepAliveHandler.bind(this), 3000);
     }
 
     private keepAliveHandler(): void {
@@ -82,7 +82,7 @@ export class Device {
         this.socket.removeAllListeners();
         this.socket = new NetSocket();
         this.socket.setEncoding("utf8");
-        setTimeout(this.connect, this.reconnectionAttemptsUsed * 5000 + 5000);
+        setTimeout(this.connect.bind(this), this.reconnectionAttemptsUsed * 5000 + 5000);
         this.reconnectionAttemptsUsed++;
     }
 
