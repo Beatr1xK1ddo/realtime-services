@@ -3,6 +3,7 @@ import {
     IMainServiceModuleDeviceSubscribeEvent,
     INodeDeviceServiceCommandsFailureEvent,
     INodeDeviceServiceCommandsResultEvent,
+    INodeDeviceServiceStatusEvent,
     INodeDeviceServiceSubscribedEvent,
     IServiceErrorBaseEvent,
     StringId,
@@ -71,7 +72,10 @@ export class TeranexNodeService extends NodeDeviceService {
     }
 
     private handleDeviceOnlineStatusChanged(ip: string, port: number): (online: boolean) => void {
-        return (online: boolean) => this.emit("status", {ip, port, online});
+        return (online: boolean) => {
+            const event: INodeDeviceServiceStatusEvent = {nodeId: this.nodeId, ip, port, online};
+            this.emit("status", event);
+        }
     }
 
     private getDevice(ip: string, port: number): Device {

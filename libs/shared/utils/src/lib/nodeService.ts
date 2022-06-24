@@ -1,12 +1,15 @@
 import {
     INodeBaseEvent,
-    INodeDeviceServiceBaseEvent, INodeDeviceServiceCommandsFailureEvent, INodeDeviceServiceCommandsResultEvent,
+    INodeDeviceServiceBaseEvent,
+    INodeDeviceServiceCommandsFailureEvent,
+    INodeDeviceServiceCommandsResultEvent,
+    INodeDeviceServiceStatusEvent,
     INodeDeviceServiceSubscribedEvent,
 } from "@socket/shared-types";
 
 export const eventToString = (event: INodeDeviceServiceBaseEvent): string => {
     return `${event.nodeId}/${event.ip}:${event.port}`;
-}
+};
 
 export const testNodeDeviceServiceBaseEvent = (event: INodeDeviceServiceBaseEvent) => {
     return (
@@ -15,9 +18,13 @@ export const testNodeDeviceServiceBaseEvent = (event: INodeDeviceServiceBaseEven
         typeof event.ip === "string" &&
         typeof event.port === "number"
     );
-}
+};
 export const testNodeDeviceServiceInitEvent = (event: INodeBaseEvent): boolean => {
     return typeof event === "object" && typeof event.nodeId === "number";
+};
+
+export const testNodeDeviceServiceStatusEvent = (event: INodeDeviceServiceStatusEvent): boolean => {
+    return typeof event === "object" && typeof event.online === "boolean";
 };
 
 export const testNodeDeviceServiceSubscribedEvent = (event: INodeDeviceServiceSubscribedEvent): boolean => {

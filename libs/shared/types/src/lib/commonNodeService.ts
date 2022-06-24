@@ -10,6 +10,10 @@ export interface INodeDeviceServiceBaseEvent extends INodeBaseEvent{
     port: number;
 }
 
+export interface INodeDeviceServiceStatusEvent extends INodeDeviceServiceBaseEvent{
+    online: boolean;
+}
+
 export interface INodeDeviceServiceCommandsResultEvent extends INodeDeviceServiceBaseEvent {
     data: string[];
 }

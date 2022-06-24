@@ -7,7 +7,9 @@ import {
     INodeBaseEvent,
     IMainServiceModuleDeviceUnsubscribeEvent,
     INodeDeviceServiceCommandsFailureEvent,
-    NumericId, IServiceErrorBaseEvent,
+    NumericId,
+    IServiceErrorBaseEvent,
+    INodeDeviceServiceStatusEvent,
 } from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 import {mainServiceModuleUtils, nodeServiceUtils} from "@socket/shared-utils";
@@ -27,6 +29,7 @@ export class TeranexServiceModule extends MainServiceModule {
         socket.on("disconnect", this.handleDisconnect.call(this, socket));
         //node events handlers
         socket.on("init", this.handleNodeServiceInit.call(this, socket));
+        socket.on("status", this.handleNodeServiceDeviceStatus.bind(this));
         socket.on("subscribed", this.handleNodeServiceSubscribed.bind(this));
         socket.on("result", this.handleNodeServiceCommandsResult.bind(this));
         socket.on("failure", this.handleNodeServiceCommandsFailure.bind(this));
@@ -62,6 +65,7 @@ export class TeranexServiceModule extends MainServiceModule {
                                     `disconnected client ${socket.id} appears to be subscribed to ${nodeId}/${deviceId}`
                                 );
                                 nodeDevicesMap.get(deviceId)?.delete(socket);
+                                //todo: stop device in case of no subscribers
                             }
                         }
                     }
@@ -93,6 +97,27 @@ export class TeranexServiceModule extends MainServiceModule {
                 }
             } else {
                 this.log(`node service ${socket.id} malformed initialized event`, true);
+            }
+        };
+    }
+
+    private handleNodeServiceDeviceStatus(socket: Socket) {
+        return (event: INodeDeviceServiceStatusEvent) => {
+            if (nodeServiceUtils.testNodeDeviceServiceStatusEvent(event)) {
+                const deviceId = `${event.ip}:${event.port}`;
+                this.log(`node ${event.nodeId} device ${deviceId} status changed to ${event.online}`);
+                const nodeClients = this.clients.get(event.nodeId);
+                if (nodeClients && nodeClients.size) {
+                    const deviceClients = nodeClients.get(deviceId);
+                    if (deviceClients && deviceClients.size) {
+                        deviceClients.forEach((socket) => socket.emit("status", event));
+                        this.log(
+                            `node ${event.nodeId} device ${deviceId} status sent to ${deviceClients.size} subscribers`
+                        );
+                    }
+                }
+            } else {
+                this.log(`node service ${socket.id} malformed status event`, true);
             }
         };
     }
