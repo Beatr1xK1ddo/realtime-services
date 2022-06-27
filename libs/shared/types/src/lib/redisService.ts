@@ -40,22 +40,40 @@ export type IRealtimeNodeStatusEvent = {
     online: boolean;
 };
 
-export type IRedisModuleAppDataSubscribeEvent = {
+export type IRedisAppChannelEvent = {
     nodeId: number;
     appId: number;
     appType: string;
 };
 
-export type IRedisModuleAppDataUnsubscribeEvent = IRedisModuleAppDataSubscribeEvent;
+export type IRedisToKeyAppBitrateEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+};
+
+export type IRedisToKeyAppErrorEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+    appType: string;
+    appId: number;
+};
+
+export type IRedisModuleAppUnsubscribeEvent = IRedisModuleAppSubscribeEvent;
 
 export type IRedisModuleNodeDataSubscribeEvent = {
     nodeId: number | number[];
     type: IRealtimeNodeEventType;
 };
 
-export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
+export type IRedisModuleAppSubscribeEvent =
+    | IRedisToKeyAppErrorEvent
+    | IRedisToKeyAppBitrateEvent
+    | IRedisAppChannelEvent
+    | IRedisModuleNodeDataSubscribeEvent;
 
-export type IClients = Map<string, Map<number, Set<Socket>>> | Map<string, Map<string, Set<Socket>>>;
+export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
 
 export type IRedisMessageType = IRealtimeAppEvent | IRealtimeNodeEvent;
 

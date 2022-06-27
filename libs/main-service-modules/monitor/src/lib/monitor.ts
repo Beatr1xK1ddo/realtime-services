@@ -25,11 +25,7 @@ export class Monitor implements IMainServiceModule {
     constructor(name: string, urlRedis: string, loggerOptions?: Partial<IBasicLoggerOptions>) {
         this.name = name;
         this.redis = new Redis(urlRedis);
-        this.logger = new BasicLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
+        this.logger = new BasicLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
     }
 
     async init(io: Namespace) {
@@ -168,13 +164,7 @@ export class Monitor implements IMainServiceModule {
 
                     history = await nodeUtils.getCache(file, () => this.fetchHistory(sqlRec));
                     this.logger.log.info('Sending "ts_errors"');
-                    this.sendData(
-                        "ts_errors",
-                        signalErrorTime,
-                        history,
-                        sqlRec,
-                        +results[0]! + "/" + +results[1]!
-                    );
+                    this.sendData("ts_errors", signalErrorTime, history, sqlRec, +results[0]! + "/" + +results[1]!);
                 }
             }
         } catch (e) {
@@ -222,13 +212,7 @@ export class Monitor implements IMainServiceModule {
         return result;
     }
 
-    sendData(
-        errorType: string,
-        errorTime: number | null,
-        errorHistory?: any,
-        sqlRec?: any,
-        replyCount?: any
-    ) {
+    sendData(errorType: string, errorTime: number | null, errorHistory?: any, sqlRec?: any, replyCount?: any) {
         const data = {
             appType: sqlRec.appType,
             appId: sqlRec.appId,
@@ -263,8 +247,10 @@ export class Monitor implements IMainServiceModule {
         const fromTime = commonUtils.nowInSeconds() - conf.live_monitor.history.depth;
         const toTime = commonUtils.nowInSeconds();
 
-        return nodeUtils.exec(
-            `php ${conf.live_monitor.history.bin} ${appType} ${appId} ${fromTime} ${toTime} ${nodeId} ${nodeIp} ${nodePort}`,
-        ).catch((e: Error) => this.logger.log.error("Exec php script error: ", e));
+        return nodeUtils
+            .exec(
+                `php ${conf.live_monitor.history.bin} ${appType} ${appId} ${fromTime} ${toTime} ${nodeId} ${nodeIp} ${nodePort}`
+            )
+            .catch((e: Error) => this.logger.log.error("Exec php script error: ", e));
     }
 }

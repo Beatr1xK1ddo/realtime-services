@@ -1,6 +1,7 @@
 import {nodeUtils} from "@socket/shared-utils";
 import {LoggerNodeService} from "@socket/node-services-logger";
 import {TeranexNodeService} from "@socket/node-services-teranex";
+import {HlsAnalyzerNodeService} from "@socket/node-services/hls-analyzer";
 
 import * as config from "./config.json";
 

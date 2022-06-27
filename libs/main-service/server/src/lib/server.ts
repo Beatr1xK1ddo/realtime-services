@@ -5,7 +5,6 @@ import {readFileSync} from "fs";
 import type {IMainServiceModule, SSL} from "@socket/shared-types";
 import {BasicLogger, IBasicLoggerOptions} from "@socket/shared/entities";
 
-
 type MainServiceServerOptions = {
     ssl: SSL;
     logger?: Partial<IBasicLoggerOptions>;

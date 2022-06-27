@@ -1,0 +1,32 @@
+{
+    "root": "libs/node-services/hls-analyzer",
+    "sourceRoot": "libs/node-services/hls-analyzer/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/node-services/hls-analyzer",
+                "main": "libs/node-services/hls-analyzer/src/index.ts",
+                "tsConfig": "libs/node-services/hls-analyzer/tsconfig.lib.json",
+                "assets": ["libs/node-services/hls-analyzer/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/node-services/hls-analyzer/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/node-services/hls-analyzer"],
+            "options": {
+                "jestConfig": "libs/node-services/hls-analyzer/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

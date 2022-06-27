@@ -6,4 +6,5 @@ export * from "./lib/commonNodeService";
 export * from "./lib/loggerService";
 export * from "./lib/nextomeetService";
 export * from "./lib/redisService";
+export * from "./lib/decklink";
 export * from "./lib/teranexService";

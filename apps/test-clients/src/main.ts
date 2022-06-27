@@ -3,10 +3,13 @@ import {teranexTestRun} from "./app/teranex-test";
 import {redisTestRun} from "./app/reddis-test";
 import {thumbnailTestClient} from "./app/thumbnails-test";
 import {hyperdeckTestRun} from "./app/hyperdeck-test";
+import {hlsTestRun} from "./app/hls-test";
+import {decklinkTest} from "./app/decklink-test";
 
 const mainServiceUrl = "https://qa.nextologies.com:1987";
 
-redisTestRun("redis://:c709bdf5f5c2be2a8a1e8da19bf88400a21421ec@38.121.75.100:80");
+decklinkTest("http://localhost:1987/decklink");
+// hlsTestRun("http://localhost:1987");
 
 // loggerTestRun(mainServiceUrl);
 // teranexTestRun(mainServiceUrl);

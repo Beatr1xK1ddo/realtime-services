@@ -9,6 +9,6 @@ export type SSL = {
 };
 
 export interface IServiceErrorBaseEvent {
-    request: string,
-    message: string,
+    request: string;
+    message: string;
 }

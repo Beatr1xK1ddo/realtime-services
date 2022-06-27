@@ -2,10 +2,10 @@ import {NumericId, StringId} from "./common";
 import {IMainServiceModuleDeviceCommandsEvent, IMainServiceModuleDeviceSubscribeEvent} from "./commonMainServiceModule";
 
 export interface INodeBaseEvent {
-    nodeId: NumericId
+    nodeId: NumericId;
 }
 
-export interface INodeDeviceServiceBaseEvent extends INodeBaseEvent{
+export interface INodeDeviceServiceBaseEvent extends INodeBaseEvent {
     ip: string;
     port: number;
 }

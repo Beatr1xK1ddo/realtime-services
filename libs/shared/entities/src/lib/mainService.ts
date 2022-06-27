@@ -16,11 +16,7 @@ export class MainServiceModule implements IMainServiceModule {
 
     constructor(name: string, options?: MainServiceModuleOptions) {
         const loggerOptions = this.options?.logger;
-        this.logger = new BasicLogger(
-            loggerOptions?.name,
-            loggerOptions?.level,
-            loggerOptions?.path
-        );
+        this.logger = new BasicLogger(loggerOptions?.name, loggerOptions?.level, loggerOptions?.path);
         this.name = name;
         this.options = options;
         this.log("creating");

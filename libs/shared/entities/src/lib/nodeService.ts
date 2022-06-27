@@ -14,12 +14,7 @@ export class NodeService {
     private socket: Socket;
     private logger: BasicLogger;
 
-    protected constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    protected constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         this.name = name.toUpperCase();
         this.nodeId = nodeId;
         this.mainServiceUrl = mainServiceUrl;
@@ -27,11 +22,7 @@ export class NodeService {
             secure: true,
             reconnection: true,
         });
-        this.logger = new BasicLogger(
-            options?.logger?.name,
-            options?.logger?.level,
-            options?.logger?.path
-        );
+        this.logger = new BasicLogger(options?.logger?.name, options?.logger?.level, options?.logger?.path);
         this.socket.on("connect", this.onConnected.bind(this));
         this.socket.on("disconnect", this.onDisconnected.bind(this));
         this.socket.on("error", this.onError.bind(this));
@@ -71,12 +62,7 @@ export class NodeService {
 export abstract class NodeDeviceService<D extends Device = Device> extends NodeService {
     protected devices: IDevices<D>;
 
-    constructor(
-        name: string,
-        nodeId: number,
-        mainServiceUrl: string,
-        options?: NodeServiceOptions
-    ) {
+    constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.devices = {};
     }
