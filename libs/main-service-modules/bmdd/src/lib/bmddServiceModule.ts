@@ -27,7 +27,7 @@ export class BmddServiceModule extends MainServiceModule {
         socket.on("init", this.handleNodeInit(socket));
         socket.on("nodeError", this.handleNodeError(socket));
         socket.on("subscribed", this.handleNodeSubscribed(socket));
-        socket.on("devices", this.handleNodeDevices(socket));
+        socket.on("devices", this.handleNodeDevices());
         //clients events
         socket.on("subscribe", this.handleSubscribe(socket));
         socket.on("unsubscribe", this.handleUnsubscribe(socket));
