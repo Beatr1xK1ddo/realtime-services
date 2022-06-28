@@ -1,0 +1,32 @@
+{
+    "root": "libs/node-services/bmdd",
+    "sourceRoot": "libs/node-services/bmdd/src",
+    "targets": {
+        "build": {
+            "executor": "@nrwl/js:tsc",
+            "outputs": ["{options.outputPath}"],
+            "options": {
+                "outputPath": "dist/libs/node-services/bmdd",
+                "main": "libs/node-services/bmdd/src/index.ts",
+                "tsConfig": "libs/node-services/bmdd/tsconfig.lib.json",
+                "assets": ["libs/node-services/bmdd/*.md"]
+            }
+        },
+        "lint": {
+            "executor": "@nrwl/linter:eslint",
+            "outputs": ["{options.outputFile}"],
+            "options": {
+                "lintFilePatterns": ["libs/node-services/bmdd/**/*.ts"]
+            }
+        },
+        "test": {
+            "executor": "@nrwl/jest:jest",
+            "outputs": ["coverage/libs/node-services/bmdd"],
+            "options": {
+                "jestConfig": "libs/node-services/bmdd/jest.config.js",
+                "passWithNoTests": true
+            }
+        }
+    },
+    "tags": []
+}

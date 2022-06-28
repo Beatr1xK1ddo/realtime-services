@@ -28,9 +28,7 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": [
-                    "libs/main-service-modules/thumbnails/**/*.{ts,tsx,js,jsx}"
-                ]
+                "lintFilePatterns": ["libs/main-service-modules/thumbnails/**/*.{ts,tsx,js,jsx}"]
             }
         },
         "test": {

@@ -16,9 +16,7 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": [
-                    "libs/main-service-modules/teranex/**/*.ts"
-                ]
+                "lintFilePatterns": ["libs/main-service-modules/teranex/**/*.ts"]
             }
         },
         "test": {

@@ -15,10 +15,7 @@
                 "main": "apps/nxt-teranex-controller/src/main.tsx",
                 "polyfills": "apps/nxt-teranex-controller/src/polyfills.ts",
                 "tsConfig": "apps/nxt-teranex-controller/tsconfig.app.json",
-                "assets": [
-                    "apps/nxt-teranex-controller/src/favicon.ico",
-                    "apps/nxt-teranex-controller/src/assets"
-                ],
+                "assets": ["apps/nxt-teranex-controller/src/favicon.ico", "apps/nxt-teranex-controller/src/assets"],
                 "styles": ["apps/nxt-teranex-controller/src/styles.css"],
                 "scripts": [],
                 "webpackConfig": "@nrwl/react/plugins/webpack"
@@ -63,9 +60,7 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": [
-                    "apps/nxt-teranex-controller/**/*.{ts,tsx,js,jsx}"
-                ]
+                "lintFilePatterns": ["apps/nxt-teranex-controller/**/*.{ts,tsx,js,jsx}"]
             }
         },
         "test": {

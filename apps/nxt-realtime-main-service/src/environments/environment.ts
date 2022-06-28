@@ -23,4 +23,7 @@ export const environment = {
         apiHttpServerPort: 30680,
         apiHttpsServerPort: 30681,
     },
+    bmdd: {
+        name: "bmdd",
+    },
 };
