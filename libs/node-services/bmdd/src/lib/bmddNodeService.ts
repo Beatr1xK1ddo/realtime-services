@@ -24,6 +24,11 @@ export class BmddNodeService extends NodeService {
         this.registerHandler("unsubscribe", this.handleUnsubscribe.bind(this));
     }
 
+    protected override onConnected() {
+        super.onConnected();
+        this.init();
+    }
+
     private async init() {
         try {
             const rawDevices = await nodeUtils.exec(DEVICES_LIST_COMMAND);
