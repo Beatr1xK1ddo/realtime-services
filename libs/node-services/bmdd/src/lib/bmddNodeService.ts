@@ -13,11 +13,13 @@ const DEVICES_LIST_COMMAND = "timeout 5 curl http://127.0.0.1:8096/api/v1/device
 const DEVICE_STATUS_COMMAND = (id: number) => `timeout 5 curl http://127.0.0.1:8096/api/v1/device/${id}/0/status`;
 
 export class BmddNodeService extends NodeService {
+    private initialized: boolean;
     private pollingIntervalId: null | NodeJS.Timer;
     private deckLinkDevices: Map<number, IDeckLinkDevice>;
 
     constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
+        this.initialized = false;
         this.pollingIntervalId = null;
         this.deckLinkDevices = new Map<number, IDeckLinkDevice>();
         this.registerHandler("subscribe", this.handleSubscribe.bind(this));
@@ -41,7 +43,9 @@ export class BmddNodeService extends NodeService {
                 devices: this.deckLinkDevices,
             };
             this.emit("init", initEvent);
+            this.initialized = true;
         } catch (e) {
+            this.log("failed to init service");
             const errorEvent: IBmddNodeServiceErrorEvent = {
                 nodeId: this.nodeId,
                 message: "init error",
@@ -51,6 +55,16 @@ export class BmddNodeService extends NodeService {
     }
 
     private handleSubscribe(event: IBmddNodeServiceSubscribeEvent) {
+        if (this.initialized) {
+            this.log(`handling subscribe event from ${event.clientId}`);
+        } else {
+            this.log(`got subscribe event from ${event.clientId}, but service was not initialized, rejecting with error`);
+            const errorEvent: IBmddNodeServiceErrorEvent = {
+                nodeId: this.nodeId,
+                message: "not initialized",
+            };
+            this.emit("nodeError", errorEvent);
+        }
         if (this.pollingIntervalId) {
             const subscribedEvent: IBmddNodeServiceSubscribedEvent = {
                 nodeId: this.nodeId,
@@ -80,12 +94,22 @@ export class BmddNodeService extends NodeService {
                 };
                 this.emit("devices", devicesEvent);
             };
-            this.pollingIntervalId = setInterval(handleDevices, 1000);
+            this.pollingIntervalId = setInterval(handleDevices, 10000);
             this.log("polling started");
         }
     }
 
     private handleUnsubscribe() {
+        if (this.initialized) {
+            this.log(`handling unsubscribe event`);
+        } else {
+            this.log(`got unsubscribe event, but service was not initialized, rejecting with error`);
+            const errorEvent: IBmddNodeServiceErrorEvent = {
+                nodeId: this.nodeId,
+                message: "not initialized",
+            };
+            this.emit("nodeError", errorEvent);
+        }
         if (this.pollingIntervalId) clearInterval(this.pollingIntervalId);
         this.pollingIntervalId = null;
         this.log("polling stopped");
