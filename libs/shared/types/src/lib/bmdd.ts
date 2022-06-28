@@ -35,7 +35,7 @@ export interface IBmddNodeServiceErrorEvent {
 
 export interface IBmddNodeServiceDevicesEvent {
     nodeId: NumericId;
-    devices: Map<number, IDeckLinkDevice>;
+    devices: {[id: number]: IDeckLinkDevice};
 }
 
 export interface IBmddNodeServiceSubscribeEvent {

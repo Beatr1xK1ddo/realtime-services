@@ -15,13 +15,13 @@ const DEVICE_STATUS_COMMAND = (id: number) => `timeout 30 curl http://127.0.0.1:
 export class BmddNodeService extends NodeService {
     private initialized: boolean;
     private pollingIntervalId: null | NodeJS.Timer;
-    private deckLinkDevices: Map<number, IDeckLinkDevice>;
+    private deckLinkDevices: {[id: number]: IDeckLinkDevice};
 
     constructor(name: string, nodeId: number, mainServiceUrl: string, options?: NodeServiceOptions) {
         super(name, nodeId, mainServiceUrl, options);
         this.initialized = false;
         this.pollingIntervalId = null;
-        this.deckLinkDevices = new Map<number, IDeckLinkDevice>();
+        this.deckLinkDevices = {};
         this.init = this.init.bind(this);
         this.registerHandler("subscribe", this.handleSubscribe.bind(this));
         this.registerHandler("unsubscribe", this.handleUnsubscribe.bind(this));
@@ -39,7 +39,7 @@ export class BmddNodeService extends NodeService {
             this.log(`devices ${rawDevices} ${devices.map(i => i.id)}`)
             devices.forEach((device) => {
                 this.log(`device ${JSON.stringify(device)}`);
-                this.deckLinkDevices.set(device.id, {id: device.id, status: "Init", detectedMode: "", pixelFormat: ""});
+                this.deckLinkDevices[device.id] = {id: device.id, status: "Init", detectedMode: "", pixelFormat: ""};
             });
             const initEvent: IBmddNodeServiceInitEvent = {
                 nodeId: this.nodeId,
@@ -78,17 +78,18 @@ export class BmddNodeService extends NodeService {
             this.log("devices polling started");
         } else {
             const handleDevices = async () => {
-                for (const id of this.deckLinkDevices.keys()) {
+                for (const deviceId of Object.keys(this.deckLinkDevices)) {
+                    const id = parseInt(deviceId, 10);
                     try {
                         const rawDevice = (await nodeUtils.exec(DEVICE_STATUS_COMMAND(id)));
                         const device = JSON.parse(rawDevice) as IDeckLinkDeviceResponse;
                         this.log(`device ${JSON.stringify(device)}`);
-                        this.deckLinkDevices.set(id, {
+                        this.deckLinkDevices[id] = {
                             id,
                             status: device.status,
                             pixelFormat: device.pixel_format,
                             detectedMode: device.detected_mode,
-                        });
+                        };
                     } catch (e) {
                         this.log(`failed to read device status ${id}`, true);
                     }
