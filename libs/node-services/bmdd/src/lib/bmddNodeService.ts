@@ -35,6 +35,7 @@ export class BmddNodeService extends NodeService {
         try {
             const rawDevices = await nodeUtils.exec(DEVICES_LIST_COMMAND);
             const devices = JSON.parse(rawDevices) as IDeckLinkDevicesResponse;
+            this.log(`devices ${rawDevices} ${devices.keys()}`)
             devices.forEach(({id}) => {
                 this.deckLinkDevices.set(id, {id, status: "Init", detectedMode: "", pixelFormat: ""});
             });
