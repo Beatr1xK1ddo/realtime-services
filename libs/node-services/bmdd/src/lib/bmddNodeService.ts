@@ -9,8 +9,8 @@ import {
 import {NodeService, NodeServiceOptions} from "@socket/shared/entities";
 import {nodeUtils} from "@socket/shared-utils";
 
-const DEVICES_LIST_COMMAND = "timeout 5 curl http://127.0.0.1:8096/api/v1/devices/";
-const DEVICE_STATUS_COMMAND = (id: number) => `timeout 5 curl http://127.0.0.1:8096/api/v1/device/${id}/0/status`;
+const DEVICES_LIST_COMMAND = "timeout 60 curl http://127.0.0.1:8096/api/v1/devices/";
+const DEVICE_STATUS_COMMAND = (id: number) => `timeout 30 curl http://127.0.0.1:8096/api/v1/device/${id}/0/status`;
 
 export class BmddNodeService extends NodeService {
     private initialized: boolean;
@@ -22,6 +22,7 @@ export class BmddNodeService extends NodeService {
         this.initialized = false;
         this.pollingIntervalId = null;
         this.deckLinkDevices = new Map<number, IDeckLinkDevice>();
+        this.init = this.init.bind(this);
         this.registerHandler("subscribe", this.handleSubscribe.bind(this));
         this.registerHandler("unsubscribe", this.handleUnsubscribe.bind(this));
     }
@@ -35,9 +36,10 @@ export class BmddNodeService extends NodeService {
         try {
             const rawDevices = await nodeUtils.exec(DEVICES_LIST_COMMAND);
             const devices = JSON.parse(rawDevices) as IDeckLinkDevicesResponse;
-            this.log(`devices ${rawDevices} ${devices.keys()}`)
-            devices.forEach(({id}) => {
-                this.deckLinkDevices.set(id, {id, status: "Init", detectedMode: "", pixelFormat: ""});
+            this.log(`devices ${rawDevices} ${devices.map(i => i.id)}`)
+            devices.forEach((device) => {
+                this.log(`device ${JSON.stringify(device)}`);
+                this.deckLinkDevices.set(device.id, {id: device.id, status: "Init", detectedMode: "", pixelFormat: ""});
             });
             const initEvent: IBmddNodeServiceInitEvent = {
                 nodeId: this.nodeId,
@@ -78,7 +80,9 @@ export class BmddNodeService extends NodeService {
             const handleDevices = async () => {
                 for (const id of this.deckLinkDevices.keys()) {
                     try {
-                        const device = (await nodeUtils.exec(DEVICE_STATUS_COMMAND(id))) as IDeckLinkDeviceResponse;
+                        const rawDevice = (await nodeUtils.exec(DEVICE_STATUS_COMMAND(id)));
+                        const device = JSON.parse(rawDevice) as IDeckLinkDeviceResponse;
+                        this.log(`device ${JSON.stringify(device)}`);
                         this.deckLinkDevices.set(id, {
                             id,
                             status: device.status,
@@ -95,7 +99,7 @@ export class BmddNodeService extends NodeService {
                 };
                 this.emit("devices", devicesEvent);
             };
-            this.pollingIntervalId = setInterval(handleDevices, 10000);
+            this.pollingIntervalId = setInterval(handleDevices, 20000);
             this.log("polling started");
         }
     }
