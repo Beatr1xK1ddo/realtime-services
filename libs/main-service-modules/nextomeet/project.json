@@ -16,9 +16,7 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": [
-                    "libs/main-service-modules/nextomeet/**/*.ts"
-                ]
+                "lintFilePatterns": ["libs/main-service-modules/nextomeet/**/*.ts"]
             }
         },
         "test": {

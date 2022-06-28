@@ -3,10 +3,11 @@ import {LoggerServiceModule} from "@socket/main-service-modules-logger";
 import {TeranexServiceModule} from "@socket/main-service-modules/teranex";
 import {RedisServiceModule} from "@socket/main-service-modules-redis";
 import {ThumbnailsModule} from "@socket/main-service-modules/thumbnails";
+import {BmddServiceModule} from "@socket/main-service-modules-bmdd";
 
 import {environment} from "./environments/environment";
 
-const {ssl, mainService, loggerService, teranexService, redisService, thumbnailsService} = environment;
+const {ssl, mainService, loggerService, teranexService, redisService, thumbnailsService, bmdd} = environment;
 
 const server = new MainServiceServer(mainService.port, {ssl});
 const modules = [
@@ -18,6 +19,7 @@ const modules = [
         apiHttpServerPort: thumbnailsService.apiHttpServerPort,
         apiServerSsl: ssl,
     }),
+    new BmddServiceModule(bmdd.name),
 ];
 
 modules.forEach((module) => server.registerModule(module));

@@ -1,5 +1,5 @@
 {
-    "name": "@socket/node-services/decklik",
+    "name": "@socket/node-services-bmdd",
     "version": "0.0.1",
     "type": "commonjs"
 }

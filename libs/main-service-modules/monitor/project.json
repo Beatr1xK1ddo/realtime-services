@@ -16,9 +16,7 @@
             "executor": "@nrwl/linter:eslint",
             "outputs": ["{options.outputFile}"],
             "options": {
-                "lintFilePatterns": [
-                    "libs/main-service-modules/monitor/**/*.ts"
-                ]
+                "lintFilePatterns": ["libs/main-service-modules/monitor/**/*.ts"]
             }
         },
         "test": {

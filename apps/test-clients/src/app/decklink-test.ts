@@ -1,4 +1,4 @@
-import {IDecklinkLiveMonitor} from "@socket/shared-types";
+import {IDeckLinkDeviceResponse} from "@socket/shared-types";
 import {io} from "socket.io-client";
 
 export const decklinkTest = (url: string) => {
@@ -9,7 +9,7 @@ export const decklinkTest = (url: string) => {
         socket.emit("subscribe", 1337);
     });
 
-    socket.on("data", (data: IDecklinkLiveMonitor) => {
+    socket.on("data", (data: IDeckLinkDeviceResponse) => {
         console.log(`Decklink data`, data);
     });
     socket.on("error", (error) => {

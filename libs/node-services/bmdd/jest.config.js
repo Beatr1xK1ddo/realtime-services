@@ -1,5 +1,5 @@
 module.exports = {
-    displayName: "main-service-modules-decklink-live-monitor",
+    displayName: "node-services-decklik",
     preset: "../../../jest.preset.js",
     globals: {
         "ts-jest": {
@@ -10,5 +10,5 @@ module.exports = {
         "^.+\\.[tj]s$": "ts-jest",
     },
     moduleFileExtensions: ["ts", "js", "html"],
-    coverageDirectory: "../../../coverage/libs/main-service-modules/decklink-live-monitor",
+    coverageDirectory: "../../../coverage/libs/node-services/bmdd",
 };
