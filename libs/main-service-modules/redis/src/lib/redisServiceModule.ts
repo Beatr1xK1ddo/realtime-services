@@ -8,8 +8,8 @@ import {
     isRealtimeAppEvent,
     IRedisModuleAppSubscribeEvent,
     IRedisModuleAppUnsubscribeEvent,
-    IRedisToKeyAppErrorEvent,
-    IRedisToKeyAppBitrateEvent,
+    IToKeyAppErrorStateEvent,
+    IToKeyAppStateEvent,
     IRedisAppChannelEvent,
     IMonitoringErrorsData,
     IMonitoringData,
@@ -48,30 +48,29 @@ export class RedisServiceModule extends MainServiceModule {
         this.monitoringErrorClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
-        this.redisToKey = new Redis(this.redisUrl);
         this.log("created");
     }
 
     protected onConnected(socket: Socket) {
         super.onConnected(socket);
-        socket.on("subscribe", this.handleAppDataSubscribe(socket));
-        socket.on("unsubscribe", this.handleAppUnsubscribe(socket));
+        socket.on("subscribe", this.handleSubscribe(socket));
+        socket.on("unsubscribe", this.handleUnsubscribe(socket));
         socket.on("disconnect", this.handleDisconnect(socket));
     }
     // Subscribe
-    private handleAppDataSubscribe = (socket: Socket) => (event: IRedisModuleAppSubscribeEvent) => {
+    private handleSubscribe = (socket: Socket) => (event: IRedisModuleAppSubscribeEvent) => {
         if (redisModuleUtils.isIRedisAppChannelEvent(event)) {
-            this.handleRedisAppChannelSubscribe(socket, event);
+            this.handleAppStateSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppErrorEvent(event)) {
-            this.handleRedisToKeyErrorSubscribe(socket, event);
+            this.handleToKeyMonitoringErrorSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppBitrateEvent(event)) {
-            this.handleRedisToKeyBitrateSubscribe(socket, event);
+            this.handleToKeyMonitoringSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisModuleNodeDataSubscribeEvent(event)) {
-            this.handleNodeDataSubscribe(socket, event);
+            this.handleNodeStateSubscribe(socket, event);
         }
     };
 
-    private handleRedisAppChannelSubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
+    private handleAppStateSubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const specificId = appId.toString();
@@ -83,7 +82,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleNodeDataSubscribe = (socket: Socket, event: IRedisModuleNodeDataSubscribeEvent) => {
+    private handleNodeStateSubscribe = (socket: Socket, event: IRedisModuleNodeDataSubscribeEvent) => {
         try {
             const {type, nodeId} = event;
             const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
@@ -97,7 +96,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleRedisToKeyErrorSubscribe = (socket: Socket, event: IRedisToKeyAppErrorEvent) => {
+    private handleToKeyMonitoringErrorSubscribe = (socket: Socket, event: IToKeyAppErrorStateEvent) => {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
 
@@ -120,14 +119,16 @@ export class RedisServiceModule extends MainServiceModule {
                         appId,
                         appType,
                     },
-                    moment: +new Date(),
-                    syncLoss: 0,
-                    syncByte: 0,
-                    pat: 0,
-                    cc: ccErrors,
-                    transport: 0,
-                    pcrR: 0,
-                    pcrD: 0,
+                    data: {
+                        moment: +new Date(),
+                        syncLoss: 0,
+                        syncByte: 0,
+                        pat: 0,
+                        cc: ccErrors,
+                        transport: 0,
+                        pcrR: 0,
+                        pcrD: 0,
+                    },
                 };
                 socket.emit("realtimeMonitoringErrors", JSON.stringify(data));
             };
@@ -141,7 +142,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleRedisToKeyBitrateSubscribe = (socket: Socket, event: IRedisToKeyAppBitrateEvent) => {
+    private handleToKeyMonitoringSubscribe = (socket: Socket, event: IToKeyAppStateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
         if (this.monitoringClients.get(channel)) {
@@ -162,9 +163,11 @@ export class RedisServiceModule extends MainServiceModule {
                         ip,
                         port,
                     },
-                    moment: +new Date(),
-                    bitrate: bitrate || 0,
-                    muxrate: 0,
+                    data: {
+                        moment: +new Date(),
+                        bitrate: bitrate || 0,
+                        muxrate: 0,
+                    },
                 };
 
                 sockets.forEach((socket) => {
@@ -230,37 +233,51 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     // Unsubscribe
-    private handleAppUnsubscribe = (socket: Socket) => (event: IRedisModuleAppUnsubscribeEvent) => {
+    private handleUnsubscribe = (socket: Socket) => (event: IRedisModuleAppUnsubscribeEvent) => {
         if (redisModuleUtils.isIRedisAppChannelEvent(event)) {
-            this.handleRedisAppChannelUnsubscribe(socket, event);
+            this.handleAppStateUnsubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppErrorEvent(event)) {
-            this.handleRedisToKeyErrorUnsubscribe(socket, event);
+            this.handleToKeyMonitoringErrorUnsubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppBitrateEvent(event)) {
-            this.handleRedisToKeyBitrateUnsubscribe(socket, event);
+            this.handleToKeyMonitoringUnsubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisModuleNodeDataSubscribeEvent(event)) {
-            this.handleNodeUnsubscribe(socket, event);
+            this.handleNodeStateUnsubscribe(socket, event);
         }
     };
 
-    private handleRedisToKeyBitrateUnsubscribe = (socket: Socket, event: IRedisToKeyAppBitrateEvent) => {
+    private handleToKeyMonitoringUnsubscribe = (socket: Socket, event: IToKeyAppStateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
         this.unsubscribeFromKey(channel, socket, this.monitoringClients);
     };
 
-    private handleRedisToKeyErrorUnsubscribe = (socket: Socket, event: IRedisToKeyAppErrorEvent) => {
+    private handleToKeyMonitoringErrorUnsubscribe = (socket: Socket, event: IToKeyAppErrorStateEvent) => {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
         this.unsubscribeFromKey(channel, socket, this.monitoringErrorClients);
     };
 
-    private handleRedisAppChannelUnsubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
+    private handleAppStateUnsubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
             const specificId = appId.toString();
             this.unsubscribeFromChannel(redisChannel, specificId, socket, this.appChannelClients);
             this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription removed`);
+        } catch (error) {
+            this.log(`client: ${socket.id} unsubscribe handling error ${error}`);
+        }
+    };
+
+    private handleNodeStateUnsubscribe = (socket: Socket, event: IRedisModuleNodeDataUnsubscribeEvent) => {
+        try {
+            const {type, nodeId} = event;
+            const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
+            for (let index = 0; index < nodeIds.length; index++) {
+                const redisChannel = `realtime:node:${nodeIds[index]}`;
+                this.unsubscribeFromChannel(redisChannel, type, socket, this.nodeChannelClients);
+                this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription removed`);
+            }
         } catch (error) {
             this.log(`client: ${socket.id} unsubscribe handling error ${error}`);
         }
@@ -303,20 +320,6 @@ export class RedisServiceModule extends MainServiceModule {
             clearInterval(storage.get(channel).timer);
             storage.delete(channel);
             this.log(`redis channel: ${channel} is empty. Unsubscribing from this key`);
-        }
-    };
-
-    private handleNodeUnsubscribe = (socket: Socket, event: IRedisModuleNodeDataUnsubscribeEvent) => {
-        try {
-            const {type, nodeId} = event;
-            const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
-            for (let index = 0; index < nodeIds.length; index++) {
-                const redisChannel = `realtime:node:${nodeIds[index]}`;
-                this.unsubscribeFromChannel(redisChannel, type, socket, this.nodeChannelClients);
-                this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription removed`);
-            }
-        } catch (error) {
-            this.log(`client: ${socket.id} unsubscribe handling error ${error}`);
         }
     };
 
@@ -385,6 +388,7 @@ export class RedisServiceModule extends MainServiceModule {
 
     private initRedis(): void {
         try {
+            this.redisToKey = new Redis(this.redisUrl);
             this.redisChannel = new Redis(this.redisUrl);
             this.redisChannel.on("connect", this.handleRedisConnection);
             this.redisChannel.on("error", this.handleRedisError);

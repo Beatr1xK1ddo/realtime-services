@@ -2,8 +2,8 @@ import {
     IRedisAppChannelEvent,
     IRedisModuleAppSubscribeEvent,
     IRedisModuleNodeDataSubscribeEvent,
-    IRedisToKeyAppBitrateEvent,
-    IRedisToKeyAppErrorEvent,
+    IToKeyAppStateEvent,
+    IToKeyAppErrorStateEvent,
 } from "@socket/shared-types";
 
 export const isIRedisAppChannelEvent = (data: IRedisModuleAppSubscribeEvent): data is IRedisAppChannelEvent => {
@@ -18,7 +18,7 @@ export const isIRedisAppChannelEvent = (data: IRedisModuleAppSubscribeEvent): da
     );
 };
 
-export const isIRedisToKeyAppErrorEvent = (data: IRedisModuleAppSubscribeEvent): data is IRedisToKeyAppErrorEvent => {
+export const isIRedisToKeyAppErrorEvent = (data: IRedisModuleAppSubscribeEvent): data is IToKeyAppErrorStateEvent => {
     return (
         data &&
         "appType" in data &&
@@ -34,9 +34,7 @@ export const isIRedisToKeyAppErrorEvent = (data: IRedisModuleAppSubscribeEvent):
     );
 };
 
-export const isIRedisToKeyAppBitrateEvent = (
-    data: IRedisModuleAppSubscribeEvent
-): data is IRedisToKeyAppBitrateEvent => {
+export const isIRedisToKeyAppBitrateEvent = (data: IRedisModuleAppSubscribeEvent): data is IToKeyAppStateEvent => {
     return data && "ip" in data && "port" in data && "nodeId" in data && !!data.ip && !!data.nodeId && !!data.port;
 };
 

@@ -46,31 +46,32 @@ export type IRedisAppChannelEvent = {
     appType: string;
 };
 
-export type IRedisToKeyAppBitrateEvent = {
+export type IToKeyAppStateEvent = {
     nodeId: number;
     ip: string;
     port: number;
 };
 
-export type IMonitoringData = {
-    channel: {
-        nodeId: number;
-        ip: string;
-        port: number;
-    };
+export type IToKeyAppStateData = {
     moment: number;
     bitrate: number;
     muxrate: number;
 };
 
-export type IMonitoringErrorsData = {
-    channel: {
-        nodeId: number;
-        ip: string;
-        port: number;
-        appType: string;
-        appId: number;
-    };
+export type IMonitoringData = {
+    channel: IToKeyAppStateEvent;
+    data: IToKeyAppStateData;
+};
+
+export type IToKeyAppErrorStateEvent = {
+    nodeId: number;
+    ip: string;
+    port: number;
+    appType: string;
+    appId: number;
+};
+
+export type IToKeyAppErrorStateData = {
     moment: number;
     syncLoss: number;
     syncByte: number;
@@ -81,12 +82,9 @@ export type IMonitoringErrorsData = {
     pcrD: number;
 };
 
-export type IRedisToKeyAppErrorEvent = {
-    nodeId: number;
-    ip: string;
-    port: number;
-    appType: string;
-    appId: number;
+export type IMonitoringErrorsData = {
+    channel: IToKeyAppErrorStateEvent;
+    data: IToKeyAppErrorStateData;
 };
 
 export type IRedisModuleAppUnsubscribeEvent = IRedisModuleAppSubscribeEvent;
@@ -97,8 +95,8 @@ export type IRedisModuleNodeDataSubscribeEvent = {
 };
 
 export type IRedisModuleAppSubscribeEvent =
-    | IRedisToKeyAppErrorEvent
-    | IRedisToKeyAppBitrateEvent
+    | IToKeyAppStateEvent
+    | IToKeyAppErrorStateEvent
     | IRedisAppChannelEvent
     | IRedisModuleNodeDataSubscribeEvent;
 
