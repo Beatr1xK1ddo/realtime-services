@@ -59,10 +59,7 @@ export class Device {
         this.log("connect is running");
         return new Promise((resolve, reject) => {
             this.deviceResponse = {resolve, reject};
-            this.socket.connect(
-                {host: this.ip, port: this.port},
-                this.handleConnectionEstablished.bind(this)
-            );
+            this.socket.connect({host: this.ip, port: this.port}, this.handleConnectionEstablished.bind(this));
             this.socket.on("close", this.handleConnectionClosed.bind(this));
             this.socket.on("error", this.handleConnectionError.bind(this));
             this.socket.on("timeout", this.handleConnectionTimeout.bind(this));

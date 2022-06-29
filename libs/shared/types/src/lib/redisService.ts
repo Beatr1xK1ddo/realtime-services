@@ -52,6 +52,35 @@ export type IRedisToKeyAppBitrateEvent = {
     port: number;
 };
 
+export type IMonitoringData = {
+    channel: {
+        nodeId: number;
+        ip: string;
+        port: number;
+    };
+    moment: number;
+    bitrate: number;
+    muxrate: number;
+};
+
+export type IMonitoringErrorsData = {
+    channel: {
+        nodeId: number;
+        ip: string;
+        port: number;
+        appType: string;
+        appId: number;
+    };
+    moment: number;
+    syncLoss: number;
+    syncByte: number;
+    pat: number;
+    cc: number;
+    transport: number;
+    pcrR: number;
+    pcrD: number;
+};
+
 export type IRedisToKeyAppErrorEvent = {
     nodeId: number;
     ip: string;

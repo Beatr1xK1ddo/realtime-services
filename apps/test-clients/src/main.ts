@@ -8,7 +8,7 @@ import {decklinkTest} from "./app/decklink-test";
 
 const mainServiceUrl = "https://qa.nextologies.com:1987";
 
-decklinkTest("http://localhost:1987/decklink");
+// decklinkTest("http://localhost:1987/decklink");
 // hlsTestRun("http://localhost:1987");
 
 // loggerTestRun(mainServiceUrl);
@@ -17,3 +17,4 @@ decklinkTest("http://localhost:1987/decklink");
 // loggerTestRun("http://localhost:1987");
 // thumbnailTestClient('http://localhost:1987/');
 // hyperdeckTestRun("http://localhost:9000/");
+redisTestRun("http://localhost:1987");
