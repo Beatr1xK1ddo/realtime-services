@@ -62,9 +62,9 @@ export class RedisServiceModule extends MainServiceModule {
         if (redisModuleUtils.isIRedisAppChannelEvent(event)) {
             this.handleAppStateSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppErrorEvent(event)) {
-            this.handleToKeyMonitoringErrorSubscribe(socket, event);
+            this.handleMonitoringErrorSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisToKeyAppBitrateEvent(event)) {
-            this.handleToKeyMonitoringSubscribe(socket, event);
+            this.handleMonitoringSubscribe(socket, event);
         } else if (redisModuleUtils.isIRedisModuleNodeDataSubscribeEvent(event)) {
             this.handleNodeStateSubscribe(socket, event);
         }
@@ -96,7 +96,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleToKeyMonitoringErrorSubscribe = (socket: Socket, event: IToKeyAppErrorStateEvent) => {
+    private handleMonitoringErrorSubscribe = (socket: Socket, event: IToKeyAppErrorStateEvent) => {
         const {nodeId, ip, port, appId, appType} = event;
         const channel = `${nodeId}-${appType}-${appId}-${ip}:${port}--last-cc-amount`;
 
@@ -142,7 +142,7 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleToKeyMonitoringSubscribe = (socket: Socket, event: IToKeyAppStateEvent) => {
+    private handleMonitoringSubscribe = (socket: Socket, event: IToKeyAppStateEvent) => {
         const {nodeId, ip, port} = event;
         const channel = `bitrate-wnulls-${nodeId}-${ip}:${port}`;
         if (this.monitoringClients.get(channel)) {
