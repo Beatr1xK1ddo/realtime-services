@@ -28,11 +28,6 @@ export type IDeckLinkDevicesResponse = Array<{id: number}>;
 
 export type IBmddNodeServiceInitEvent = IBmddNodeServiceDevicesEvent;
 
-export interface IBmddNodeServiceErrorEvent {
-    nodeId: NumericId;
-    message: string;
-}
-
 export interface IBmddNodeServiceDevicesEvent {
     nodeId: NumericId;
     devices: {[id: number]: IDeckLinkDevice};
@@ -44,9 +39,4 @@ export interface IBmddNodeServiceSubscribeEvent {
 
 export interface IBmddNodeServiceSubscribedEvent extends IBmddNodeServiceDevicesEvent {
     clientId: StringId
-}
-
-export interface IBmddServiceModuleErrorEvent {
-    nodeId?: NumericId;
-    message: string;
 }

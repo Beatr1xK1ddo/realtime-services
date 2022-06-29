@@ -8,8 +8,8 @@ import {
     IMainServiceModuleDeviceUnsubscribeEvent,
     INodeDeviceServiceCommandsFailureEvent,
     NumericId,
-    IServiceErrorBaseEvent,
     INodeDeviceServiceStatusEvent,
+    INodeServiceCommonFaultEvent,
 } from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 import {mainServiceModuleUtils, nodeServiceUtils} from "@socket/shared-utils";
@@ -164,7 +164,7 @@ export class TeranexServiceModule extends MainServiceModule {
         }
     }
 
-    private handleNodeServiceError(event: IServiceErrorBaseEvent) {
+    private handleNodeServiceError(event: INodeServiceCommonFaultEvent) {
         //todo: pass it to the client
     }
 

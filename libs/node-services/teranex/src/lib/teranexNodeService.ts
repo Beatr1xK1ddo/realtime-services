@@ -5,7 +5,9 @@ import {
     INodeDeviceServiceCommandsResultEvent,
     INodeDeviceServiceStatusEvent,
     INodeDeviceServiceSubscribedEvent,
-    IServiceErrorBaseEvent,
+    INodeServiceCommonFaultEvent,
+    IServiceCommonFaultOrigin,
+    IServiceCommonFaultType,
     StringId,
 } from "@socket/shared-types";
 import {Device, NodeDeviceService, NodeServiceOptions} from "@socket/shared/entities";
@@ -34,11 +36,14 @@ export class TeranexNodeService extends NodeDeviceService {
             };
             this.emit("subscribed", subscribedEvent);
         } catch (error) {
-            const errorEvent: IServiceErrorBaseEvent = {
-                request: "subscribe",
-                message: error,
+            this.log(`client ${event.clientId} subscribe fault ${error}`);
+            const faultEvent: INodeServiceCommonFaultEvent = {
+                nodeId: this.nodeId,
+                origin: IServiceCommonFaultOrigin.node,
+                type: IServiceCommonFaultType.event,
+                event: "subscribe",
             };
-            this.emit("serviceError", errorEvent);
+            this.emit("serviceError", faultEvent);
         }
     }
 
@@ -75,7 +80,7 @@ export class TeranexNodeService extends NodeDeviceService {
         return (online: boolean) => {
             const event: INodeDeviceServiceStatusEvent = {nodeId: this.nodeId, ip, port, online};
             this.emit("status", event);
-        }
+        };
     }
 
     private getDevice(ip: string, port: number): Device {

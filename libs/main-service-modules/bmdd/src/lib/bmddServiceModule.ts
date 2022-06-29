@@ -2,11 +2,12 @@ import {Socket} from "socket.io";
 
 import {
     IBmddNodeServiceDevicesEvent,
-    IBmddNodeServiceErrorEvent,
     IBmddNodeServiceInitEvent,
     IBmddNodeServiceSubscribedEvent,
     IBmddNodeServiceSubscribeEvent,
-    IBmddServiceModuleErrorEvent,
+    INodeServiceCommonFaultEvent,
+    IServiceCommonFaultOrigin,
+    IServiceCommonFaultType,
     NumericId,
 } from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
@@ -25,9 +26,9 @@ export class BmddServiceModule extends MainServiceModule {
         super.onConnected(socket);
         //node events
         socket.on("init", this.handleNodeInit(socket));
-        socket.on("nodeError", this.handleNodeError(socket));
+        socket.on("fault", this.handleNodeFault(socket));
         socket.on("subscribed", this.handleNodeSubscribed(socket));
-        socket.on("devices", this.handleNodeDevices());
+        socket.on("devices", this.handleNodeDevices);
         //clients events
         socket.on("subscribe", this.handleSubscribe(socket));
         socket.on("unsubscribe", this.handleUnsubscribe(socket));
@@ -42,37 +43,36 @@ export class BmddServiceModule extends MainServiceModule {
             this.log(`node ${nodeId} ${socket.id} initialized already`);
         } else {
             this.nodes.set(nodeId, socket);
-            this.log(`node ${nodeId} ${socket.id} subscribed successfully`);
+            this.log(`node ${nodeId} ${socket.id} initialized successfully`);
             const clients = this.clients.get(nodeId);
-            if (clients) {
-                clients.forEach((socket) => {
-                    const subscribedEvent: IBmddNodeServiceSubscribedEvent = {
-                        ...event,
-                        clientId: socket.id,
-                    };
-                    this.handleNodeSubscribed(socket)(subscribedEvent);
-                });
+            if (clients && clients.size) {
+                this.log(`node ${nodeId} ${socket.id} has ${clients.size} subscribers, handling subscribe`);
+                clients.forEach((socket) => this.handleNodeSubscription(nodeId, socket));
             }
         }
     };
 
-    private handleNodeError = (socket: Socket) => (event: IBmddNodeServiceErrorEvent) => {
+    private handleNodeFault = (socket: Socket) => (event: INodeServiceCommonFaultEvent) => {
         this.log(`node ${event.nodeId} ${socket.id} error ${event.message}`);
+        const clients = this.clients.get(event.nodeId);
+        if (clients && clients.size) {
+            clients.forEach((socket) => socket.emit("fault", event));
+        }
     };
 
     private handleNodeSubscribed = (socket: Socket) => (event: IBmddNodeServiceSubscribedEvent) => {
-        this.log(`node ${event.nodeId} ${socket.id} handling subscribed from ${event.clientId}`);
-        const clients = this.clients.get(event.nodeId);
-        if (clients) {
+        this.log(`handling subscribed for ${event.clientId} from node ${event.nodeId} ${socket.id}`);
+        const client = this.getClientById(event.clientId);
+        if (client) {
             const subscribedEvent: IBmddNodeServiceDevicesEvent = {
                 nodeId: event.nodeId,
                 devices: event.devices,
             };
-            this.socket?.sockets.get(event.clientId)?.emit("subscribed", subscribedEvent);
+            client.emit("subscribed", subscribedEvent);
         }
     };
 
-    private handleNodeDevices = () => (event: IBmddNodeServiceDevicesEvent) => {
+    private handleNodeDevices = (event: IBmddNodeServiceDevicesEvent) => {
         const clients = this.clients.get(event.nodeId);
         if (clients) {
             clients.forEach((socket) => socket.emit("devices", event));
@@ -80,7 +80,7 @@ export class BmddServiceModule extends MainServiceModule {
     };
 
     //client event handlers
-    private sendNodeSubscribeEvent = (nodeId: NumericId, socket: Socket) => {
+    private handleNodeSubscription = (nodeId: NumericId, socket: Socket) => {
         const node = this.nodes.get(nodeId);
         if (node) {
             const subscribeEvent: IBmddNodeServiceSubscribeEvent = {
@@ -98,12 +98,12 @@ export class BmddServiceModule extends MainServiceModule {
                 return;
             } else {
                 clients.add(socket);
-                this.sendNodeSubscribeEvent(nodeId, socket);
+                this.handleNodeSubscription(nodeId, socket);
                 this.log(`client ${socket.id} subscribed to node ${nodeId}`);
             }
         } else {
             this.clients.set(nodeId, new Set([socket]));
-            this.sendNodeSubscribeEvent(nodeId, socket);
+            this.handleNodeSubscription(nodeId, socket);
             this.log(`client ${socket.id} subscribed to node ${nodeId}`);
         }
     };
@@ -116,7 +116,7 @@ export class BmddServiceModule extends MainServiceModule {
                 const node = this.nodes.get(nodeId);
                 if (node) {
                     node.emit("unsubscribe");
-                    this.log(`node ${nodeId} has no subscribers, sending unsubscribe event`);
+                    this.log(`node ${nodeId} has no subscribers, unsubscribe event sent`);
                 }
             }
             this.log(`client ${socket.id} unsubscribed from node ${nodeId}`);
@@ -129,10 +129,17 @@ export class BmddServiceModule extends MainServiceModule {
     private handleDisconnect = (socket: Socket) => (reason: string) => {
         super.onDisconnected(reason);
         this.log(`${socket.id} handling disconnected event`);
-        const client = Array.from(this.clients.values()).some((clients) => clients.has(socket));
-        if (client) {
-            this.log(`${socket.id} appears to be a client, processing with unsubscribe`);
-            this.handleUnsubscribe(socket);
+        const subscribedNodes = Array.from(this.clients.entries()).reduce((result, [nodeId, clients]) => {
+            if (clients.has(socket)) {
+                result.add(nodeId);
+            }
+            return result;
+        }, new Set() as Set<NumericId>);
+        if (subscribedNodes.size) {
+            this.log(
+                `${socket.id} appears to be a client, subscribed to ${subscribedNodes.size} processing with unsubscribe`
+            );
+            subscribedNodes.forEach((nodeId) => this.handleUnsubscribe(socket)(nodeId));
             return;
         }
         const node = Array.from(this.nodes.entries()).find(([, node]) => node === socket);
@@ -142,12 +149,13 @@ export class BmddServiceModule extends MainServiceModule {
             this.nodes.delete(nodeId);
             const clients = this.clients.get(nodeId);
             if (clients && clients.size) {
-                this.log(`node ${nodeId} ${socket.id} has ${clients.size} subscribers, handling error`);
-                const errorEvent: IBmddServiceModuleErrorEvent = {
+                this.log(`node ${nodeId} ${socket.id} has ${clients.size} subscribers, handling fault`);
+                const faultEvent: INodeServiceCommonFaultEvent = {
                     nodeId,
-                    message: "node service offline",
+                    origin: IServiceCommonFaultOrigin.node,
+                    type: IServiceCommonFaultType.disconnected,
                 };
-                clients.forEach((socket) => socket.emit("serviceError", errorEvent));
+                clients.forEach((socket) => socket.emit("fault", faultEvent));
             }
         }
     };
