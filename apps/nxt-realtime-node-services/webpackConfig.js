@@ -7,7 +7,7 @@ module.exports = (config, context) => {
                 ...config.module.rules,
                 {
                     test: /.node$/,
-                    loader: 'node-loader',
+                    loader: "node-loader",
                 },
             ],
         },

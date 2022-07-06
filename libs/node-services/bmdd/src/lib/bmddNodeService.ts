@@ -122,7 +122,7 @@ export class BmddNodeService extends NodeService {
                 };
                 this.emit("devices", devicesEvent);
             };
-            this.pollingIntervalId = setInterval(handleDevices, 20000);
+            this.pollingIntervalId = setInterval(handleDevices, 3000);
             this.log("devices status polling started");
             this.handleSubscribed(event.clientId);
         }

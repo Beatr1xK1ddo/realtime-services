@@ -9,7 +9,7 @@ import {bmddTest} from "./app/bmdd-test";
 // const mainServiceUrl = "https://qa.nextologies.com:1987";
 const mainServiceUrl = "https://nxt-dev-env.nextologies.com:1987";
 
-bmddTest(mainServiceUrl);
+loggerTestRun("http://localhost:1987");
 // hlsTestRun("http://localhost:1987");
 
 // loggerTestRun(mainServiceUrl);

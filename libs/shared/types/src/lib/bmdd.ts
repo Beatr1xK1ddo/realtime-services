@@ -34,9 +34,9 @@ export interface IBmddNodeServiceDevicesEvent {
 }
 
 export interface IBmddNodeServiceSubscribeEvent {
-    clientId: StringId
+    clientId: StringId;
 }
 
 export interface IBmddNodeServiceSubscribedEvent extends IBmddNodeServiceDevicesEvent {
-    clientId: StringId
+    clientId: StringId;
 }

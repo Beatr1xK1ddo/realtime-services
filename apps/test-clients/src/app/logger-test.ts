@@ -1,3 +1,4 @@
+import {ILogClientTypeEvent, ILogClientTypesEvent} from "@socket/shared-types";
 import {io, Manager} from "socket.io-client";
 
 export function loggerTestRun(url: string) {
@@ -8,10 +9,20 @@ export function loggerTestRun(url: string) {
 
     socket.on("connect", () => {
         console.log("Client connected to LoggerModule");
-        socket.emit("subscribe", {nodeId: 1337, logType: "sysLog"});
+        socket.emit("subscribeTypes", {nodeId: 1337, appType: "ipbe", appId: 123} as ILogClientTypesEvent);
+        socket.emit("subscribeType", {
+            nodeId: 1337,
+            appType: "sysLog",
+            appId: 12,
+            logType: "logerTest",
+        } as ILogClientTypeEvent);
     });
 
-    socket.on("data", (data) => {
+    socket.on("nodeDataTypes", (data) => {
+        console.log("nodeDataTypes", data);
+        console.log(`Logger data ${JSON.stringify(data)}`);
+    });
+    socket.on("nodeDataType", (data) => {
         console.log(`Logger data ${JSON.stringify(data)}`);
     });
     socket.on("error", (error) => {

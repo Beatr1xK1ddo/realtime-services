@@ -6,13 +6,13 @@ export const environment = {
         syslogFile: "/var/log/syslog",
         excludeMessages: {
             applog: ["ultragrid", "cesnet"],
-            syslog: ["cron", "postfix"]
-        }
+            syslog: ["cron", "postfix"],
+        },
     },
     teranex: {
-        serviceUrl: "https://qa.nextologies.com:1987/teranex"
+        serviceUrl: "https://qa.nextologies.com:1987/teranex",
     },
     bmdd: {
-        serviceUrl: "https://qa.nextologies.com:1987/bmdd"
+        serviceUrl: "https://qa.nextologies.com:1987/bmdd",
     },
 };

@@ -1,4 +1,3 @@
-import {IHlsMessage, isHlsMessage} from "@socket/shared-types";
 import {MainServiceModule, MainServiceModuleOptions} from "@socket/shared/entities";
 import Redis from "ioredis";
 import {Mongoose} from "mongoose";

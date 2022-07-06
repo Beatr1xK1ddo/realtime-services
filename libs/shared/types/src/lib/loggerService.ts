@@ -1,11 +1,4 @@
-export enum ELogTypes {
-    appLog = "appLog",
-    sysLog = "sysLog",
-    all = "all",
-}
-
-export type ISysLogMessage = {
-    type: ELogTypes.sysLog;
+export type IAppLogMessage = {
     message: string;
     created: number;
     appId: number;
@@ -15,16 +8,29 @@ export type ISysLogMessage = {
     nodeId: number;
 };
 
-export type IAppLogMessage = {
-    type: ELogTypes.appLog;
+export type ISysLogMessage = {
     message: string;
     created: number;
     nodeId: number;
 };
 
-export type ILogData = {
-    nodeId: number;
-    data: ISysLogMessage | IAppLogMessage;
-};
+export interface ILogBaseTypesEvent {
+    appType: string;
+    appId: number;
+}
+export interface ILogBaseTypeEvent extends ILogBaseTypesEvent {
+    logType: string;
+}
 
-export type ILoggerRequestPayload = {nodeId: number; logType: ELogTypes};
+export interface ILogClientTypesEvent extends ILogBaseTypesEvent {
+    nodeId: number;
+}
+
+export type ILogClientTypeEvent = ILogBaseTypeEvent & ILogClientTypesEvent;
+
+export interface ILogNodeTypesDataEvent {
+    channel: ILogClientTypesEvent;
+    data: Array<string>;
+}
+
+export type ILogDbInsertEvent = ISysLogMessage | Array<ISysLogMessage> | IAppLogMessage | Array<IAppLogMessage>;
