@@ -1,7 +1,7 @@
 export const environment = {
     production: true,
     logAgent: {
-        serviceUrl: "https://qa.nextologies.com:1987/logger",
+        serviceUrl: "https://cp.nextologies.com:1987/logger",
         applogDir: "/home/dv2/data/logs/real--*.log",
         syslogFile: "/var/log/syslog",
         excludeMessages: {
@@ -10,9 +10,9 @@ export const environment = {
         },
     },
     teranex: {
-        serviceUrl: "https://qa.nextologies.com:1987/teranex",
+        serviceUrl: "https://cp.nextologies.com:1987/teranex",
     },
     bmdd: {
-        serviceUrl: "https://qa.nextologies.com:1987/bmdd",
+        serviceUrl: "https://cp.nextologies.com:1987/bmdd",
     },
 };
