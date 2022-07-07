@@ -99,7 +99,7 @@ export class LoggerServiceModule extends MainServiceModule {
                 const appIdMap = new Map([[appId, new Set([socket])]]);
                 this.clientsTypes.set(nodeId, new Map([[appType, appIdMap]]));
             }
-            this.log(`client: ${socket.id} subscribed successfuly`);
+            this.log(`client: ${socket.id} subscribed tot "Types" successfuly`);
             this.sendDataTypes(nodeId, appType, appId);
         };
     }

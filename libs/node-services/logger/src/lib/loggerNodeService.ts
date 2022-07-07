@@ -64,10 +64,6 @@ export class LoggerNodeService extends NodeService {
         if (allowedFile.test(fileName)) {
             const [_, appType, appId, __, logType, ___] = fileName.split(/\.|--/);
             const numAppId = parseInt(appId);
-            const data: ILogNodeTypesDataEvent = {
-                channel: {appType, appId: numAppId, nodeId: this.nodeId},
-                data: Array.from(this.logTypes.get(appType)?.get(numAppId)?.keys() || []),
-            };
             const timer = setInterval(() => {
                 const value = this.logTypes.get(appType)?.get(numAppId)?.get(logType);
                 if (value) value.counter = 0;
@@ -82,6 +78,10 @@ export class LoggerNodeService extends NodeService {
             } else if (!this.logTypes.get(appType)?.get(numAppId)?.has(logType)) {
                 this.logTypes.get(appType)?.get(numAppId)?.set(logType, {counter: 0, prevValue: "", timer});
             }
+            const data: ILogNodeTypesDataEvent = {
+                channel: {appType, appId: numAppId, nodeId: this.nodeId},
+                data: Array.from(this.logTypes.get(appType)?.get(numAppId)?.keys() || []),
+            };
             this.emit("dataTypes", data);
             this.createUntruckedFile(appType, numAppId, logType);
         }
@@ -124,6 +124,7 @@ export class LoggerNodeService extends NodeService {
             if (logInfo.prevValue === chunk) {
                 return;
             }
+            logInfo.prevValue = chunk;
             logInfo.counter += 1;
             if (logInfo.counter > 100) {
                 this.log(`can not send log. Max logs credential is 100 logs per 1 seccond.`);
