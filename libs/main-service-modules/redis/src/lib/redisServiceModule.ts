@@ -1,6 +1,5 @@
 import {Socket} from "socket.io";
 import Redis from "ioredis";
-
 import {
     IRedisModuleNodeDataSubscribeEvent,
     IRedisModuleNodeDataUnsubscribeEvent,
@@ -17,6 +16,7 @@ import {
     IQosSubscribeEvent,
     IQosDataEvent,
     IQosDataPayload,
+    IRealtimeAppStatusEvent,
 } from "@socket/shared-types";
 import {IBasicLoggerOptions, MainServiceModule} from "@socket/shared/entities";
 import {redisModuleUtils} from "@socket/shared-utils";
@@ -53,7 +53,6 @@ export class RedisServiceModule extends MainServiceModule {
         this.qosClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
-        this.log("created");
     }
 
     protected onConnected(socket: Socket) {
@@ -102,9 +101,13 @@ export class RedisServiceModule extends MainServiceModule {
                 const portMap = new Map([[port, new Set([socket])]]);
                 const ipMap = new Map([[ip, portMap]]);
                 this.monitoringClients.set(nodeId, ipMap);
+                await this.redisToKey.client("UNBLOCK", this.redisMonitoringId);
+                this.handleMonitoringData();
             }
-            await this.redisToKey.client("UNBLOCK", this.redisMonitoringId);
-            this.sendMonitoringData(event, socket);
+            const data = await this.getMonitoringData(event);
+            if (data.payload.length) {
+                socket.emit("subscribed", data);
+            }
             this.log(`client: ${socket.id} subscription added to node: ${nodeId}, ip: ${ip} and port: ${port}`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe to monitoring handle error ${error}`, true);
@@ -133,9 +136,13 @@ export class RedisServiceModule extends MainServiceModule {
                 const appIdMap = new Map([[appId, new Set([socket])]]);
                 const appTypeMap = new Map([[appType, appIdMap]]);
                 this.qosClients.set(nodeId, appTypeMap);
+                await this.redisToKey.client("UNBLOCK", this.redisQosId);
+                this.handleQosData();
             }
-            await this.redisToKey.client("UNBLOCK", this.redisQosId);
-            this.sendQosData(event, socket);
+            const data = await this.getQosData(event);
+            if (data.payload.items.length) {
+                socket.emit("subscribed", data);
+            }
             this.log(
                 `client: ${socket.id} subscription added to node: ${nodeId}, appType: ${appType} and appId: ${appId}`
             );
@@ -144,12 +151,16 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleAppStateSubscribe = (socket: Socket, event: IRedisAppChannelEvent) => {
+    private handleAppStateSubscribe = async (socket: Socket, event: IRedisAppChannelEvent) => {
         try {
             const {appId, nodeId, appType} = event;
             const specificId = appId.toString();
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
             this.subscribeToChannel(redisChannel, specificId, socket, this.appChannelClients);
+            const clientEvent = await this.getInitialStatus(appId, appType);
+            if (clientEvent) {
+                socket.emit("realtimeAppData", clientEvent);
+            }
             this.log(`redis channel: ${redisChannel} client: ${socket.id} subscription added`);
         } catch (error) {
             this.log(`client: ${socket.id} subscribe handling error ${error}`);
@@ -177,7 +188,9 @@ export class RedisServiceModule extends MainServiceModule {
         storage: IRedisChannelStorage
     ) => {
         if (storage.has(channel)) {
-            if (storage.get(channel).has(subChannel)) {
+            if (storage.get(channel)?.get(subChannel)?.has(socket)) {
+                this.log(`client ${socket.id} already subscribed to channel ${channel}, subChannel: ${subChannel}`);
+            } else if (storage.get(channel)?.has(subChannel)) {
                 storage.get(channel).get(subChannel).add(socket);
             } else {
                 const sockets = new Set<Socket>([socket]);
@@ -216,9 +229,8 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleMonitoringUnsubscribe = (socket: Socket, event: IMonitoringSubscribeEvent) => {
         const {ip, nodeId, port, subscriptionType} = event;
-        if (this.monitoringClients.get(nodeId).get(ip).get(port).has(socket)) {
+        if (this.monitoringClients.get(nodeId)?.get(ip)?.get(port)?.has(socket)) {
             this.monitoringClients.get(nodeId).get(ip).get(port).delete(socket);
-        } else {
             this.log(
                 `client ${socket.id} unsubscribed successfuly from event: ${subscriptionType}, node: ${nodeId}, ip: ${ip} and port: ${port}`
             );
@@ -227,9 +239,8 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleQosUnsubscribe = (socket: Socket, event: IQosSubscribeEvent) => {
         const {appId, nodeId, appType, subscriptionType} = event;
-        if (this.qosClients.get(nodeId).get(appType).get(appId).has(socket)) {
+        if (this.qosClients.get(nodeId)?.get(appType)?.get(appId)?.has(socket)) {
             this.qosClients.get(nodeId).get(appType).get(appId).delete(socket);
-        } else {
             this.log(
                 `client ${socket.id} unsubscribed successfuly from subscriptionType: ${subscriptionType}, node: ${nodeId}, appType: ${appType} and appId: ${appId}`
             );
@@ -288,54 +299,47 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     // Stream handlers
-    private sendMonitoringData(event: IMonitoringSubscribeEvent, socket: Socket) {
+    private async getMonitoringData(event: IMonitoringSubscribeEvent) {
         const {nodeId, ip, port} = event;
         const key = `${+new Date() - (60 * 1000 + 1)}-0`;
-        this.redisMonitoring.xrange(`monitoring-${nodeId}`, key, "+", (err, items) => {
-            if (err) {
-                this.log(`error occured while getting initial values from "monitoring-${nodeId}". Error ${err}`, true);
-            } else {
-                const data = items?.filter((item) => {
-                    const [, [key]] = item;
-                    const [dataNode, dataIp, dataPort] = key.split(/[-:]/);
-                    const intNodeId = parseInt(dataNode);
-                    const intPort = parseInt(dataPort);
-                    return intNodeId === nodeId && ip === dataIp && intPort === port;
-                });
-                const event: Partial<IMonitoringSubscribedEvent> = {
-                    payload: [],
-                };
-                const result: Array<IMonitoringPayloadItem> = data.map((item, index) => {
-                    const [, [key, value]] = item;
-                    if (index === 0) {
-                        const [dataNode, dataIp, dataPort] = key.split(/[-:]/);
-                        const intNodeId = parseInt(dataNode);
-                        const intPort = parseInt(dataPort);
-                        event.nodeId = intNodeId;
-                        event.ip = dataIp;
-                        event.port = intPort;
-                        event.subscriptionType = ESubscriptionType.monitoring;
-                    }
-                    const cleanValue = JSON.parse(value) as IMonitoringRowData;
-                    return {
-                        moment: cleanValue.time,
-                        monitoring: {
-                            bitrate: cleanValue.tsDataRate,
-                            muxrate: cleanValue.tsTotalRate === cleanValue.tsDataRate ? 0 : cleanValue.tsTotalRate,
-                        },
-                        errors: {
-                            cc: cleanValue.p1Stats.ccErrors,
-                            syncLosses: cleanValue.p1Stats.syncLosses,
-                        },
-                    };
-                });
-                if (result.length) {
-                    event.payload = result;
-                    socket.emit("subscribed", event);
-                }
-                this.handleMonitoringData();
-            }
+        const redis = new Redis(this.redisUrl);
+        const items = await redis.xrange(`monitoring-${nodeId}`, key, "+");
+        const data = items?.filter((item) => {
+            const [, [key]] = item;
+            const [dataNode, dataIp, dataPort] = key.split(/[-:]/);
+            const intNodeId = parseInt(dataNode);
+            const intPort = parseInt(dataPort);
+            return intNodeId === nodeId && ip === dataIp && intPort === port;
         });
+        const clientEvent: Partial<IMonitoringSubscribedEvent> = {
+            payload: [],
+        };
+        const result: Array<IMonitoringPayloadItem> = data.map((item, index) => {
+            const [, [key, value]] = item;
+            if (index === 0) {
+                const [dataNode, dataIp, dataPort] = key.split(/[-:]/);
+                const intNodeId = parseInt(dataNode);
+                const intPort = parseInt(dataPort);
+                clientEvent.nodeId = intNodeId;
+                clientEvent.ip = dataIp;
+                clientEvent.port = intPort;
+                clientEvent.subscriptionType = ESubscriptionType.monitoring;
+            }
+            const cleanValue = JSON.parse(value) as IMonitoringRowData;
+            return {
+                moment: cleanValue.time,
+                monitoring: {
+                    bitrate: cleanValue.tsDataRate,
+                    muxrate: cleanValue.tsTotalRate === cleanValue.tsDataRate ? 0 : cleanValue.tsTotalRate,
+                },
+                errors: {
+                    cc: cleanValue.p1Stats.ccErrors,
+                    syncLosses: cleanValue.p1Stats.syncLosses,
+                },
+            };
+        });
+        clientEvent.payload = result;
+        return clientEvent;
     }
 
     private handleMonitoringData() {
@@ -373,7 +377,7 @@ export class RedisServiceModule extends MainServiceModule {
                                 },
                             })
                         );
-                    if (this.monitoringClients.get(intNodeId)) {
+                    if (this.monitoringClients.size) {
                         setTimeout(() => this.handleMonitoringData(), 0);
                     }
                 }
@@ -381,31 +385,29 @@ export class RedisServiceModule extends MainServiceModule {
         });
     }
 
-    private sendQosData(event: IQosSubscribeEvent, socket: Socket) {
+    private async getQosData(event: IQosSubscribeEvent) {
         const {nodeId, appType, appId} = event;
         const key = `${+new Date() - (60 * 1000 + 1)}-0`;
-        this.redisQos.xrange(`qos-${nodeId}`, key, "+", (err, items) => {
-            if (err) {
-                this.log(`error occured while getting initial values from "qos-${nodeId}". Error ${err}`, true);
-            } else {
-                const data = items?.filter((item) => {
-                    const [, [key]] = item;
-                    const [dataNode, dataAppType, dataAppId] = key.split(/[-:]/);
-                    const intNodeId = parseInt(dataNode);
-                    const intAppId = parseInt(dataAppId);
-                    return intNodeId === nodeId && dataAppType === appType && intAppId === appId;
-                });
-                const clientEvent: Partial<IQosDataEvent> = {...event};
-                if (data.length) {
-                    const result = data[data.length - 1];
-                    const [, [, value]] = result;
-                    const cleanValue = JSON.parse(value) as IQosDataPayload;
-                    clientEvent.payload = cleanValue;
-                    socket.emit("subscribed", clientEvent);
-                }
-                this.handleQosData();
-            }
+        const redis = new Redis(this.redisUrl);
+        const items = await redis.xrange(`qos-${nodeId}`, key, "+");
+        const data = items?.filter((item) => {
+            const [, [key]] = item;
+            const [dataNode, dataAppType, dataAppId] = key.split(/[-:]/);
+            const intNodeId = parseInt(dataNode);
+            const intAppId = parseInt(dataAppId);
+            return intNodeId === nodeId && dataAppType === appType && intAppId === appId;
         });
+        const clientEvent: Partial<IQosDataEvent> = {...event};
+        if (data.length) {
+            const result = data[data.length - 1];
+            const [, [, value]] = result;
+            const cleanValue = JSON.parse(value) as IQosDataPayload;
+            clientEvent.payload = cleanValue;
+        } else {
+            clientEvent.payload.items = [];
+            clientEvent.payload.quality = 0;
+        }
+        return clientEvent;
     }
 
     private handleQosData() {
@@ -440,6 +442,67 @@ export class RedisServiceModule extends MainServiceModule {
             }
         });
     }
+
+    // App subscribe events
+    private async getInitialStatus(appId: number, appType: string) {
+        try {
+            const status = await this.redisToKey.get(`${appType}-${appId}-status`);
+            const statusChange = await this.redisToKey.get(`${appType}-${appId}-statusChange`);
+            const event: IRealtimeAppStatusEvent = {
+                id: appId,
+                type: appType,
+                status,
+                statusChange,
+            };
+            return event;
+        } catch (e) {
+            this.log(`Error occured while get initial statuses. Error: ${e}`, true);
+        }
+    }
+
+    // Redis events
+    private async initRedis() {
+        try {
+            this.redisToKey = new Redis(this.redisUrl);
+            this.redisChannel = new Redis(this.redisUrl);
+            this.redisMonitoring = new Redis(this.redisUrl);
+            this.redisQos = new Redis(this.redisUrl);
+            this.redisMonitoringId = await this.redisMonitoring.client("ID");
+            this.redisQosId = await this.redisQos.client("ID");
+            this.redisChannel.on("connect", this.handleRedisConnection);
+            this.redisChannel.on("error", this.handleRedisError);
+            this.redisChannel.on("message", this.handleRedisSubEvent);
+        } catch (error) {
+            this.log(`redis initializing error ${error}`, true);
+        }
+    }
+
+    private handleRedisConnection = () => this.log("redis connection success");
+
+    private handleRedisError = (error) => this.log(`redis error: ${error}`, true);
+
+    private handleRedisSubEvent = (redisChannel: string, redisEvent: string) => {
+        try {
+            const event: IRedisMessageType = JSON.parse(redisEvent);
+            const appEvent = isRealtimeAppEvent(event);
+
+            if (appEvent) {
+                const {id} = event;
+                this.appChannelClients
+                    .get(redisChannel)
+                    ?.get(id.toString())
+                    ?.forEach((socket) => socket.emit("realtimeAppData", event));
+            } else {
+                const {type} = event;
+                this.nodeChannelClients
+                    .get(redisChannel)
+                    ?.get(type)
+                    ?.forEach((socket) => socket.emit("realtimeNodeData", event));
+            }
+        } catch (error) {
+            this.log(`redis channel: ${redisChannel} event handling error ${error}`, true);
+        }
+    };
 
     private handleDisconnect = (socket: Socket) => () => {
         //todo kan: what if one socket was subscribed to a lot of channels? let channel should become Array<string>
@@ -488,6 +551,7 @@ export class RedisServiceModule extends MainServiceModule {
                     if (sockets.has(socket)) {
                         sockets.delete(socket);
                         this.log(`client: ${socket.id} disconnected`);
+                        removed = true;
                         let emptyNode = true;
                         this.monitoringClients.get(nodeId).forEach((portMap) =>
                             portMap.forEach((sockets) => {
@@ -502,48 +566,15 @@ export class RedisServiceModule extends MainServiceModule {
                 })
             )
         );
-    };
-
-    private async initRedis() {
-        try {
-            this.redisToKey = new Redis(this.redisUrl);
-            this.redisChannel = new Redis(this.redisUrl);
-            this.redisMonitoring = new Redis(this.redisUrl);
-            this.redisQos = new Redis(this.redisUrl);
-            this.redisMonitoringId = await this.redisMonitoring.client("ID");
-            this.redisQosId = await this.redisQos.client("ID");
-            this.redisChannel.on("connect", this.handleRedisConnection);
-            this.redisChannel.on("error", this.handleRedisError);
-            this.redisChannel.on("message", this.handleRedisSubEvent);
-        } catch (error) {
-            this.log(`redis initializing error ${error}`);
-        }
-    }
-
-    private handleRedisConnection = () => this.log("redis connection success");
-
-    private handleRedisError = (error) => this.log(`redis error: ${error}`, true);
-
-    private handleRedisSubEvent = (redisChannel: string, redisEvent: string) => {
-        try {
-            const event: IRedisMessageType = JSON.parse(redisEvent);
-            const appEvent = isRealtimeAppEvent(event);
-
-            if (appEvent) {
-                const {id} = event;
-                this.appChannelClients
-                    .get(redisChannel)
-                    ?.get(id.toString())
-                    ?.forEach((socket) => socket.emit("realtimeAppData", event));
-            } else {
-                const {type} = event;
-                this.nodeChannelClients
-                    .get(redisChannel)
-                    ?.get(type)
-                    ?.forEach((socket) => socket.emit("realtimeNodeData", event));
-            }
-        } catch (error) {
-            this.log(`redis channel: ${redisChannel} event handling error ${error}`, true);
-        }
+        this.qosClients.forEach((_) =>
+            _.forEach((__) =>
+                __.forEach((sockets) => {
+                    if (sockets.has(socket)) {
+                        sockets.delete(socket);
+                        this.log(`client: ${socket.id} disconnected`);
+                    }
+                })
+            )
+        );
     };
 }
