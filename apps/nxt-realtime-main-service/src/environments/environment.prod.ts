@@ -8,8 +8,9 @@ export const environment = {
     mainService: {
         port: 1987,
     },
-    loggerService: {
-        name: "logger",
+    logging: {
+        name: "logging",
+        url: "mongodb://nxtroot1:sdfj338dsfk22fdskd399s9sss@158.106.77.8:80/logs?authSource=admin",
     },
     teranexService: {
         name: "teranex",

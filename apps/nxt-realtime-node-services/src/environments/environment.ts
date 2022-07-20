@@ -1,9 +1,10 @@
 export const environment = {
     production: false,
-    logAgent: {
+    logging: {
+        name: "logging",
         serviceUrl: "https://nxt-dev-env.nextologies.com:1987/logger",
-        applogDir: "./ssl",
-        syslogFile: "./ssl/path",
+        appsLogsDir: "/home",
+        sysLogFile: "/var/log/syslog",
         excludeMessages: {
             applog: ["ultragrid", "cesnet"],
             syslog: ["cron", "postfix"],
