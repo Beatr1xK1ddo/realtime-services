@@ -1,5 +1,3 @@
-export type Optional<T> = null | T;
-
 export type NumericId = number;
 
 export type StringId = string;
@@ -30,4 +28,18 @@ export interface IServiceCommonFaultEvent {
 
 export interface INodeServiceCommonFaultEvent extends IServiceCommonFaultEvent {
     nodeId: NumericId;
+}
+
+export namespace Common {
+    //utils
+    export type Optional<T> = null | T;
+    //common
+    export type ITimeInMs = number;
+    export type INumericId = number;
+    export type IStringId = string;
+    //node
+    export type INodeId = INumericId;
+    //app
+    export type IAppId = INumericId;
+    export type IAppType = string;
 }
