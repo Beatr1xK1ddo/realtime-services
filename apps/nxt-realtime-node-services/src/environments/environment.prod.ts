@@ -2,7 +2,7 @@ export const environment = {
     production: true,
     logging: {
         name: "logging",
-        serviceUrl: "https://qa.nextologies.com:1987/logger",
+        serviceUrl: "https://qa.nextologies.com:1987/logging",
         appsLogsDir: "/home/dv2/data/logs/",
         sysLogFile: "/var/log/syslog",
         excludeMessages: {
