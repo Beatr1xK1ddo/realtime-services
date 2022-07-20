@@ -92,7 +92,6 @@ export class LoggingNodeService extends NodeService {
             await LoggingNodeService.processFileLineByLine(pathname, (message: string) => {
                 appLogRecordsEvent.records.push({created, message});
             });
-            this.log(`emitting ${JSON.stringify(appLogRecordsEvent)}`);
             this.emit("data", appLogRecordsEvent);
             this.createBackupFile(appType, appId, appLogType);
         } else {
