@@ -1,6 +1,7 @@
 export const environment = {
     production: true,
-    logAgent: {
+    logging: {
+        name: "logging",
         serviceUrl: "https://qa.nextologies.com:1987/logger",
         appsLogsDir: "/home/dv2/data/logs/",
         sysLogFile: "/var/log/syslog",
