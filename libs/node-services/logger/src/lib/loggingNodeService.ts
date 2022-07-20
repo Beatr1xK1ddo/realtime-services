@@ -77,9 +77,11 @@ export class LoggingNodeService extends NodeService {
     }
 
     private async handleFileAdd(pathname: string) {
+        this.log(`handleFileAdd ${pathname}`);
         const fileName = path.basename(pathname);
         if (appLogFile.test(fileName)) {
             const {appType, appId, appName, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
+            this.log(`handleFileAdd ${appLogType} ${appId} ${appName} ${appLogType} `);
             const appLogRecordsEvent: LoggingService.INodeAppLogRecordsEvent = {
                 nodeId: this.nodeId,
                 serviceLogType: EServiceLogType.app,
@@ -90,6 +92,7 @@ export class LoggingNodeService extends NodeService {
             await LoggingNodeService.processFileLineByLine(pathname, (message: string) => {
                 appLogRecordsEvent.records.push({created, message});
             });
+            this.log(`emitting ${JSON.stringify(appLogRecordsEvent)}`);
             this.emit("data", appLogRecordsEvent);
             this.createBackupFile(appType, appId, appLogType);
         } else {
