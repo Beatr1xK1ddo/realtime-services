@@ -18,4 +18,4 @@ loggerTestRun(mainServiceUrl);
 // loggerTestRun("http://localhost:1987");
 // thumbnailTestClient('http://localhost:1987/');
 // hyperdeckTestRun("http://localhost:9000/");
-// redisTestRun("http://localhost:1987");
+// redisTestRun("http://localhost:1987", 1337);

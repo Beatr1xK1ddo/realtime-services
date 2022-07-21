@@ -1,109 +1,113 @@
-import {Socket} from "socket.io";
+export enum ESubscriptionType {
+    monitoring = "monitoring",
+    qos = "qos",
+    node = "node",
+    app = "app",
+}
 
-export type IRealtimeAppEvent = IRealtimeAppStatusEvent | IRealtimeAppTimingEvent;
+export interface IOnDataHandler {
+    (key: string, data: string): void;
+}
 
-export type IRealtimeAppStatusEvent = {
-    id: number;
-    type: string;
+export interface INodeSubscribeOrigin {
+    nodeId: number | number[];
+    type: INodeEventType;
+}
+
+export interface IIpPortOrigin {
+    nodeId: number;
+    ip: string;
+    port: number;
+}
+
+export interface IAppIdAppTypeOrigin {
+    nodeId: number;
+    appId: number;
+    appType: string;
+}
+
+export interface ISubscribeEvent {
+    subscriptionType: ESubscriptionType;
+    origin: IIpPortOrigin | IAppIdAppTypeOrigin | INodeSubscribeOrigin;
+}
+
+export type IUnsubscribeEvent = ISubscribeEvent;
+
+export interface IMonitoringRowData {
+    time: number;
+    tsTotalRate: number;
+    tsDataRate: number;
+    p1Stats: {
+        syncLosses: number;
+        ccErrors: number;
+    };
+}
+
+export interface IMonitoringData {
+    moment: number;
+    monitoring: {
+        bitrate: number;
+        muxrate: number;
+    };
+    errors: {
+        syncLosses: number;
+        cc: number;
+    };
+}
+
+export enum EQosItem {
+    good,
+    warning,
+    bad,
+}
+
+export interface IQosData {
+    items: Array<EQosItem>;
+    quality: number;
+}
+
+export type IAppData = IAppStatusData | IAppTimingData;
+
+export interface IAppStatusData {
+    appId: number;
+    appType: string;
     status: string;
     statusChange: string;
-};
+}
 
-export type IRealtimeAppTimingEvent = {
-    id: number;
+export interface IAppTimingData {
+    appId: number;
     type: string;
     startedAt: number;
-};
+}
 
-export type IRealtimeNodeEvent = IRealtimeNodePingEvent | IRealtimeNodeSystemStateEvent | IRealtimeNodeStatusEvent;
+export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
-export type IRealtimeNodeEventType = "ping" | "system" | "status";
+export type INodeEventType = "ping" | "system" | "status";
 
-export type IRealtimeNodePingEvent = {
+export interface INodePingData {
     id: number;
-    type: IRealtimeNodeEventType;
+    type: INodeEventType;
     lastPing: number;
-};
+}
 
-export type IRealtimeNodeSystemStateEvent = {
+export interface INodeSystemStateData {
     id: number;
-    type: IRealtimeNodeEventType;
+    type: INodeEventType;
     cpu: number;
     memoryUsed: number;
     memoryTotal: number;
     loadAverage: number;
-};
+}
 
-export type IRealtimeNodeStatusEvent = {
+export interface INodeStatusData {
     id: number;
-    type: IRealtimeNodeEventType;
+    type: INodeEventType;
     online: boolean;
-};
+}
 
-export type IRedisAppChannelEvent = {
-    nodeId: number;
-    appId: number;
-    appType: string;
-};
+export type IPubSubData = INodeData | IAppData;
 
-export type IToKeyAppStateEvent = {
-    nodeId: number;
-    ip: string;
-    port: number;
-};
-
-export type IToKeyAppStateData = {
-    moment: number;
-    bitrate: number;
-    muxrate: number;
-};
-
-export type IMonitoringData = {
-    channel: IToKeyAppStateEvent;
-    data: IToKeyAppStateData;
-};
-
-export type IToKeyAppErrorStateEvent = {
-    nodeId: number;
-    ip: string;
-    port: number;
-    appType: string;
-    appId: number;
-};
-
-export type IToKeyAppErrorStateData = {
-    moment: number;
-    syncLoss: number;
-    syncByte: number;
-    pat: number;
-    cc: number;
-    transport: number;
-    pcrR: number;
-    pcrD: number;
-};
-
-export type IMonitoringErrorsData = {
-    channel: IToKeyAppErrorStateEvent;
-    data: IToKeyAppErrorStateData;
-};
-
-export type IRedisModuleAppUnsubscribeEvent = IRedisModuleAppSubscribeEvent;
-
-export type IRedisModuleNodeDataSubscribeEvent = {
-    nodeId: number | number[];
-    type: IRealtimeNodeEventType;
-};
-
-export type IRedisModuleAppSubscribeEvent =
-    | IToKeyAppStateEvent
-    | IToKeyAppErrorStateEvent
-    | IRedisAppChannelEvent
-    | IRedisModuleNodeDataSubscribeEvent;
-
-export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
-
-export type IRedisMessageType = IRealtimeAppEvent | IRealtimeNodeEvent;
-
-export const isRealtimeAppEvent = (type: IRedisMessageType): type is IRealtimeAppEvent => {
-    return "id" in type;
-};
+export interface IDataEvent extends ISubscribeEvent {
+    payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
+}
