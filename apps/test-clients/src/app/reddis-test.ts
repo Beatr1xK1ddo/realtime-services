@@ -1,15 +1,7 @@
-import Redis from "ioredis";
 import {io} from "socket.io-client";
-import {
-    IRealtimeAppStatusEvent,
-    IRealtimeAppTimingEvent,
-    IRedisAppChannelEvent,
-    IRedisModuleNodeDataSubscribeEvent,
-    IRedisToKeyAppBitrateEvent,
-} from "@socket/shared-types";
 
 export const redisTestRun = (url: string) => {
-    const statusEvent: IRedisToKeyAppBitrateEvent = {
+    const statusEvent = {
         nodeId: 317,
         ip: "239.1.9.179",
         port: 1234,

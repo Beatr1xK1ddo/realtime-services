@@ -5,22 +5,15 @@ export function loggerTestRun(url: string) {
     console.log(`Initializing client connection to LoggerModule on ${url}`);
     // const manager = new Manager(url);
     // const socket = manager.socket('/logger');
-    const socket = io(`${url}/logger`);
+    const socket = io(`${url}/logging`);
 
     socket.on("connect", () => {
         console.log("Client connected to LoggerModule");
-        socket.emit("subscribeTypes", {nodeId: 1337, appType: "ipbe", appId: 123} as ILogClientTypesEvent);
-        socket.emit("subscribeType", {
-            nodeId: 1337,
-            appType: "sysLog",
-            appId: 12,
-            logType: "logerTest",
-        } as ILogClientTypeEvent);
+        socket.emit("subscribe", {nodeId: 2151, appType: "ipbe", appId: 892} as ILogClientTypesEvent);
     });
 
-    socket.on("nodeDataTypes", (data) => {
-        console.log("nodeDataTypes", data);
-        console.log(`Logger data ${JSON.stringify(data)}`);
+    socket.on("data", (data) => {
+        console.log(data.records[0].message);
     });
     socket.on("nodeDataType", (data) => {
         console.log(`Logger data ${JSON.stringify(data)}`);

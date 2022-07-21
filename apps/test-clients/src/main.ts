@@ -6,10 +6,10 @@ import {hyperdeckTestRun} from "./app/hyperdeck-test";
 import {hlsTestRun} from "./app/hls-test";
 import {bmddTest} from "./app/bmdd-test";
 
-// const mainServiceUrl = "https://qa.nextologies.com:1987";
-const mainServiceUrl = "https://nxt-dev-env.nextologies.com:1987";
+const mainServiceUrl = "https://qa.nextologies.com:1987";
+// const mainServiceUrl = "https://nxt-dev-env.nextologies.com:1987";
 
-loggerTestRun("http://localhost:1987");
+loggerTestRun(mainServiceUrl);
 // hlsTestRun("http://localhost:1987");
 
 // loggerTestRun(mainServiceUrl);
