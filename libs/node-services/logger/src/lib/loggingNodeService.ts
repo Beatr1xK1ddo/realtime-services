@@ -1,7 +1,7 @@
 import * as path from "path";
-import {ChildProcessWithoutNullStreams, exec, spawn} from "child_process";
+import {ChildProcessWithoutNullStreams, spawn} from "child_process";
 import {FSWatcher, watch} from "chokidar";
-import {close, createReadStream, existsSync, mkdirSync, open, promises as fs, readFile, write, writeFile} from "fs";
+import {createReadStream, existsSync, mkdirSync, promises as fs} from "fs";
 import {createInterface} from "readline";
 
 import {NodeService} from "@socket/shared/entities";
@@ -111,7 +111,7 @@ export class LoggingNodeService extends NodeService {
             this.log(`${fileName} has not tail running, spawning`);
             const {appType, appId, appName, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
             //todo: is there a way to do it better? do we need to close this read stream manually?
-            const stream = spawn("tail", ["-n", "1", `${this.appLogsPath}/${fileName}`]);
+            const stream = spawn("tail", ["-f", "-n", "1", `${this.appLogsPath}/${fileName}`]);
             stream.stdout.setEncoding("utf8");
             stream.stdout.on("data", this.handleLogRecord(appType, appId, appName, appLogType));
             stream.on("error", (error) => {
