@@ -1,8 +1,8 @@
 export const environment = {
     production: true,
-    logging: {
+    loggingModule: {
         name: "logging",
-        serviceUrl: "https://qa.nextologies.com:1987/logging",
+        serviceUrl: "https://cp.nextologies.com:1987/logging",
         appsLogsDir: "/home/dv2/data/logs/",
         sysLogFile: "/var/log/syslog",
         excludeMessages: {
@@ -11,9 +11,11 @@ export const environment = {
         },
     },
     teranex: {
+        name: "teranex",
         serviceUrl: "https://cp.nextologies.com:1987/teranex",
     },
-    bmdd: {
+    bmddModule: {
+        name: "bmdd",
         serviceUrl: "https://cp.nextologies.com:1987/bmdd",
     },
 };

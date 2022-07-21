@@ -7,21 +7,19 @@ import {BmddServiceModule} from "@socket/main-service-modules-bmdd";
 
 import {environment} from "./environments/environment";
 
-const {ssl, mainService, logging, teranexService, redisService, thumbnailsService, bmdd} = environment;
+const {ssl, mainService, loggingModule, teranexModule, redisModule, thumbnailsModule, bmddModule} = environment;
 
 const server = new MainServiceServer(mainService.port, {ssl});
 const modules = [
-    new LoggingModule(logging.name, {dbUrl: logging.url}),
-/*
-    new TeranexServiceModule(teranexService.name),
-    new RedisServiceModule(redisService.name, {url: redisService.url}),
-    new ThumbnailsModule(thumbnailsService.name, {
-        apiHttpsServerPort: thumbnailsService.apiHttpsServerPort,
-        apiHttpServerPort: thumbnailsService.apiHttpServerPort,
+    new LoggingModule(loggingModule.name, {dbUrl: loggingModule.url}),
+    new TeranexServiceModule(teranexModule.name),
+    new RedisServiceModule(redisModule.name, {url: redisModule.url}),
+    new ThumbnailsModule(thumbnailsModule.name, {
+        apiHttpsServerPort: thumbnailsModule.apiHttpsServerPort,
+        apiHttpServerPort: thumbnailsModule.apiHttpServerPort,
         apiServerSsl: ssl,
     }),
-    new BmddServiceModule(bmdd.name),
-*/
+    new BmddServiceModule(bmddModule.name),
 ];
 
 modules.forEach((module) => server.registerModule(module));

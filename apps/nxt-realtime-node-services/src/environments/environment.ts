@@ -1,6 +1,6 @@
 export const environment = {
     production: false,
-    logging: {
+    loggingModule: {
         name: "logging",
         serviceUrl: "https://nxt-dev-env.nextologies.com:1987/logging",
         appsLogsDir: "/home",
@@ -11,9 +11,11 @@ export const environment = {
         },
     },
     teranex: {
+        name: "teranex",
         serviceUrl: "https://nxt-dev-env.nextologies.com:1987/teranex",
     },
-    bmdd: {
+    bmddModule: {
+        name: "bmdd",
         serviceUrl: "https://nxt-dev-env.nextologies.com:1987/bmdd",
     },
 };
