@@ -1,23 +1,14 @@
 import * as path from "path";
-import {exec, spawn} from "child_process";
+import {ChildProcessWithoutNullStreams, exec, spawn} from "child_process";
 import {FSWatcher, watch} from "chokidar";
 import {close, createReadStream, existsSync, mkdirSync, open, promises as fs, readFile, write, writeFile} from "fs";
 import {createInterface} from "readline";
 
 import {NodeService} from "@socket/shared/entities";
-import {Common, IAppLogMessage, ILogNodeTypesDataEvent, LoggingService} from "@socket/shared-types";
+import {Common, LoggingService} from "@socket/shared-types";
 import EServiceLogType = LoggingService.EServiceLogType;
 
-// import EServiceLogType = LoggingService.EServiceLogType;
-
-const sysLog = "system.ts";
-const connectionLostDir = "historyLog";
-
-type ILogTypeInfo = {
-    prevValue: string;
-    counter: number;
-    timer: NodeJS.Timer;
-};
+const connectionLostDir = "backup";
 
 const appLogFile = /real--[a-z0-9_]+--[0-9]+--[a-z0-9_]+--[a-z0-9_]+.log$/i;
 
@@ -26,19 +17,19 @@ export class LoggingNodeService extends NodeService {
     private sysLogsPath: string;
     private excludeAppLogRegexp?: RegExp;
     private excludeSysLogRegexp?: RegExp;
-    private watcher?: FSWatcher;
 
-    private connected: boolean;
-    private logTypes: Map<Common.IAppType, Map<Common.IAppId, Set<LoggingService.IAppLogType>>>;
-    // private logTypes: Map<Common.IAppType, Map<Common.IAppId, Map<string, ILogTypeInfo>>>;
+    private appsLogsFiles: Set<LoggingService.ILogFile>;
+    private appsLogsTypes: Map<Common.IAppType, Map<Common.IAppId, Set<LoggingService.IAppLogType>>>;
+    private tails: Map<LoggingService.ILogFile, ChildProcessWithoutNullStreams>;
+    private watcher?: FSWatcher;
 
     constructor(name: string, nodeId: number, url: string, appLogsPath: string, sysLogsPath: string, exclude?: any) {
         super(name, nodeId, url);
-        this.nodeId = nodeId;
+        this.mainServiceConnectionActive = false;
+
         this.appLogsPath = appLogsPath;
         this.sysLogsPath = sysLogsPath;
-        this.logTypes = new Map();
-        this.connected = false;
+
         if (!existsSync(`${this.appLogsPath}/${connectionLostDir}`)) {
             mkdirSync(`${this.appLogsPath}/${connectionLostDir}`);
         }
@@ -46,76 +37,95 @@ export class LoggingNodeService extends NodeService {
             this.excludeAppLogRegexp = new RegExp(`(${exclude?.applog.join("|")})`, "i");
             this.excludeSysLogRegexp = new RegExp(`(${exclude?.syslog.join("|")})`, "i");
         }
+
+        this.appsLogsFiles = new Set<LoggingService.ILogFile>();
+        this.appsLogsTypes = new Map<Common.IAppType, Map<Common.IAppId, Set<LoggingService.IAppLogType>>>();
+        this.tails = new Map<LoggingService.ILogFile, ChildProcessWithoutNullStreams>();
+        this.initLogsWatching();
     }
 
-    // socket
-    protected override async onConnected() {
-        super.onConnected();
-        this.connected = true;
-        await this.updateAppsLogsTypes();
-        const appsLogsTypes: Array<LoggingService.IAppLogsTypes> = [];
-        this.logTypes.forEach((appsMap, appType) => {
-            appsMap.forEach((appLogsTypes, appId) => {
-                appsLogsTypes.push({appType, appId, appLogsTypes: Array.from(appLogsTypes)});
-            })
-        })
-        const nodeInitEvent: LoggingService.INodeInitEvent = {
-            nodeId: this.nodeId,
-            appsLogsTypes,
-        };
-        this.emit("initNode", nodeInitEvent);
-        // await this.handlePendingMessages();
-        this.startLogsMonitoring();
-    }
-
-    // watcher file handlers
-    private startLogsMonitoring() {
+    //watching handling
+    private async initLogsWatching() {
+        await this.handleAppsLogsFiles();
         // this.watcher = watch([this.appLogsPath, this.sysLogsPath]);
-        this.watcher = watch([this.appLogsPath]);
+        this.watcher = watch([this.appLogsPath], {
+            ignoreInitial: true,
+            followSymlinks: false,
+        });
         this.watcher.on("add", this.handleFileAdd.bind(this));
         this.watcher.on("change", this.handleFileChange.bind(this));
-    }
+    };
+
+    private async handleAppsLogsFiles() {
+        const files = await fs.readdir(this.appLogsPath);
+        this.log(`got thees files ${files} after reading ${this.appLogsPath}, updating context`);
+        files.forEach(fileName => {
+            if (appLogFile.test(fileName)) {
+                this.log(`${fileName} seems to be an app log, processing`);
+                //save file name to this.appsLogsFiles: Set<LoggingService.ILogFile>
+                this.appsLogsFiles.add(fileName);
+                //add log type to this.appsLogsTypes: Map<Common.IAppType, Map<Common.IAppId, Set<LoggingService.IAppLogType>>>
+                const {appType, appId, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
+                const appTypeMap = this.appsLogsTypes.get(appType) ?? new Map<Common.IAppId, Set<LoggingService.IAppLogType>>();
+                const appLogsTypes = appTypeMap.get(appId) ?? new Set<LoggingService.IAppLogType>();
+                appLogsTypes.add(appLogType);
+                appTypeMap.set(appId, appLogsTypes);
+                this.appsLogsTypes.set(appType, appTypeMap);
+            }
+        })
+    };
 
     private async handleFileAdd(pathname: string) {
-        this.log(`handleFileAdd ${pathname}`);
         const fileName = path.basename(pathname);
         if (appLogFile.test(fileName)) {
+            await this.handleAppsLogsFiles();
             const {appType, appId, appName, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
-            this.log(`handleFileAdd ${appLogType} ${appId} ${appName} ${appLogType} `);
-            const appLogRecordsEvent: LoggingService.INodeAppLogRecordsEvent = {
-                nodeId: this.nodeId,
-                serviceLogType: EServiceLogType.app,
-                appType, appId, appName, appLogType,
-                records: [],
-            };
+            const records: Array<LoggingService.INodeBasicLogRecord> = [];
             const created = new Date().getTime();
             await LoggingNodeService.processFileLineByLine(pathname, (message: string) => {
-                appLogRecordsEvent.records.push({created, message});
+                records.push({created, message});
             });
-            appLogRecordsEvent.records = appLogRecordsEvent.records.slice(0, 100);
-            this.emit("data", appLogRecordsEvent);
+            for (let i = 0; i < records.length; i += 100) {
+                const resultChunk = records.slice(i, i + 100);
+                const appLogRecordsEvent: LoggingService.INodeAppLogRecordsEvent = {
+                    nodeId: this.nodeId,
+                    serviceLogType: EServiceLogType.app,
+                    appType, appId, appName, appLogType,
+                    records: resultChunk,
+                };
+                if (this.mainServiceConnectionActive) {
+                    this.emit("data", appLogRecordsEvent);
+                } else {
+                    //todo: put it into backup file
+                }
+            }
             this.createBackupFile(appType, appId, appLogType);
         } else {
             //todo: handle sys logs
         }
-    }
+    };
 
     private handleFileChange(pathname: string) {
         const fileName = path.basename(pathname);
-        if (appLogFile.test(fileName)) {
+        if (appLogFile.test(fileName) && !this.tails.has(fileName)) {
+            this.log(`${fileName} has not tail running, spawning`);
             const {appType, appId, appName, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
             //todo: is there a way to do it better? do we need to close this read stream manually?
             const stream = spawn("tail", ["-n", "1", `${this.appLogsPath}/${fileName}`]);
             stream.stdout.setEncoding("utf8");
             stream.stdout.on("data", this.handleLogRecord(appType, appId, appName, appLogType));
             stream.on("error", (error) => {
-                this.log(`running "tail" error: ${error}`, true);
+                this.log(`${fileName} tail error: ${error}`, true);
             });
             stream.on("close", (code) => {
-                this.log(`stream closing. Close code: ${code}`);
+                this.log(`${fileName} tail stream closed: ${code}`);
+                //todo: do we need to restart this?
             });
+            this.tails.set(fileName, stream);
+        } else {
+            //todo: handle sys logs
         }
-    }
+    };
 
     private handleLogRecord(appType: Common.IAppType, appId: Common.IAppId, appName: string, appLogType: LoggingService.IAppLogType) {
         return (message: string) => {
@@ -126,31 +136,49 @@ export class LoggingNodeService extends NodeService {
                 appType, appId, appName, appLogType,
                 records: [{created, message}],
             };
-            if (this.connected) {
+            if (this.mainServiceConnectionActive) {
                 this.emit("data", appLogRecordsEvent);
             } else {
                 //todo: handle backup
-/*
-                const fileName = `${appType}-${appId}-${appLogType}.json`;
-                const filepath = `${this.appLogsPath}/${connectionLostDir}/${fileName}`;
-                readFile(filepath, "utf8", (err, data) => {
-                    if (err) {
-                        this.log(`error occured while reading file ${filepath}. Error ${err.message}`);
-                    } else {
-                        const cleanData = JSON.parse(data) as Array<IAppLogMessage>;
-                        cleanData.push(message);
-                        const result = JSON.stringify(cleanData);
-                        writeFile(filepath, result, (err) => {
-                            if (err) {
-                                this.log(`error occured while creating reserve file ${fileName}. Error ${err.message}`);
-                            }
-                        });
-                    }
-                });
-*/
+                /*
+                 const fileName = `${appType}-${appId}-${appLogType}.json`;
+                 const filepath = `${this.appLogsPath}/${connectionLostDir}/${fileName}`;
+                 readFile(filepath, "utf8", (err, data) => {
+                 if (err) {
+                 this.log(`error occured while reading file ${filepath}. Error ${err.message}`);
+                 } else {
+                 const cleanData = JSON.parse(data) as Array<IAppLogMessage>;
+                 cleanData.push(message);
+                 const result = JSON.stringify(cleanData);
+                 writeFile(filepath, result, (err) => {
+                 if (err) {
+                 this.log(`error occured while creating reserve file ${fileName}. Error ${err.message}`);
+                 }
+                 });
+                 }
+                 });
+                 */
             }
         };
-    }
+    };
+
+    //main service handling
+    protected override async onConnected() {
+        super.onConnected();
+        const appsLogsTypes: Array<LoggingService.IAppLogsTypes> = [];
+        this.appsLogsTypes.forEach((appsMap, appType) => {
+            appsMap.forEach((appLogsTypes, appId) => {
+                appsLogsTypes.push({appType, appId, appLogsTypes: Array.from(appLogsTypes)});
+            })
+        })
+        const nodeInitEvent: LoggingService.INodeInitEvent = {
+            nodeId: this.nodeId,
+            appsLogsTypes,
+        };
+        this.emit("initNode", nodeInitEvent);
+        //todo: handle pending messages if anny
+        // await this.handlePendingMessages();
+    };
 
     // connection lost case
     private createBackupFile(appType: Common.IAppType, appId: Common.IAppId, appLogType: LoggingService.IAppLogType) {
@@ -244,24 +272,6 @@ export class LoggingNodeService extends NodeService {
         for await (const line of readInterface) {
             onNewLine(line);
         }
-    };
-
-    private async updateAppsLogsTypes() {
-        const files = await fs.readdir(this.appLogsPath);
-        files.forEach(fileName => {
-            const {appType, appId, appLogType} = LoggingNodeService.readAppMetadataFromFileName(fileName);
-            //Map<Common.IAppType, Map<Common.IAppId, Set<LoggingService.IAppLogType>>>
-            const appTypeMap = this.logTypes.get(appType) ?? new Map<Common.IAppId, Set<LoggingService.IAppLogType>>();
-            const appLogsTypes = appTypeMap.get(appId) ?? new Set<LoggingService.IAppLogType>();
-            appLogsTypes.add(appLogType);
-            appTypeMap.set(appId, appLogsTypes);
-            this.logTypes.set(appType, appTypeMap);
-        })
-    }
-
-    protected override onDisconnected(reason: string): void {
-        super.onDisconnected(reason);
-        this.connected = false;
     };
 
     private isTrashData(data: string, filename: string) {

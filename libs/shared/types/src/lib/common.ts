@@ -37,6 +37,8 @@ export namespace Common {
     export type ITimeInMs = number;
     export type INumericId = number;
     export type IStringId = string;
+    export type IIp = string;
+    export type IPort = number;
     //node
     export type INodeId = INumericId;
     //app

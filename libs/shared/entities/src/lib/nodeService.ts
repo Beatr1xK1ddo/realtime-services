@@ -11,6 +11,7 @@ export class NodeService {
     protected name: string;
     protected nodeId: number;
     protected mainServiceUrl: string;
+    protected mainServiceConnectionActive: boolean;
     private socket: Socket;
     private logger: BasicLogger;
 
@@ -31,10 +32,12 @@ export class NodeService {
 
     protected onConnected(): void {
         this.log(`transport connected`);
+        this.mainServiceConnectionActive = true;
     }
 
     protected onDisconnected(reason: string): void {
         this.log(`transport disconnected ${reason}`);
+        this.mainServiceConnectionActive = false;
     }
 
     protected onError(error: any): void {

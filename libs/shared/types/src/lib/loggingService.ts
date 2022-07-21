@@ -31,21 +31,15 @@ export interface ILogClientTypesEvent extends ILogBaseTypesEvent {
 
 export type ILogClientTypeEvent = ILogBaseTypeEvent & ILogClientTypesEvent;
 
-export interface ILogNodeTypesDataEvent {
-    channel: ILogClientTypesEvent;
-    data: Array<string>;
-}
-
 export type ILogDbInsertEvent = ISysLogMessage | Array<ISysLogMessage> | IAppLogMessage | Array<IAppLogMessage>;
 
 export namespace LoggingService {
-    import Optional = Common.Optional;
-
     export enum EServiceLogType {
         app = "applicationLog",
         sys = "systemLog",
     }
 
+    export type ILogFile = string;
     export type IAppName = string;
     export type IAppLogType = string;
 
