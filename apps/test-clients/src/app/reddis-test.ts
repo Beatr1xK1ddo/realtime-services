@@ -14,9 +14,6 @@ export const redisTestRun = (url: string, nodeId: number) => {
     socket.on("connect", () => {
         console.log("Client connected to RedisModule");
         socket.emit("subscribe", event2);
-        // setTimeout(() => {
-        //     socket.emit("subscribe", event);
-        // }, 3000);
     });
 
     socket.on("realtimeQos", (data) => {

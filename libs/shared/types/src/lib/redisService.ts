@@ -1,76 +1,37 @@
-export type IRealtimeAppEvent = IRealtimeAppStatusEvent | IRealtimeAppTimingEvent;
-
 export enum ESubscriptionType {
     monitoring = "monitoring",
     qos = "qos",
+    node = "node",
+    app = "app",
 }
 
-interface IBasicSubscribeEvent {
-    subscriptionType: ESubscriptionType;
+export interface IOnDataHandler {
+    (key: string, data: string): void;
 }
 
-export interface IMonitoringBaseEvent {
+export interface INodeSubscribeOrigin {
+    nodeId: number | number[];
+    type: INodeEventType;
+}
+
+export interface IIpPortOrigin {
     nodeId: number;
     ip: string;
     port: number;
 }
 
-export interface IRealtimeAppStatusEvent {
-    id: number;
-    type: string;
-    status: string;
-    statusChange: string;
-}
-
-export interface IRealtimeAppTimingEvent {
-    id: number;
-    type: string;
-    startedAt: number;
-}
-
-export type IRealtimeNodeEvent = IRealtimeNodePingEvent | IRealtimeNodeSystemStateEvent | IRealtimeNodeStatusEvent;
-
-export type IRealtimeNodeEventType = "ping" | "system" | "status";
-
-export interface IRealtimeNodePingEvent {
-    id: number;
-    type: IRealtimeNodeEventType;
-    lastPing: number;
-}
-
-export interface IRealtimeNodeSystemStateEvent {
-    id: number;
-    type: IRealtimeNodeEventType;
-    cpu: number;
-    memoryUsed: number;
-    memoryTotal: number;
-    loadAverage: number;
-}
-
-export interface IRealtimeNodeStatusEvent {
-    id: number;
-    type: IRealtimeNodeEventType;
-    online: boolean;
-}
-
-export interface IRedisAppChannelEvent {
+export interface IAppIdAppTypeOrigin {
     nodeId: number;
     appId: number;
     appType: string;
 }
 
-export type IRedisModuleAppUnsubscribeEvent = IRedisModuleAppSubscribeEvent;
-
-export interface IRedisModuleNodeDataSubscribeEvent {
-    nodeId: number | number[];
-    type: IRealtimeNodeEventType;
+export interface ISubscribeEvent {
+    subscriptionType: ESubscriptionType;
+    origin: IIpPortOrigin | IAppIdAppTypeOrigin | INodeSubscribeOrigin;
 }
 
-export type IMonitoringSubscribeEvent = IBasicSubscribeEvent & IMonitoringBaseEvent;
-
-export interface IMonitoringSubscribedEvent extends IMonitoringSubscribeEvent {
-    payload: Array<IMonitoringPayloadItem>;
-}
+export type IUnsubscribeEvent = ISubscribeEvent;
 
 export interface IMonitoringRowData {
     time: number;
@@ -82,7 +43,7 @@ export interface IMonitoringRowData {
     };
 }
 
-export interface IMonitoringPayloadItem {
+export interface IMonitoringData {
     moment: number;
     monitoring: {
         bitrate: number;
@@ -94,41 +55,59 @@ export interface IMonitoringPayloadItem {
     };
 }
 
-export interface IMonitoringDataEvent extends IMonitoringSubscribeEvent {
-    payload: IMonitoringPayloadItem;
-}
-
-export type IRedisModuleAppSubscribeEvent =
-    | IMonitoringSubscribeEvent
-    | IRedisAppChannelEvent
-    | IRedisModuleNodeDataSubscribeEvent
-    | IQosSubscribeEvent;
-
-export type IRedisModuleNodeDataUnsubscribeEvent = IRedisModuleNodeDataSubscribeEvent;
-
-export type IRedisMessageType = IRealtimeAppEvent | IRealtimeNodeEvent;
-
-export const isRealtimeAppEvent = (type: IRedisMessageType): type is IRealtimeAppEvent => {
-    return "id" in type;
-};
-
 export enum EQosItem {
     good,
     warning,
     bad,
 }
 
-export interface IQosDataPayload {
+export interface IQosData {
     items: Array<EQosItem>;
     quality: number;
 }
 
-export interface IQosSubscribeEvent extends IBasicSubscribeEvent {
-    nodeId: number;
+export type IAppData = IAppStatusData | IAppTimingData;
+
+export interface IAppStatusData {
     appId: number;
     appType: string;
+    status: string;
+    statusChange: string;
 }
 
-export interface IQosDataEvent extends IQosSubscribeEvent {
-    payload: IQosDataPayload;
+export interface IAppTimingData {
+    appId: number;
+    type: string;
+    startedAt: number;
+}
+
+export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
+
+export type INodeEventType = "ping" | "system" | "status";
+
+export interface INodePingData {
+    id: number;
+    type: INodeEventType;
+    lastPing: number;
+}
+
+export interface INodeSystemStateData {
+    id: number;
+    type: INodeEventType;
+    cpu: number;
+    memoryUsed: number;
+    memoryTotal: number;
+    loadAverage: number;
+}
+
+export interface INodeStatusData {
+    id: number;
+    type: INodeEventType;
+    online: boolean;
+}
+
+export type IPubSubData = INodeData | IAppData;
+
+export interface IDataEvent extends ISubscribeEvent {
+    payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
 }
