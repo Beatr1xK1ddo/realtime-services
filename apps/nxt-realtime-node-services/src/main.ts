@@ -6,9 +6,9 @@ import {BmddNodeService} from "@socket/node-services-bmdd";
 import {environment} from "./environments/environment";
 
 const {
-    logging: {name: loggingServiceName, appsLogsDir, sysLogFile, excludeMessages, serviceUrl: loggingServiceUrl},
-    teranex: {name: teranexServiceName, serviceUrl: teranexServiceUrl},
-    bmdd: {name: bmddServiceName, serviceUrl: bmddServiceUrl},
+    loggingService: {name: loggingServiceName, appsLogsDir, sysLogFile, excludeMessages, serviceUrl: loggingServiceUrl},
+    teranexService: {name: teranexServiceName, serviceUrl: teranexServiceUrl},
+    bmddService: {name: bmddServiceName, serviceUrl: bmddServiceUrl},
 } = environment;
 
 nodeUtils.getNodeId().then((id) => {

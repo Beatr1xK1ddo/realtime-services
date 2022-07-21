@@ -1,6 +1,6 @@
 export const environment = {
     production: true,
-    loggingModule: {
+    loggingService: {
         name: "logging",
         serviceUrl: "https://cp.nextologies.com:1987/logging",
         appsLogsDir: "/home/dv2/data/logs/",
@@ -10,11 +10,11 @@ export const environment = {
             syslog: ["cron", "postfix"],
         },
     },
-    teranex: {
+    teranexService: {
         name: "teranex",
         serviceUrl: "https://cp.nextologies.com:1987/teranex",
     },
-    bmddModule: {
+    bmddService: {
         name: "bmdd",
         serviceUrl: "https://cp.nextologies.com:1987/bmdd",
     },
