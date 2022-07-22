@@ -5,7 +5,6 @@ import {
     IAppData,
     IAppDataSubscribedEvent,
     IAppIdAppTypeOrigin,
-    IAppStatusData,
     IDataEvent,
     IIpPortOrigin,
     IMonitoringData,
@@ -579,8 +578,12 @@ export class RedisServiceModule extends MainServiceModule {
                     },
                     payload,
                 };
-                const {id, ...rest} = event;
-                payload = rest;
+                if (redisModuleUtils.isINodeStatusData(event)) {
+                    payload = event;
+                } else {
+                    const {id, ...rest} = event;
+                    payload = rest;
+                }
                 this.nodeChannelClients
                     .get(redisChannel)
                     ?.get(event.type)

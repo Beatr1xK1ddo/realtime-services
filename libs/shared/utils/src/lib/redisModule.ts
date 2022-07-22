@@ -3,9 +3,7 @@ import {
     IAppStatusDataRaw,
     IAppTimingDataRaw,
     INodeDataRow,
-    INodePingDataRow,
-    INodeStatusDataRow,
-    INodeSystemStateDataRow,
+    INodeStatusData,
     IPubSubData,
 } from "@socket/shared-types";
 
@@ -25,4 +23,8 @@ export const isIAppTimingDataRaw = (type: IAppDataRow): type is IAppTimingDataRa
 // node
 export const isRealtimeNodeData = (type: IPubSubData): type is INodeDataRow => {
     return type && "id" in type && "type" in type;
+};
+
+export const isINodeStatusData = (type: INodeDataRow): type is INodeStatusData => {
+    return type && "online" in type;
 };

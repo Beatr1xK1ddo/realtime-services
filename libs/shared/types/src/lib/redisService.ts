@@ -87,7 +87,7 @@ export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
 
 export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "type">;
 
-export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusDataRow;
+export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusData;
 
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
@@ -112,13 +112,11 @@ export interface INodeSystemStateDataRow {
 
 export type INodeSystemStateData = Omit<INodeSystemStateDataRow, "id">;
 
-export interface INodeStatusDataRow {
+export interface INodeStatusData {
     id: number;
     type: INodeEventType;
     online: boolean;
 }
-
-export type INodeStatusData = Omit<INodeStatusDataRow, "id">;
 
 export type IPubSubData = INodeDataRow | IAppDataRow;
 
