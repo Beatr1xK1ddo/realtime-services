@@ -26,12 +26,12 @@ export interface IAppIdAppTypeOrigin {
     appType: string;
 }
 
-export interface ISubscribeEvent {
+export interface ISubscribeEvent<T = any> {
     subscriptionType: ESubscriptionType;
-    origin: IIpPortOrigin | IAppIdAppTypeOrigin | INodeSubscribeOrigin;
+    origin: T;
 }
 
-export type IUnsubscribeEvent = ISubscribeEvent;
+export type IUnsubscribeEvent<T = any> = ISubscribeEvent<T>;
 
 export interface IMonitoringRowData {
     time: number;
@@ -66,20 +66,24 @@ export interface IQosData {
     quality: number;
 }
 
-export type IAppData = IAppStatusData | IAppTimingData;
+export type IAppData = IAppStatusDataRaw | IAppTimingDataRaw;
 
-export interface IAppStatusData {
+export interface IAppStatusDataRaw {
     appId: number;
     appType: string;
     status: string;
     statusChange: string;
 }
 
-export interface IAppTimingData {
+export interface IAppTimingDataRaw {
     appId: number;
     type: string;
     startedAt: number;
 }
+
+export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
+
+export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "type">;
 
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
@@ -108,6 +112,19 @@ export interface INodeStatusData {
 
 export type IPubSubData = INodeData | IAppData;
 
-export interface IDataEvent extends ISubscribeEvent {
-    payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
+export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
+    // payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
+    payload: P;
+}
+
+export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
+    // payload: IMonitoringData | Array<IMonitoringData> | IQosData | INodeData | IAppData;
+    payload: P;
+}
+
+export type ISubscribedEvent<T, P> = IDataEvent<T, P>;
+
+export interface IAppDataSubscribedEvent {
+    status: IAppStatusData;
+    runtime: IAppTimingData;
 }

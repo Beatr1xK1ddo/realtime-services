@@ -2,6 +2,7 @@ import {Socket} from "socket.io";
 import Redis from "ioredis";
 import {
     ESubscriptionType,
+    IAppDataSubscribedEvent,
     IAppIdAppTypeOrigin,
     IDataEvent,
     IIpPortOrigin,
@@ -11,6 +12,7 @@ import {
     IOnDataHandler,
     IPubSubData,
     IQosData,
+    ISubscribedEvent,
     ISubscribeEvent,
     IUnsubscribeEvent,
 } from "@socket/shared-types";
@@ -74,10 +76,10 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private async handleMonitoringSubscribe(socket: Socket, event: ISubscribeEvent) {
+    private async handleMonitoringSubscribe(socket: Socket, event: ISubscribeEvent<IIpPortOrigin>) {
         try {
             const {origin, subscriptionType} = event;
-            const {ip, nodeId, port} = origin as IIpPortOrigin;
+            const {ip, nodeId, port} = origin;
             if (this.monitoringClients.get(nodeId)?.get(ip)?.get(port)?.has(socket)) {
                 return this.log(
                     `client: ${socket.id} already subscribed to subscriptionType: ${subscriptionType}, node: ${nodeId}, ip: ${ip} and port: ${port}`
@@ -101,7 +103,7 @@ export class RedisServiceModule extends MainServiceModule {
                 this.handleMonitoringData();
             }
             const data = await this.getMonitoringData(event);
-            if ((data.payload as Array<IMonitoringData>).length) {
+            if (data.payload.length) {
                 socket.emit("subscribed", data);
             }
             this.log(`client: ${socket.id} subscribed to Monitoring. Node: ${nodeId}, ip: ${ip} and port: ${port}`);
@@ -110,10 +112,10 @@ export class RedisServiceModule extends MainServiceModule {
         }
     }
 
-    private handleQosSubscribe = async (socket: Socket, event: ISubscribeEvent) => {
+    private handleQosSubscribe = async (socket: Socket, event: ISubscribeEvent<IAppIdAppTypeOrigin>) => {
         try {
             const {origin, subscriptionType} = event;
-            const {appType, nodeId, appId} = origin as IAppIdAppTypeOrigin;
+            const {appType, nodeId, appId} = origin;
             if (this.qosClients.get(nodeId)?.get(appType)?.get(appId)?.has(socket)) {
                 return this.log(
                     `client: ${socket.id} already subscribed to subscriptionType: ${subscriptionType}, node: ${nodeId}, appType: ${appType} and appId: ${appId}`
@@ -146,14 +148,16 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleAppStateSubscribe = async (socket: Socket, event: ISubscribeEvent) => {
+    private handleAppStateSubscribe = async (socket: Socket, event: ISubscribeEvent<IAppIdAppTypeOrigin>) => {
         try {
             const {origin, subscriptionType} = event;
-            const {appId, nodeId, appType} = origin as IAppIdAppTypeOrigin;
+            const {appId, nodeId, appType} = origin;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
             const status = await this.redisGet(`${appType}-${appId}-status`);
             const statusChange = await this.redisGet(`${appType}-${appId}-statusChange`);
-            const subscribeEvent: IDataEvent = {
+            // todo: i am not sure that this is correct way of getting initial runtime
+            const startedAt = await this.redisGet(`${appType}-${appId}-startedAt`);
+            const subscribeEvent: ISubscribedEvent<IAppIdAppTypeOrigin, IAppDataSubscribedEvent> = {
                 subscriptionType,
                 origin: {
                     appId,
@@ -161,10 +165,13 @@ export class RedisServiceModule extends MainServiceModule {
                     nodeId,
                 },
                 payload: {
-                    appId,
-                    appType,
-                    status,
-                    statusChange,
+                    status: {
+                        status,
+                        statusChange,
+                    },
+                    runtime: {
+                        startedAt: parseInt(startedAt),
+                    },
                 },
             };
             socket.emit("subscribed", subscribeEvent);
@@ -186,10 +193,10 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleNodeStateSubscribe = (socket: Socket, event: ISubscribeEvent) => {
+    private handleNodeStateSubscribe = (socket: Socket, event: ISubscribeEvent<INodeSubscribeOrigin>) => {
         try {
             const {origin} = event;
-            const {type, nodeId} = origin as INodeSubscribeOrigin;
+            const {type, nodeId} = origin;
             const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
             for (let index = 0; index < nodeIds.length; index++) {
                 const redisChannel = `realtime:node:${nodeIds[index]}`;
@@ -226,9 +233,9 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleMonitoringUnsubscribe = (socket: Socket, event: IUnsubscribeEvent) => {
+    private handleMonitoringUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<IIpPortOrigin>) => {
         const {origin, subscriptionType} = event;
-        const {ip, nodeId, port} = origin as IIpPortOrigin;
+        const {ip, nodeId, port} = origin;
         if (this.monitoringClients.get(nodeId)?.get(ip)?.get(port)?.has(socket)) {
             this.monitoringClients.get(nodeId).get(ip).get(port).delete(socket);
             this.log(
@@ -237,9 +244,9 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleQosUnsubscribe = (socket: Socket, event: IUnsubscribeEvent) => {
+    private handleQosUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<IAppIdAppTypeOrigin>) => {
         const {origin, subscriptionType} = event;
-        const {appId, nodeId, appType} = origin as IAppIdAppTypeOrigin;
+        const {appId, nodeId, appType} = origin;
         if (this.qosClients.get(nodeId)?.get(appType)?.get(appId)?.has(socket)) {
             this.qosClients.get(nodeId).get(appType).get(appId).delete(socket);
             this.log(
@@ -248,10 +255,10 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleAppStateUnsubscribe = (socket: Socket, event: IUnsubscribeEvent) => {
+    private handleAppStateUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<IAppIdAppTypeOrigin>) => {
         try {
             const {origin} = event;
-            const {appId, nodeId, appType} = origin as IAppIdAppTypeOrigin;
+            const {appId, nodeId, appType} = origin;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
             if (!this.appChannelClients?.get(redisChannel)?.get(appId)?.has(socket)) {
                 this.log(`client: ${socket.id} can't unsubscribe from AppSatate redis channel: ${redisChannel}`, true);
@@ -276,10 +283,10 @@ export class RedisServiceModule extends MainServiceModule {
         }
     };
 
-    private handleNodeStateUnsubscribe = (socket: Socket, event: IUnsubscribeEvent) => {
+    private handleNodeStateUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<INodeSubscribeOrigin>) => {
         try {
             const {origin} = event;
-            const {type, nodeId} = origin as INodeSubscribeOrigin;
+            const {type, nodeId} = origin;
             const nodeIds = Array.isArray(nodeId) ? nodeId : [nodeId];
             for (let index = 0; index < nodeIds.length; index++) {
                 const redisChannel = `realtime:node:${nodeIds[index]}`;
@@ -313,9 +320,9 @@ export class RedisServiceModule extends MainServiceModule {
     };
 
     // Stream handlers
-    private async getMonitoringData(event: ISubscribeEvent) {
+    private async getMonitoringData(event: ISubscribeEvent<IIpPortOrigin>) {
         const {origin} = event;
-        const {nodeId, ip, port} = origin as IIpPortOrigin;
+        const {nodeId, ip, port} = origin;
         const key = `${+new Date() - (60 * 1000 + 1)}-0`;
         const redis = new Redis(this.redisUrl);
         const items = await redis.xrange(`monitoring-${nodeId}`, key, "+");
@@ -326,7 +333,7 @@ export class RedisServiceModule extends MainServiceModule {
             const intPort = parseInt(dataPort);
             return intNodeId === nodeId && ip === dataIp && intPort === port;
         });
-        const clientEvent: Partial<IDataEvent> = {
+        const clientEvent: ISubscribedEvent<IIpPortOrigin, Array<IMonitoringData>> = {
             ...event,
             payload: [],
         };
@@ -399,9 +406,9 @@ export class RedisServiceModule extends MainServiceModule {
         });
     }
 
-    private async getQosData(event: ISubscribeEvent) {
+    private async getQosData(event: ISubscribeEvent<IAppIdAppTypeOrigin>) {
         const {origin} = event;
-        const {nodeId, appType, appId} = origin as IAppIdAppTypeOrigin;
+        const {nodeId, appType, appId} = origin;
         const key = `${+new Date() - (60 * 1000 + 1)}-0`;
         const redis = new Redis(this.redisUrl);
         const items = await redis.xrange(`qos-${nodeId}`, key, "+");
@@ -412,7 +419,7 @@ export class RedisServiceModule extends MainServiceModule {
             const intAppId = parseInt(dataAppId);
             return intNodeId === nodeId && dataAppType === appType && intAppId === appId;
         });
-        const clientEvent: Partial<IDataEvent> = {
+        const clientEvent: IDataEvent<IAppIdAppTypeOrigin, IQosData> = {
             ...event,
             payload: {
                 items: [],
@@ -535,6 +542,7 @@ export class RedisServiceModule extends MainServiceModule {
                     .get(redisChannel)
                     ?.get(appId)
                     ?.forEach((socket) => {
+                        const event = {};
                         socket.emit("data", event);
                     });
             } else {
