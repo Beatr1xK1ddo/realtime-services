@@ -66,7 +66,9 @@ export interface IQosData {
     quality: number;
 }
 
-export type IAppData = IAppStatusDataRaw | IAppTimingDataRaw;
+export type IAppDataRow = IAppStatusDataRaw | IAppTimingDataRaw;
+
+export type IAppData = IAppStatusData | IAppTimingData;
 
 export interface IAppStatusDataRaw {
     appId: number;
@@ -85,17 +87,21 @@ export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
 
 export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "type">;
 
+export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusDataRow;
+
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
 export type INodeEventType = "ping" | "system" | "status";
 
-export interface INodePingData {
+export interface INodePingDataRow {
     id: number;
     type: INodeEventType;
     lastPing: number;
 }
 
-export interface INodeSystemStateData {
+export type INodePingData = Omit<INodePingDataRow, "id">;
+
+export interface INodeSystemStateDataRow {
     id: number;
     type: INodeEventType;
     cpu: number;
@@ -104,13 +110,17 @@ export interface INodeSystemStateData {
     loadAverage: number;
 }
 
-export interface INodeStatusData {
+export type INodeSystemStateData = Omit<INodeSystemStateDataRow, "id">;
+
+export interface INodeStatusDataRow {
     id: number;
     type: INodeEventType;
     online: boolean;
 }
 
-export type IPubSubData = INodeData | IAppData;
+export type INodeStatusData = Omit<INodeStatusDataRow, "id">;
+
+export type IPubSubData = INodeDataRow | IAppDataRow;
 
 export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
     // payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;

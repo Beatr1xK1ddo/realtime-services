@@ -2,12 +2,15 @@ import {Socket} from "socket.io";
 import Redis from "ioredis";
 import {
     ESubscriptionType,
+    IAppData,
     IAppDataSubscribedEvent,
     IAppIdAppTypeOrigin,
+    IAppStatusData,
     IDataEvent,
     IIpPortOrigin,
     IMonitoringData,
     IMonitoringRowData,
+    INodeData,
     INodeSubscribeOrigin,
     IOnDataHandler,
     IPubSubData,
@@ -536,21 +539,52 @@ export class RedisServiceModule extends MainServiceModule {
         try {
             const event: IPubSubData = JSON.parse(redisEvent);
             const appEvent = redisModuleUtils.isRealtimeAppData(event);
+            const nodeEvent = redisModuleUtils.isRealtimeNodeData(event);
             if (appEvent) {
                 const {appId} = event;
+                const [, , nodeIdRow, appType] = redisChannel.split(":");
+                let payload: IAppData;
+                if (redisModuleUtils.isIAppStatusDataRaw(event)) {
+                    const {status, statusChange} = event;
+                    payload = {status, statusChange};
+                }
+                if (redisModuleUtils.isIAppTimingDataRaw(event)) {
+                    const {startedAt} = event;
+                    payload = {startedAt};
+                }
+                const dataEvent: IDataEvent<IAppIdAppTypeOrigin, IAppData> = {
+                    subscriptionType: ESubscriptionType.app,
+                    origin: {
+                        appId,
+                        nodeId: parseInt(nodeIdRow),
+                        appType,
+                    },
+                    payload,
+                };
                 this.appChannelClients
                     .get(redisChannel)
                     ?.get(appId)
                     ?.forEach((socket) => {
-                        const event = {};
-                        socket.emit("data", event);
+                        socket.emit("data", dataEvent);
                     });
-            } else {
-                const {type} = event;
+            }
+            if (nodeEvent) {
+                const [, , nodeIdRow] = redisChannel;
+                let payload: INodeData;
+                const dataEvent: IDataEvent<INodeSubscribeOrigin, INodeData> = {
+                    subscriptionType: ESubscriptionType.app,
+                    origin: {
+                        type: event.type,
+                        nodeId: parseInt(nodeIdRow),
+                    },
+                    payload,
+                };
+                const {id, ...rest} = event;
+                payload = rest;
                 this.nodeChannelClients
                     .get(redisChannel)
-                    ?.get(type)
-                    ?.forEach((socket) => socket.emit("data", event));
+                    ?.get(event.type)
+                    ?.forEach((socket) => socket.emit("data", dataEvent));
             }
         } catch (error) {
             this.log(`redis channel: ${redisChannel} event handling error ${error}`, true);
