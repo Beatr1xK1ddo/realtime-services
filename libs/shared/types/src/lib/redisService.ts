@@ -79,13 +79,13 @@ export interface IAppStatusDataRaw {
 
 export interface IAppTimingDataRaw {
     appId: number;
-    type: string;
+    appType: string;
     startedAt: number;
 }
 
 export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
 
-export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "type">;
+export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "appType">;
 
 export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusData;
 
