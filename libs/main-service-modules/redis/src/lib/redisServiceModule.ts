@@ -598,44 +598,23 @@ export class RedisServiceModule extends MainServiceModule {
 
     private handleDisconnect = (socket: Socket) => () => {
         //todo kan: what if one socket was subscribed to a lot of channels? let channel should become Array<string>
-        let removed = false;
-        let channel: string | null = null;
         for (const clientsSubType of [this.nodeChannelClients, this.appChannelClients]) {
-            if (removed) break;
-            for (const redisChannel of clientsSubType.keys()) {
-                if (removed) break;
-                const specificClients = clientsSubType.get(redisChannel);
+            for (const channel of clientsSubType.keys()) {
+                const specificClients = clientsSubType.get(channel);
                 if (specificClients) {
                     specificClients.forEach((sockets: Set<Socket>) => {
                         if (sockets && sockets.has(socket)) {
                             sockets.delete(socket);
-                            removed = true;
-                            channel = redisChannel;
                             this.log(`client: ${socket.id} disconnected`);
+                        }
+                        if (!sockets.size) {
+                            clientsSubType.delete(channel);
+                            this.log(`channel: ${channel} is empty. Removing redis subscription`);
+                            this.redisChannel.unsubscribe(channel);
                         }
                     });
                 }
             }
-            if (channel) {
-                let emptyChannel = true;
-                const clientSocketsMap = clientsSubType.get(channel);
-                const clientSocketsMapKeys = clientSocketsMap.keys();
-
-                for (const key of clientSocketsMapKeys) {
-                    if (clientSocketsMap.get(key as never).size) {
-                        emptyChannel = false;
-                        break;
-                    }
-                }
-                if (emptyChannel) {
-                    this.log(`channel: ${channel} is empty. Removing redis subscription`);
-                    this.redisChannel.unsubscribe(channel);
-                }
-            }
-            if (removed) break;
-        }
-        if (removed) {
-            return;
         }
         this.monitoringClients.forEach((_) =>
             _.forEach((__) =>
@@ -643,14 +622,10 @@ export class RedisServiceModule extends MainServiceModule {
                     if (sockets.has(socket)) {
                         sockets.delete(socket);
                         this.log(`client: ${socket.id} disconnected`);
-                        removed = true;
                     }
                 })
             )
         );
-        if (removed) {
-            return;
-        }
         this.qosClients.forEach((_) =>
             _.forEach((__) =>
                 __.forEach((sockets) => {
