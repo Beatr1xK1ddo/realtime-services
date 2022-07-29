@@ -26,12 +26,12 @@ export interface IAppIdAppTypeOrigin {
     appType: string;
 }
 
-export interface ISubscribeEvent {
+export interface ISubscribeEvent<T = any> {
     subscriptionType: ESubscriptionType;
-    origin: IIpPortOrigin | IAppIdAppTypeOrigin | INodeSubscribeOrigin;
+    origin: T;
 }
 
-export type IUnsubscribeEvent = ISubscribeEvent;
+export type IUnsubscribeEvent<T = any> = ISubscribeEvent<T>;
 
 export interface IMonitoringRowData {
     time: number;
@@ -66,32 +66,42 @@ export interface IQosData {
     quality: number;
 }
 
+export type IAppDataRow = IAppStatusDataRaw | IAppTimingDataRaw;
+
 export type IAppData = IAppStatusData | IAppTimingData;
 
-export interface IAppStatusData {
+export interface IAppStatusDataRaw {
     appId: number;
     appType: string;
     status: string;
     statusChange: string;
 }
 
-export interface IAppTimingData {
+export interface IAppTimingDataRaw {
     appId: number;
-    type: string;
+    appType: string;
     startedAt: number;
 }
+
+export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
+
+export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "appType">;
+
+export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusData;
 
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
 export type INodeEventType = "ping" | "system" | "status";
 
-export interface INodePingData {
+export interface INodePingDataRow {
     id: number;
     type: INodeEventType;
     lastPing: number;
 }
 
-export interface INodeSystemStateData {
+export type INodePingData = Omit<INodePingDataRow, "id">;
+
+export interface INodeSystemStateDataRow {
     id: number;
     type: INodeEventType;
     cpu: number;
@@ -100,14 +110,29 @@ export interface INodeSystemStateData {
     loadAverage: number;
 }
 
+export type INodeSystemStateData = Omit<INodeSystemStateDataRow, "id">;
+
 export interface INodeStatusData {
     id: number;
     type: INodeEventType;
     online: boolean;
 }
 
-export type IPubSubData = INodeData | IAppData;
+export type IPubSubData = INodeDataRow | IAppDataRow;
 
-export interface IDataEvent extends ISubscribeEvent {
-    payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
+export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
+    // payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
+    payload: P;
+}
+
+export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
+    // payload: IMonitoringData | Array<IMonitoringData> | IQosData | INodeData | IAppData;
+    payload: P;
+}
+
+export type ISubscribedEvent<T, P> = IDataEvent<T, P>;
+
+export interface IAppDataSubscribedEvent {
+    status: IAppStatusData;
+    runtime: IAppTimingData;
 }
