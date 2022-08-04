@@ -12,3 +12,5 @@ export interface IServiceErrorBaseEvent {
     request: string;
     message: string;
 }
+
+export type Optional<T> = T | null;
