@@ -1,28 +1,10 @@
 import {Socket} from "socket.io";
 import Redis from "ioredis";
 import {
-    ESubscriptionType,
-    IAppData,
-    IAppDataSubscribedEvent,
-    IAppIdAppTypeOrigin,
-    IDataEvent,
-    IIpPortOrigin,
-    IMonitoringData,
-    IMonitoringRowData,
-    INodeData,
-    INodeIdOrigin,
-    INodeSubscribeOrigin,
-    IOnDataHandler,
-    IPubSubData,
-    IQosData,
-    ISubscribedEvent,
-    ISubscribeEvent,
-    ITsMonitoringData,
-    ITxrNodeDataRow,
-    ITxrRxModuleData,
-    ITxrTxModuleData,
-    IUnsubscribeEvent,
-    Optional,
+    ESubscriptionType, IAppData, IAppDataSubscribedEvent, IAppIdAppTypeOrigin, IDataEvent, IIpPortOrigin,
+    IMonitoringData, IMonitoringRowData, INodeData, INodeIdOrigin, INodeSubscribeOrigin, IOnDataHandler, IPubSubData,
+    IQosData, ISubscribedEvent, ISubscribeEvent, ITsMonitoringData, ITxrNodeDataRow, ITxrRxModuleData, ITxrTxModuleData,
+    IUnsubscribeEvent, Optional,
 } from "@socket/shared-types";
 import {IBasicLoggerOptions, MainServiceModule} from "@socket/shared/entities";
 import {redisModuleUtils} from "@socket/shared-utils";
@@ -74,7 +56,9 @@ export class RedisServiceModule extends MainServiceModule {
         this.txrClients = new Map();
         this.qosClients = new Map();
         this.redisUrl = options.url;
-        this.initRedis();
+        this.initRedis()
+            .then(() => this.log("init successfully"))
+            .catch(() => this.log("init failure", true));
     }
 
     protected onConnected(socket: Socket) {
@@ -449,7 +433,7 @@ export class RedisServiceModule extends MainServiceModule {
             ...event,
             payload: [],
         };
-        const result: Array<IMonitoringData> = data.map((item) => {
+        clientEvent.payload = data.map((item) => {
             const [, [, value]] = item;
             const cleanValue = JSON.parse(value) as IMonitoringRowData;
             return {
@@ -464,7 +448,6 @@ export class RedisServiceModule extends MainServiceModule {
                 },
             };
         });
-        clientEvent.payload = result;
         return clientEvent;
     }
 
@@ -540,8 +523,8 @@ export class RedisServiceModule extends MainServiceModule {
         };
         if (data.length) {
             const [, [, value]] = data[data.length - 1];
-            const cleanValue = JSON.parse(value) as IQosData;
-            clientEvent.payload = cleanValue;
+            //todo kan: JSON.parse(value) my fail
+            clientEvent.payload = JSON.parse(value) as IQosData;
         }
         return clientEvent;
     }
@@ -650,10 +633,9 @@ export class RedisServiceModule extends MainServiceModule {
         try {
             const rx = await this.getTxtRxData(origin);
             const tx = await this.getTxtTxData(origin);
-            const clientEvent = redisModuleUtils.txrClientEventMapper(rx, tx, origin);
-            return clientEvent;
+            return redisModuleUtils.txrClientEventMapper(rx, tx, origin);
         } catch (e) {
-            this.log(`error occured while handle getTxrSubscribedData. Error ${e}`, true);
+            this.log(`error occurred while handle getTxrSubscribedData. Error ${e}`, true);
         }
     }
 
@@ -664,12 +646,10 @@ export class RedisServiceModule extends MainServiceModule {
             const redis = new Redis(this.redisUrl);
             const result = await redis.xrevrange(channel, "+", "-", "COUNT", 1);
             if (result.length) {
-                const data = JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrRxModuleData>;
-                return data;
+                return JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrRxModuleData>;
             }
-            return;
         } catch (e) {
-            this.log(`error occured while getting data from TxtRx. Error ${e}`, true);
+            this.log(`error occurred while getting data from TxtRx. Error ${e}`, true);
         }
     }
 
@@ -680,10 +660,8 @@ export class RedisServiceModule extends MainServiceModule {
             const redis = new Redis(this.redisUrl);
             const result = await redis.xrevrange(channel, "+", "-", "COUNT", 1);
             if (result.length) {
-                const data = JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrTxModuleData>;
-                return data;
+                return JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrTxModuleData>;
             }
-            return;
         } catch (e) {
             this.log(`error occured while getting data from TxtRx. Error ${e}`, true);
         }
@@ -749,16 +727,15 @@ export class RedisServiceModule extends MainServiceModule {
 
     private async redisGetByKey(key: string) {
         try {
-            const data = await this.redisGet.get(key);
-            return data;
+            return await this.redisGet.get(key);
         } catch (e) {
-            this.log(`Error occured while getting data from redis. Error ${e}`);
+            this.log(`Error occurred while getting data from redis. Error ${e}`);
         }
     }
 
     private redisGetWithInterval(channel: string, onData: IOnDataHandler, interval?: number, memoized?: boolean) {
         let previousValue = null;
-        const timer = setInterval(async () => {
+        return setInterval(async () => {
             const data = await this.redisGetByKey(channel);
             if (memoized && data !== previousValue) {
                 previousValue = data;
@@ -768,7 +745,6 @@ export class RedisServiceModule extends MainServiceModule {
                 onData(channel, data);
             }
         }, interval || 1000);
-        return timer;
     }
 
     private redisSubscribeToChannel = (channel: string) => {

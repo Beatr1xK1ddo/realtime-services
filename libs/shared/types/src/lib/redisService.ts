@@ -93,19 +93,20 @@ export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
 
 export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "appType">;
 
-export type INodeDataRow = INodePingDataRow | INodeSystemStateDataRow | INodeStatusData;
+export type INodeDataRow = INodePingDataRaw | INodeSystemStateDataRow | INodeStatusData;
 
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
 export type INodeEventType = "ping" | "system" | "status";
 
-export interface INodePingDataRow {
+//todo kan: fix all naming according to this
+export interface INodePingDataRaw {
     id: number;
     type: INodeEventType;
     lastPing: number;
 }
 
-export type INodePingData = Omit<INodePingDataRow, "id">;
+export type INodePingData = Omit<INodePingDataRaw, "id">;
 
 export interface INodeSystemStateDataRow {
     id: number;

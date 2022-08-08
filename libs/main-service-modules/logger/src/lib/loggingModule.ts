@@ -18,17 +18,12 @@ export class LoggingModule extends MainServiceModule {
         Map<Common.IAppType, Map<Common.IAppId, Map<LoggingService.IAppLogType, Set<Socket>>>>
     >;
 
-    // private clientsTypes: Map<number, Map<string, Map<number, Set<Socket>>>>;
-    // private clientsType: Map<number, Map<string, Map<number, Map<string, Set<Socket>>>>>;
-
     constructor(name: string, options: LoggingModuleOptions) {
         super(name, options);
         this.dbUrl = options.dbUrl;
         this.db = new Mongoose();
         this.nodes = new Map();
         this.appLogsSubscribers = new Map();
-        // this.clientsTypes = new Map();
-        // this.clientsType = new Map();
     }
 
     public override async init(io: Namespace) {
@@ -95,7 +90,7 @@ export class LoggingModule extends MainServiceModule {
                 node.apps.set(app.appType, appsIdsToTypesMap);
             })
             this.nodes.set(event.nodeId, node);
-            this.logNode(event.nodeId)("initialized successfully");
+            this.debugNode(event.nodeId)("initialized successfully");
             //test if there is pending subscriptions
             if (this.appLogsSubscribers.has(event.nodeId)) {
                 //todo: handle subscription
@@ -106,15 +101,15 @@ export class LoggingModule extends MainServiceModule {
     private handleNodeAppLogsTypes(event: LoggingService.INodeAppLogsTypesEvent) {
         //todo: update this.appLogsSubscribers keys on changed
         const {appId, appType, nodeId, appLogsTypes} = event;
-        this.logApp(nodeId, appType, appId)(`has ${appLogsTypes} logs types`);
+        this.debugApp(nodeId, appType, appId)(`has ${appLogsTypes} logs types`);
         if (this.nodes.get(nodeId)?.apps.has(appType)) {
-            this.logApp(nodeId, appType, appId)(`updating types`);
+            this.debugApp(nodeId, appType, appId)(`updating types`);
             this.nodes.get(nodeId)!.apps.get(appType)!.set(appId, new Set(appLogsTypes));
         } else if (this.nodes.has(nodeId)) {
-            this.logApp(nodeId, appType, appId)(`setting types`);
+            this.debugApp(nodeId, appType, appId)(`setting types`);
             this.nodes.get(nodeId)!.apps.set(appType, new Map([[appId, new Set(appLogsTypes)]]));
         } else {
-            this.logNode(nodeId)("wasn't initialized can't update/set app logs types, continue", true);
+            this.debugNode(nodeId)("wasn't initialized can't update/set app logs types, continue");
             return;
         }
         this.updateSubscribersWithAppLogsTypes(nodeId, appType, appId);
@@ -128,7 +123,7 @@ export class LoggingModule extends MainServiceModule {
             subscribers.forEach((sockets) => {
                 sockets.forEach(appSubscribers.add);
             });
-            this.logApp(nodeId, appType, appId)(`updating ${subscribers.size} subscribers with app logs types`);
+            this.debugApp(nodeId, appType, appId)(`updating ${subscribers.size} subscribers with app logs types`);
             const event: LoggingService.INodeAppLogsTypesEvent = {nodeId, appType, appId, appLogsTypes: types};
             appSubscribers.forEach((socket) => socket.emit("appLogsTypes", event));
         }
@@ -195,7 +190,7 @@ export class LoggingModule extends MainServiceModule {
         //todo: what if we don't want to handle app logs?
         return (event: LoggingService.ISubscriberInitEvent) => {
             const {nodeId, appId, appType} = event;
-            this.logApp(nodeId, appType, appId)(`handling init event from ${socket.id}`);
+            this.debugApp(nodeId, appType, appId)(`handling init event from ${socket.id}`);
             const appLogsTypesSet = this.nodes.get(nodeId)?.apps.get(appType)?.get(appId);
             const appLogsTypes = appLogsTypesSet ? Array.from(appLogsTypesSet) : null;
             const appLogsTypesEvent: LoggingService.INodeAppLogsTypesEvent = {nodeId, appType, appId, appLogsTypes};
@@ -226,7 +221,7 @@ export class LoggingModule extends MainServiceModule {
                     this.appLogsSubscribers.get(nodeId)?.get(appType)?.get(appId)?.set(appLogType, new Set([socket]));
                 }
             });
-            this.logApp(nodeId, appType, appId)(`${socket.id} subscribed successfully`);
+            this.debugApp(nodeId, appType, appId)(`${socket.id} subscribed successfully`);
         };
     }
 
@@ -240,14 +235,14 @@ export class LoggingModule extends MainServiceModule {
                 appLogsTypesToUnsubscribeFrom?.forEach(appLogType => {
                     subscribers.get(appLogType)?.delete(socket);
                 })
-                this.logApp(nodeId, appType, appId)(`${socket.id} unsubscribed successfully`);
+                this.debugApp(nodeId, appType, appId)(`${socket.id} unsubscribed successfully`);
             }
         };
     }
 
     private handleDisconnect(socket: Socket) {
         return (reason: string) => {
-            this.log(`${socket.id} disconnected`);
+            this.log(`${socket.id} disconnected ${reason}`);
             //todo: make this better
             //clear subscribers
             this.appLogsSubscribers.forEach(nodeSubscribers => {
@@ -273,15 +268,15 @@ export class LoggingModule extends MainServiceModule {
     }
 
     //service specific
-    private logNode(nodeId: Common.INodeId) {
-        return (message: string, error?: boolean) => {
-            this.log(`node ${nodeId} ${message}`, error);
+    private debugNode(nodeId: Common.INodeId) {
+        return (message: string) => {
+            this.debug(`node ${nodeId} ${message}`);
         };
     }
 
-    private logApp(nodeId: Common.INodeId, appType: Common.IAppType, appId: Common.IAppId) {
-        return (message: string, error?: boolean) => {
-            this.log(`node ${nodeId} ${appType}:${appId} ${message}`, error);
+    private debugApp(nodeId: Common.INodeId, appType: Common.IAppType, appId: Common.IAppId) {
+        return (message: string) => {
+            this.debug(`node ${nodeId} ${appType}:${appId} ${message}`);
         };
     }
 }
