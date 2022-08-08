@@ -10,13 +10,19 @@ import {
     IMonitoringData,
     IMonitoringRowData,
     INodeData,
+    INodeIdOrigin,
     INodeSubscribeOrigin,
     IOnDataHandler,
     IPubSubData,
     IQosData,
     ISubscribedEvent,
     ISubscribeEvent,
+    ITsMonitoringData,
+    ITxrNodeDataRow,
+    ITxrRxModuleData,
+    ITxrTxModuleData,
     IUnsubscribeEvent,
+    Optional,
 } from "@socket/shared-types";
 import {IBasicLoggerOptions, MainServiceModule} from "@socket/shared/entities";
 import {redisModuleUtils} from "@socket/shared-utils";
@@ -28,30 +34,44 @@ export type RedisServiceModuleOptions = {
 
 type IMonitoringClients = Map<number, Map<string, Map<number, Set<Socket>>>>;
 
+type ITsMonitoringClients = Map<number, Map<string, Map<number, Set<Socket>>>>;
+
 type IQosClients = Map<number, Map<string, Map<number, Set<Socket>>>>;
 
 type IAppChannelStorage = Map<string, Map<number, Set<Socket>>>;
 
 type INodeChannelStorage = Map<string, Map<string, Set<Socket>>>;
 
+type ITxrChannelStore = Map<number, Set<Socket>>;
+
 export class RedisServiceModule extends MainServiceModule {
+    // channels
     private appChannelClients: IAppChannelStorage;
     private nodeChannelClients: INodeChannelStorage;
     private monitoringClients: IMonitoringClients;
+    private tsMonitoringClients: ITsMonitoringClients;
+    private txrClients: ITxrChannelStore;
     private qosClients: IQosClients;
     private redisUrl: string;
     private redisChannel: Redis;
     private redisMonitoringId?: number;
     private redisQosId?: number;
+    private redisTsMonitoringId?: number;
+    private redisTsMonitoring: Redis;
+    // txr
+    private redisTxrId?: number;
+    private redisTxr: Redis;
     private redisMonitoring: Redis;
     private redisQos: Redis;
-    private redisToKey: Redis;
+    private redisGet: Redis;
 
     constructor(name: string, options: RedisServiceModuleOptions) {
         super(name, options);
         this.appChannelClients = new Map();
         this.nodeChannelClients = new Map();
         this.monitoringClients = new Map();
+        this.tsMonitoringClients = new Map();
+        this.txrClients = new Map();
         this.qosClients = new Map();
         this.redisUrl = options.url;
         this.initRedis();
@@ -71,13 +91,77 @@ export class RedisServiceModule extends MainServiceModule {
             this.handleQosSubscribe(socket, event);
         } else if (subscriptionType === ESubscriptionType.monitoring) {
             this.handleMonitoringSubscribe(socket, event);
-        }
-        if (subscriptionType === ESubscriptionType.node) {
+        } else if (subscriptionType === ESubscriptionType.node) {
             this.handleNodeStateSubscribe(socket, event);
         } else if (subscriptionType === ESubscriptionType.app) {
             this.handleAppStateSubscribe(socket, event);
+        } else if (subscriptionType === ESubscriptionType.tsMonitoring) {
+            this.handleTsMonitoringSubscribe(socket, event);
+        } else if (subscriptionType === ESubscriptionType.txr) {
+            this.handleTxrSubscribe(socket, event);
         }
     };
+
+    private async handleTxrSubscribe(socket: Socket, event: ISubscribeEvent<INodeIdOrigin>) {
+        try {
+            const {origin} = event;
+            const {nodeId} = origin;
+            const clientEvent = await this.getTxrSubscribedData(event.origin);
+            socket.emit("subscribed", clientEvent);
+            if (this.txrClients?.get(nodeId)?.has(socket)) {
+                return this.log(`client: ${socket.id} already subscribed to TXR with node: ${nodeId}`);
+            }
+            if (this.txrClients.has(nodeId)) {
+                this.txrClients.get(nodeId).add(socket);
+            } else {
+                this.txrClients.set(nodeId, new Set([socket]));
+                await this.redisGet.client("UNBLOCK", this.redisTxrId);
+                this.handleTxrData();
+            }
+            this.log(`client: ${socket.id} subscribed to TXR. Node: ${nodeId}`);
+        } catch (error) {
+            this.log(
+                `client: ${socket.id} can not subscribe to TXR. Node: ${event.origin.nodeId} error ${error}`,
+                true
+            );
+        }
+    }
+
+    private async handleTsMonitoringSubscribe(socket: Socket, event: ISubscribeEvent<IIpPortOrigin>) {
+        try {
+            const {origin, subscriptionType} = event;
+            const {ip, nodeId, port} = origin;
+            if (this.tsMonitoringClients.get(nodeId)?.get(ip)?.get(port)?.has(socket)) {
+                return this.log(
+                    `client: ${socket.id} already subscribed to subscriptionType: ${subscriptionType}, node: ${nodeId}, ip: ${ip} and port: ${port}`
+                );
+            }
+            if (this.tsMonitoringClients.get(nodeId)?.get(ip)?.has(port)) {
+                this.tsMonitoringClients.get(nodeId).get(ip).get(port).add(socket);
+            } else if (this.tsMonitoringClients.get(nodeId)?.has(ip)) {
+                this.tsMonitoringClients
+                    .get(nodeId)
+                    .get(ip)
+                    .set(port, new Set([socket]));
+            } else if (this.tsMonitoringClients.has(nodeId)) {
+                const portMap = new Map([[port, new Set([socket])]]);
+                this.tsMonitoringClients.get(nodeId).set(ip, portMap);
+            } else if (!this.tsMonitoringClients.has(nodeId)) {
+                const portMap = new Map([[port, new Set([socket])]]);
+                const ipMap = new Map([[ip, portMap]]);
+                this.tsMonitoringClients.set(nodeId, ipMap);
+                await this.redisGet.client("UNBLOCK", this.redisTsMonitoringId);
+                this.handleTsMonitoringData();
+            }
+            const data = await this.getTsMonitoringData(event);
+            if (data) {
+                socket.emit("subscribed", data);
+            }
+            this.log(`client: ${socket.id} subscribed to TsMonitoring. Node: ${nodeId}, ip: ${ip} and port: ${port}`);
+        } catch (error) {
+            this.log(`client: ${socket.id} subscribe to TsMonitoring handle error ${error}`, true);
+        }
+    }
 
     private async handleMonitoringSubscribe(socket: Socket, event: ISubscribeEvent<IIpPortOrigin>) {
         try {
@@ -102,7 +186,7 @@ export class RedisServiceModule extends MainServiceModule {
                 const portMap = new Map([[port, new Set([socket])]]);
                 const ipMap = new Map([[ip, portMap]]);
                 this.monitoringClients.set(nodeId, ipMap);
-                await this.redisToKey.client("UNBLOCK", this.redisMonitoringId);
+                await this.redisGet.client("UNBLOCK", this.redisMonitoringId);
                 this.handleMonitoringData();
             }
             const data = await this.getMonitoringData(event);
@@ -138,7 +222,7 @@ export class RedisServiceModule extends MainServiceModule {
                 const appIdMap = new Map([[appId, new Set([socket])]]);
                 const appTypeMap = new Map([[appType, appIdMap]]);
                 this.qosClients.set(nodeId, appTypeMap);
-                await this.redisToKey.client("UNBLOCK", this.redisQosId);
+                await this.redisGet.client("UNBLOCK", this.redisQosId);
                 this.handleQosData();
             }
             const data = await this.getQosData(event);
@@ -156,10 +240,10 @@ export class RedisServiceModule extends MainServiceModule {
             const {origin, subscriptionType} = event;
             const {appId, nodeId, appType} = origin;
             const redisChannel = `realtime:app:${nodeId}:${appType}`;
-            const status = await this.redisGet(`${appType}-${appId}-status`);
-            const statusChange = await this.redisGet(`${appType}-${appId}-statusChange`);
+            const status = await this.redisGetByKey(`${appType}-${appId}-status`);
+            const statusChange = await this.redisGetByKey(`${appType}-${appId}-statusChange`);
             // todo: i am not sure that this is correct way of getting initial runtime
-            const startedAt = await this.redisGet(`${appType}-${appId}-started_at`);
+            const startedAt = await this.redisGetByKey(`${appType}-${appId}-started_at`);
             const subscribeEvent: ISubscribedEvent<IAppIdAppTypeOrigin, IAppDataSubscribedEvent> = {
                 subscriptionType,
                 origin: {
@@ -231,14 +315,36 @@ export class RedisServiceModule extends MainServiceModule {
             this.handleQosUnsubscribe(socket, event);
         } else if (subscriptionType === ESubscriptionType.monitoring) {
             this.handleMonitoringUnsubscribe(socket, event);
-        }
-        if (subscriptionType === ESubscriptionType.node) {
+        } else if (subscriptionType === ESubscriptionType.node) {
             this.handleNodeStateUnsubscribe(socket, event);
         } else if (subscriptionType === ESubscriptionType.app) {
             this.handleAppStateUnsubscribe(socket, event);
+        } else if (subscriptionType === ESubscriptionType.tsMonitoring) {
+            this.handleTsMonitoringUnsubscribe(socket, event);
+        } else if (subscriptionType === ESubscriptionType.txr) {
+            this.handleTxrUnsubscribe(socket, event);
         }
     };
 
+    private handleTxrUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<INodeIdOrigin>) => {
+        const {origin, subscriptionType} = event;
+        const {nodeId} = origin;
+        if (this.txrClients?.get(nodeId)?.has(socket)) {
+            this.txrClients.get(nodeId).delete(socket);
+            this.log(`client ${socket.id} unsubscribed successfuly from event: ${subscriptionType}, node: ${nodeId}`);
+        }
+    };
+
+    private handleTsMonitoringUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<IIpPortOrigin>) => {
+        const {origin, subscriptionType} = event;
+        const {ip, nodeId, port} = origin;
+        if (this.tsMonitoringClients.get(nodeId)?.get(ip)?.get(port)?.has(socket)) {
+            this.tsMonitoringClients.get(nodeId).get(ip).get(port).delete(socket);
+            this.log(
+                `client ${socket.id} unsubscribed successfuly from event: ${subscriptionType}, node: ${nodeId}, ip: ${ip} and port: ${port}`
+            );
+        }
+    };
     private handleMonitoringUnsubscribe = (socket: Socket, event: IUnsubscribeEvent<IIpPortOrigin>) => {
         const {origin, subscriptionType} = event;
         const {ip, nodeId, port} = origin;
@@ -479,15 +585,160 @@ export class RedisServiceModule extends MainServiceModule {
         });
     }
 
+    private async getTsMonitoringData(event: ISubscribeEvent<IIpPortOrigin>) {
+        const {
+            origin: {nodeId},
+        } = event;
+        try {
+            const redis = new Redis(this.redisUrl);
+            const data = await redis.xrevrange(`tsMonitoring-${nodeId}`, "+", "-", "COUNT", 1);
+            if (data.length) {
+                const [[, [, rowValue]]] = data;
+                const value = JSON.parse(rowValue);
+                const eventData: ISubscribedEvent<IIpPortOrigin, Optional<ITsMonitoringData>> = {
+                    ...event,
+                    payload: value ?? null,
+                };
+                return eventData;
+            }
+        } catch (e) {
+            this.log(`Error occured in getTsMonitoringData. Error: ${e}`, true);
+        }
+    }
+
+    private async handleTsMonitoringData() {
+        const streams = Array.from(this.tsMonitoringClients.keys()).map((node) => `tsMonitoring-${node}`);
+        const ids = streams.map(() => "$");
+        this.redisTsMonitoring.xread("COUNT", 1, "BLOCK", 0, "STREAMS", ...streams, ...ids, (err, res) => {
+            if (err) {
+                this.log(`error occured while handle new value in handleTsMonitoringData event. Error ${err}`, true);
+            } else {
+                if (res) {
+                    const [nodeIdRaw, ip, portRaw] = res[0][1][0][1][0].split(/[-:]/);
+                    const port = parseInt(portRaw);
+                    const nodeId = parseInt(nodeIdRaw);
+                    // todo: what if nodeId, ip, port is None
+                    try {
+                        const data = JSON.parse(res[0][1][0][1][1]);
+                        this.tsMonitoringClients
+                            .get(nodeId)
+                            ?.get(ip)
+                            ?.get(port)
+                            ?.forEach((socket) =>
+                                socket.emit("data", {
+                                    origin: {
+                                        nodeId,
+                                        ip,
+                                        port,
+                                    },
+                                    subscriptionType: ESubscriptionType.tsMonitoring,
+                                    payload: data,
+                                })
+                            );
+                        if (this.tsMonitoringClients.size) {
+                            setTimeout(() => this.handleTsMonitoringData(), 0);
+                        }
+                    } catch (e) {
+                        this.log(`Error occured while sending new tsMonitoring data. Error ${e}`, true);
+                    }
+                }
+            }
+        });
+    }
+
+    private async getTxrSubscribedData(origin: INodeIdOrigin) {
+        try {
+            const rx = await this.getTxtRxData(origin);
+            const tx = await this.getTxtTxData(origin);
+            const clientEvent = redisModuleUtils.txrClientEventMapper(rx, tx, origin);
+            return clientEvent;
+        } catch (e) {
+            this.log(`error occured while handle getTxrSubscribedData. Error ${e}`, true);
+        }
+    }
+
+    private async getTxtRxData(event: INodeIdOrigin) {
+        const {nodeId} = event;
+        try {
+            const channel = `LIVE_TXR7_RS_RX_${nodeId}`;
+            const redis = new Redis(this.redisUrl);
+            const result = await redis.xrevrange(channel, "+", "-", "COUNT", 1);
+            if (result.length) {
+                const data = JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrRxModuleData>;
+                return data;
+            }
+            return;
+        } catch (e) {
+            this.log(`error occured while getting data from TxtRx. Error ${e}`, true);
+        }
+    }
+
+    private async getTxtTxData(event: INodeIdOrigin) {
+        const {nodeId} = event;
+        try {
+            const channel = `LIVE_TXR7_RS_TX_${nodeId}`;
+            const redis = new Redis(this.redisUrl);
+            const result = await redis.xrevrange(channel, "+", "-", "COUNT", 1);
+            if (result.length) {
+                const data = JSON.parse(result[0][1][1]) as ITxrNodeDataRow<ITxrTxModuleData>;
+                return data;
+            }
+            return;
+        } catch (e) {
+            this.log(`error occured while getting data from TxtRx. Error ${e}`, true);
+        }
+    }
+
+    private handleTxrData() {
+        const streamsRx = Array.from(this.txrClients.keys()).map((node) => `LIVE_TXR7_RS_RX_${node}`);
+        const streamsTx = Array.from(this.txrClients.keys()).map((node) => `LIVE_TXR7_RS_TX_${node}`);
+        const streams = streamsRx.concat(streamsTx);
+        const ids = streams.map(() => "$");
+        this.redisTxr.xread("COUNT", 1, "BLOCK", 0, "STREAMS", ...streams, ...ids, async (err, res) => {
+            if (err) {
+                this.log(`error occured while handle new value in handleTxrData event. Error ${err}`, true);
+            } else {
+                if (res) {
+                    const [, , , txrType, nodeIdRaw] = res[0][0].split("_");
+                    const nodeId = parseInt(nodeIdRaw);
+                    try {
+                        let rxData, txData;
+                        if (txrType === "RX") {
+                            rxData = JSON.parse(res[0][1][0][1][1]) as ITxrNodeDataRow<ITxrRxModuleData>;
+                            txData = await this.getTxtTxData({nodeId});
+                        } else {
+                            txData = JSON.parse(res[0][1][0][1][1]) as ITxrNodeDataRow<ITxrTxModuleData>;
+                            rxData = await this.getTxtRxData({nodeId});
+                        }
+                        const clientEvent = redisModuleUtils.txrClientEventMapper(rxData, txData, {nodeId});
+                        this.txrClients?.get(nodeId)?.forEach((socket) => socket.emit("data", clientEvent));
+
+                        if (this.txrClients.size) {
+                            setTimeout(() => this.handleTxrData(), 0);
+                        }
+                    } catch (e) {
+                        this.log(`Error occured while sending new txr data. Error ${e}`, true);
+                    }
+                }
+            }
+        });
+    }
+
     // Redis events
     private async initRedis() {
         try {
-            this.redisToKey = new Redis(this.redisUrl);
+            this.redisGet = new Redis(this.redisUrl);
             this.redisChannel = new Redis(this.redisUrl);
+            // streams
             this.redisMonitoring = new Redis(this.redisUrl);
             this.redisQos = new Redis(this.redisUrl);
+            this.redisTsMonitoring = new Redis(this.redisUrl);
+            this.redisTxr = new Redis(this.redisUrl);
             this.redisMonitoringId = await this.redisMonitoring.client("ID");
             this.redisQosId = await this.redisQos.client("ID");
+            this.redisTsMonitoringId = await this.redisQos.client("ID");
+            this.redisTxrId = await this.redisTxr.client("ID");
+            // events
             this.redisChannel.on("connect", this.handleRedisConnection);
             this.redisChannel.on("error", this.handleRedisError);
             this.redisChannel.on("message", this.handleRedisSubEvent);
@@ -496,25 +747,25 @@ export class RedisServiceModule extends MainServiceModule {
         }
     }
 
-    private async redisGet(key: string) {
+    private async redisGetByKey(key: string) {
         try {
-            const data = await this.redisToKey.get(key);
+            const data = await this.redisGet.get(key);
             return data;
         } catch (e) {
             this.log(`Error occured while getting data from redis. Error ${e}`);
         }
     }
 
-    private redisGetWithInterval(key: string, onData: IOnDataHandler, interval?: number, memoized?: boolean) {
+    private redisGetWithInterval(channel: string, onData: IOnDataHandler, interval?: number, memoized?: boolean) {
         let previousValue = null;
         const timer = setInterval(async () => {
-            const data = await this.redisGet(key);
+            const data = await this.redisGetByKey(channel);
             if (memoized && data !== previousValue) {
                 previousValue = data;
-                onData(key, data);
+                onData(channel, data);
             }
             if (!memoized) {
-                onData(key, data);
+                onData(channel, data);
             }
         }, interval || 1000);
         return timer;
@@ -627,6 +878,16 @@ export class RedisServiceModule extends MainServiceModule {
             )
         );
         this.qosClients.forEach((_) =>
+            _.forEach((__) =>
+                __.forEach((sockets) => {
+                    if (sockets.has(socket)) {
+                        sockets.delete(socket);
+                        this.log(`client: ${socket.id} disconnected`);
+                    }
+                })
+            )
+        );
+        this.tsMonitoringClients.forEach((_) =>
             _.forEach((__) =>
                 __.forEach((sockets) => {
                     if (sockets.has(socket)) {

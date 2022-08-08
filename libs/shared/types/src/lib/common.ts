@@ -45,3 +45,5 @@ export namespace Common {
     export type IAppId = INumericId;
     export type IAppType = string;
 }
+
+export type Optional<T> = T | null;
