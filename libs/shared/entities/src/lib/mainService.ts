@@ -60,12 +60,17 @@ export class MainServiceModule implements IMainServiceModule {
     }
 
     protected log(message: string, error?: boolean): void {
-        const loggingMessage = `Service ${this.name}: ${message}`;
+        const loggingMessage = `${this.name} service: ${message}`;
         if (error) {
             this.logger.log.error(loggingMessage);
         } else {
             this.logger.log.info(loggingMessage);
         }
+    }
+
+    protected debug(message: string): void {
+        const debugMessage = `${this.name} service: ${message}`;
+        this.logger.log.debug(debugMessage);
     }
 
     private validateInit(): boolean {
