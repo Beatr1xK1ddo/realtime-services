@@ -779,9 +779,10 @@ export class RedisServiceModule extends MainServiceModule {
             const event: IPubSubData = JSON.parse(redisEvent);
             const appEvent = redisModuleUtils.isRealtimeAppData(event);
             const nodeEvent = redisModuleUtils.isRealtimeNodeData(event);
+            //todo kan: make this similar to nodeEvent behaviour
             if (appEvent) {
                 const {appId} = event;
-                const [, , nodeIdRow, appType] = redisChannel.split(":");
+                const [, , nodeIdRaw, appType] = redisChannel.split(":");
                 let payload: IAppData;
                 if (redisModuleUtils.isIAppStatusDataRaw(event)) {
                     const {status, statusChange} = event;
@@ -795,7 +796,7 @@ export class RedisServiceModule extends MainServiceModule {
                     subscriptionType: ESubscriptionType.app,
                     origin: {
                         appId,
-                        nodeId: parseInt(nodeIdRow),
+                        nodeId: parseInt(nodeIdRaw),
                         appType,
                     },
                     payload,
