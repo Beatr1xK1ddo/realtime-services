@@ -1,44 +1,38 @@
-import {ITxrNodeData, ITxrNodeDataRow} from "@socket/shared-types";
+import {ITxrNodeData, ITxrNodeDataRaw} from "@socket/shared-types";
 import {
-    IAppDataRow,
+    IAppDataRaw,
     IAppStatusDataRaw,
     IAppTimingDataRaw,
-    INodeDataRow,
-    INodeStatusData,
+    INodeDataRaw,
     IPubSubData,
     ISubscribedEvent,
     ITxrRxModuleData,
     ITxrTxModuleData,
-    ISubscribeEvent,
     ESubscriptionType,
     INodeIdOrigin,
 } from "@socket/shared-types";
 
 // app
-export const isRealtimeAppData = (type: IPubSubData): type is IAppDataRow => {
+export const isRealtimeAppData = (type: IPubSubData): type is IAppDataRaw => {
     return "appId" in type;
 };
 
-export const isIAppStatusDataRaw = (type: IAppDataRow): type is IAppStatusDataRaw => {
+export const isIAppStatusDataRaw = (type: IAppDataRaw): type is IAppStatusDataRaw => {
     return type && "status" in type;
 };
 
-export const isIAppTimingDataRaw = (type: IAppDataRow): type is IAppTimingDataRaw => {
+export const isIAppTimingDataRaw = (type: IAppDataRaw): type is IAppTimingDataRaw => {
     return type && "startedAt" in type;
 };
 
 // node
-export const isRealtimeNodeData = (type: IPubSubData): type is INodeDataRow => {
+export const isRealtimeNodeData = (type: IPubSubData): type is INodeDataRaw => {
     return type && "id" in type && "type" in type;
 };
 
-export const isINodeStatusData = (type: INodeDataRow): type is INodeStatusData => {
-    return type && "online" in type;
-};
-
 export const txrClientEventMapper = (
-    rx: ITxrNodeDataRow<ITxrRxModuleData>,
-    tx: ITxrNodeDataRow<ITxrTxModuleData>,
+    rx: ITxrNodeDataRaw<ITxrRxModuleData>,
+    tx: ITxrNodeDataRaw<ITxrTxModuleData>,
     origin: INodeIdOrigin
 ) => {
     let payload: ITxrNodeData;

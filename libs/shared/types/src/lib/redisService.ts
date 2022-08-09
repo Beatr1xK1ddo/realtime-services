@@ -13,9 +13,11 @@ export interface IOnDataHandler {
 
 export interface INodeSubscribeOrigin {
     nodeId: number | number[];
-    type: INodeEventType;
 }
 
+export interface INodeDataOrigi extends INodeSubscribeOrigin {
+    type: INodeEventType;
+}
 export interface IIpPortOrigin {
     nodeId: number;
     ip: string;
@@ -39,7 +41,7 @@ export interface ISubscribeEvent<T = any> {
 
 export type IUnsubscribeEvent<T = any> = ISubscribeEvent<T>;
 
-export interface IMonitoringRowData {
+export interface IMonitoringRawData {
     time: number;
     tsTotalRate: number;
     tsDataRate: number;
@@ -72,7 +74,7 @@ export interface IQosData {
     quality: number;
 }
 
-export type IAppDataRow = IAppStatusDataRaw | IAppTimingDataRaw;
+export type IAppDataRaw = IAppStatusDataRaw | IAppTimingDataRaw;
 
 export type IAppData = IAppStatusData | IAppTimingData;
 
@@ -93,7 +95,7 @@ export type IAppStatusData = Omit<IAppStatusDataRaw, "appId" | "appType">;
 
 export type IAppTimingData = Omit<IAppTimingDataRaw, "appId" | "appType">;
 
-export type INodeDataRow = INodePingDataRaw | INodeSystemStateDataRow | INodeStatusData;
+export type INodeDataRaw = INodePingDataRaw | INodeSystemStateDataRaw | INodeStatusDataRaw;
 
 export type INodeData = INodePingData | INodeSystemStateData | INodeStatusData;
 
@@ -106,9 +108,9 @@ export interface INodePingDataRaw {
     lastPing: number;
 }
 
-export type INodePingData = Omit<INodePingDataRaw, "id">;
+export type INodePingData = Omit<INodePingDataRaw, "id" | "type">;
 
-export interface INodeSystemStateDataRow {
+export interface INodeSystemStateDataRaw {
     id: number;
     type: INodeEventType;
     cpu: number;
@@ -117,15 +119,17 @@ export interface INodeSystemStateDataRow {
     loadAverage: number;
 }
 
-export type INodeSystemStateData = Omit<INodeSystemStateDataRow, "id">;
+export type INodeSystemStateData = Omit<INodeSystemStateDataRaw, "id" | "type">;
 
-export interface INodeStatusData {
+export interface INodeStatusDataRaw {
     id: number;
     type: INodeEventType;
     online: boolean;
 }
 
-export type IPubSubData = INodeDataRow | IAppDataRow;
+export type INodeStatusData = Omit<INodeStatusDataRaw, "id" | "type">;
+
+export type IPubSubData = INodeDataRaw | IAppDataRaw;
 
 export interface IDataEvent<T, P> extends ISubscribeEvent<T> {
     // payload: IMonitoringData | Array<IMonitoringData> | IQosData | IPubSubData;
@@ -217,7 +221,7 @@ export interface ITxrNodeData {
     p1CCErrors: number;
 }
 
-export interface ITxrNodeDataRow<T> {
+export interface ITxrNodeDataRaw<T> {
     modules?: Array<T>;
 }
 
