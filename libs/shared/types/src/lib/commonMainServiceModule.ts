@@ -3,6 +3,7 @@ import {Namespace} from "socket.io";
 import {INodeDeviceServiceBaseEvent} from "./commonNodeService";
 
 export interface IMainServiceModule {
+    namespace: string;
     name: string;
     init(io: Namespace): void;
 }

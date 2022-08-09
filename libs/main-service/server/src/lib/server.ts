@@ -27,14 +27,14 @@ export class MainServiceServer {
     }
 
     registerModule(module: IMainServiceModule) {
-        this.logger.log.info(`Registering module ${module.name}`);
-        if (MainServiceServer.namespaces.has(module.name)) {
-            this.logger.log.error(`Module with namespace: ${module.name} already exists`);
-            throw TypeError(`Module with namespace: ${module.name} already exists`);
+        this.logger.log.info(`${module.name} module registering with namespace ${module.namespace}`);
+        if (MainServiceServer.namespaces.has(module.namespace)) {
+            this.logger.log.error(`MainServiceServer ERROR: failed to register ${module.name} namespace ${module.namespace} already exists`);
+            throw TypeError(`MainServiceServer ERROR: failed to register ${module.name} namespace ${module.namespace} already exists`);
         }
-        const ioNamespace = this.io.of(`/${module.name}`);
-        MainServiceServer.namespaces.set(module.name, ioNamespace);
-        this.logger.log.info(`Module with namespace: ${module.name} was registered`);
+        const ioNamespace = this.io.of(`/${module.namespace}`);
+        MainServiceServer.namespaces.set(module.namespace, ioNamespace);
+        this.logger.log.info(`${module.name} module with namespace: ${module.namespace} registered successfully`);
         module.init(ioNamespace);
     }
 }

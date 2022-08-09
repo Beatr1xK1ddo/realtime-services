@@ -9,6 +9,7 @@ export type MainServiceModuleOptions = {
 };
 
 export class MainServiceModule implements IMainServiceModule {
+    namespace: string;
     name: string;
     options?: MainServiceModuleOptions;
     protected socket?: Namespace;
