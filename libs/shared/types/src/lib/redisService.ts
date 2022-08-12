@@ -1,3 +1,5 @@
+import {Optional} from "./common";
+
 export enum ESubscriptionType {
     monitoring = "monitoring",
     qos = "qos",
@@ -164,7 +166,7 @@ export interface IProgramPidData {
     ratePercent: number;
 }
 
-export interface ITsMonitoringData {
+export interface ITsMonitoringProgram {
     seqNo: number;
     statsSeqNo: number;
     time: number;
@@ -198,6 +200,106 @@ export interface ITsMonitoringData {
             }
         ];
     };
+}
+
+export type IP1ErrorData = {
+    syncLosses: number;
+    syncLossTime: number;
+    syncLossSinceTime: number;
+    syncByteErrors: number;
+    syncByteErrorTime: number;
+    syncByteErrorByte: number;
+    patErrors: number;
+    patErrorTime: number;
+    patErrorTableId: number;
+    patErrorNotDetectedFor: number;
+    patErrorScramblingControl: number;
+    ccErrorTime: number;
+    ccErrors: number;
+    ccErrorPid: number;
+    ccErrorRequiredCc: number;
+    ccErrorFoundCc: number;
+    pmtErrors: number;
+    pmtErrorTime: number;
+    pmtErrorPmtPid: number;
+    pmtErrorNotDetectedFor: number;
+    pmtErrorScramblingControl: number;
+    pidErrorTime: number;
+    pidErrors: number;
+    pidErrorPid: number;
+    pidErrorProgramNumber: number;
+    pidErrorPidType: number;
+    pidErrorNotDetectedFor: number;
+    patErrorType: string;
+    patErrorTableIdStr: string;
+    pidErrorPidTypeStr: string;
+    pmtErrorType: string;
+};
+
+export type IP2ErrorData = {
+    transportErrors: number;
+    transportErrorTime: number;
+    transportErrorPid: number;
+    crcErrors: number;
+    crcErrorTime: number;
+    crcErrorPid: number;
+    crcErrorTableId: number;
+    pcrRepetitionErrors: number;
+    pcrRepetitionErrorTime: number;
+    pcrRepetitionErrorPid: number;
+    pcrRepetitionErrorPcrDiff: number;
+    pcrDiscontinuityErrors: number;
+    pcrDiscontinuityErrorTime: number;
+    pcrDiscontinuityErrorPid: number;
+    pcrDiscontinuityErrorPcrDiff: number;
+    catErrors: number;
+    catErrorTime: number;
+    catErrorTableId: number;
+    crcErrorTableIdStr: string;
+    catErrorType: string;
+    catErrorTableIdStr: string;
+};
+
+export type ITsMonitoringStats = {
+    time: number;
+    mediaRcvedPackets: number;
+    mediaRcvedBytes: number;
+    mediaInfo: {
+        lastRcvedFrom: string;
+    };
+    mediaStats: {
+        syncLosses: number;
+        syncLossTime: number;
+        syncLossSinceTime: number;
+        otherErrors: number;
+        otherErrorTime: number;
+        otherErrorSysError: number;
+        otherErrorRequiredPort: number;
+        otherErrorFoundPort: number;
+        otherErrorPacketLength: number;
+        otherErrorType: string;
+        otherErrorRequiredIp: string;
+        otherErrorFoundIp: string;
+    };
+    tsSynced: boolean;
+    tsInfo: {
+        transportStreamId: number;
+        nitPid: number;
+        originalNetworkId: number;
+    };
+    tsTotalRate: number;
+    tsDataRate: number;
+    tsDataRatePercent: number;
+    p1Stats: IP1ErrorData;
+    p2Stats: IP2ErrorData;
+    programsSeqNo: number;
+    programsStatsSeqNo: number;
+    tablesSeqNo: number;
+};
+
+export interface ITsMonitoringSubscribedPayload {
+    program: Optional<ITsMonitoringProgram>;
+    stats: Optional<ITsMonitoringStats>;
 }
 
 // txr

@@ -19,7 +19,9 @@ import {
     IQosData,
     ISubscribedEvent,
     ISubscribeEvent,
-    ITsMonitoringData,
+    ITsMonitoringProgram,
+    ITsMonitoringStats,
+    ITsMonitoringSubscribedPayload,
     ITxrNodeDataRaw,
     ITxrRxModuleData,
     ITxrTxModuleData,
@@ -157,9 +159,18 @@ export class RedisServiceModule extends MainServiceModule {
                 await this.redisGet.client("UNBLOCK", this.redisTsMonitoringId);
                 this.handleTsMonitoringData();
             }
-            const data = await this.getTsMonitoringData(event);
-            if (data) {
-                socket.emit("subscribed", data);
+            const program = await this.getTsMonitoringPrograms(event);
+            const stats = await this.getTsMonitoringStats(event);
+            const subscribedEvent: ISubscribedEvent<IIpPortOrigin, ITsMonitoringSubscribedPayload> = {
+                origin,
+                subscriptionType,
+                payload: {
+                    program: program ?? null,
+                    stats: stats ?? null,
+                },
+            };
+            if (program || stats) {
+                socket.emit("subscribed", subscribedEvent);
             }
             this.log(`client: ${socket.id} subscribed to TsMonitoring. Node: ${nodeId}, ip: ${ip} and port: ${port}`);
         } catch (error) {
@@ -577,21 +588,32 @@ export class RedisServiceModule extends MainServiceModule {
         });
     }
 
-    private async getTsMonitoringData(event: ISubscribeEvent<IIpPortOrigin>) {
+    private async getTsMonitoringPrograms(event: ISubscribeEvent<IIpPortOrigin>) {
         const {
             origin: {nodeId},
         } = event;
         try {
             const redis = new Redis(this.redisUrl);
-            const data = await redis.xrevrange(`tsMonitoring-${nodeId}`, "+", "-", "COUNT", 1);
+            const data = await redis.xrevrange(`tsMonitoring-${nodeId}-programs`, "+", "-", "COUNT", 1);
             if (data.length) {
                 const [[, [, rowValue]]] = data;
-                const value = JSON.parse(rowValue);
-                const eventData: ISubscribedEvent<IIpPortOrigin, Optional<ITsMonitoringData>> = {
-                    ...event,
-                    payload: value ?? null,
-                };
-                return eventData;
+                return JSON.parse(rowValue) as ITsMonitoringProgram;
+            }
+        } catch (e) {
+            this.log(`Error occured in getTsMonitoringData. Error: ${e}`, true);
+        }
+    }
+
+    private async getTsMonitoringStats(event: ISubscribeEvent<IIpPortOrigin>) {
+        const {
+            origin: {nodeId},
+        } = event;
+        try {
+            const redis = new Redis(this.redisUrl);
+            const data = await redis.xrevrange(`tsMonitoring-${nodeId}-stats`, "+", "-", "COUNT", 1);
+            if (data.length) {
+                const [[, [, rowValue]]] = data;
+                return JSON.parse(rowValue) as ITsMonitoringStats;
             }
         } catch (e) {
             this.log(`Error occured in getTsMonitoringData. Error: ${e}`, true);
@@ -599,43 +621,59 @@ export class RedisServiceModule extends MainServiceModule {
     }
 
     private async handleTsMonitoringData() {
-        const streams = Array.from(this.tsMonitoringClients.keys()).map((node) => `tsMonitoring-${node}`);
-        const ids = streams.map(() => "$");
-        this.redisTsMonitoring.xread("COUNT", 1, "BLOCK", 0, "STREAMS", ...streams, ...ids, (err, res) => {
-            if (err) {
-                this.log(`error occured while handle new value in handleTsMonitoringData event. Error ${err}`, true);
-            } else {
-                if (res) {
-                    const [nodeIdRaw, ip, portRaw] = res[0][1][0][1][0].split(/[-:]/);
-                    const port = parseInt(portRaw);
-                    const nodeId = parseInt(nodeIdRaw);
-                    // todo: what if nodeId, ip, port is None
-                    try {
-                        const data = JSON.parse(res[0][1][0][1][1]);
-                        this.tsMonitoringClients
-                            .get(nodeId)
-                            ?.get(ip)
-                            ?.get(port)
-                            ?.forEach((socket) =>
-                                socket.emit("data", {
-                                    origin: {
-                                        nodeId,
-                                        ip,
-                                        port,
-                                    },
-                                    subscriptionType: ESubscriptionType.tsMonitoring,
-                                    payload: data,
-                                })
-                            );
-                        if (this.tsMonitoringClients.size) {
-                            setTimeout(() => this.handleTsMonitoringData(), 0);
+        const programStreams = Array.from(this.tsMonitoringClients.keys()).map(
+            (node) => `tsMonitoring-${node}-programs`
+        );
+        const programIds = programStreams.map(() => "$");
+        const statStreams = Array.from(this.tsMonitoringClients.keys()).map((node) => `tsMonitoring-${node}-stats`);
+        const statsIds = statStreams.map(() => "$");
+        this.redisTsMonitoring.xread(
+            "COUNT",
+            1,
+            "BLOCK",
+            0,
+            "STREAMS",
+            ...[...statStreams, ...programStreams],
+            ...[...statsIds, ...programIds],
+            (err, res) => {
+                if (err) {
+                    this.log(
+                        `error occured while handle new value in handleTsMonitoringData event. Error ${err}`,
+                        true
+                    );
+                } else {
+                    if (res) {
+                        const [nodeIdRaw, ip, portRaw] = res[0][1][0][1][0].split(/[-:]/);
+                        const port = parseInt(portRaw);
+                        const nodeId = parseInt(nodeIdRaw);
+                        // todo: what if nodeId, ip, port is None
+                        try {
+                            const data = JSON.parse(res[0][1][0][1][1]);
+                            this.tsMonitoringClients
+                                .get(nodeId)
+                                ?.get(ip)
+                                ?.get(port)
+                                ?.forEach((socket) =>
+                                    socket.emit("data", {
+                                        origin: {
+                                            nodeId,
+                                            ip,
+                                            port,
+                                        },
+                                        subscriptionType: ESubscriptionType.tsMonitoring,
+                                        payload: data,
+                                    })
+                                );
+                            if (this.tsMonitoringClients.size) {
+                                setTimeout(() => this.handleTsMonitoringData(), 0);
+                            }
+                        } catch (e) {
+                            this.log(`Error occured while sending new tsMonitoring data. Error ${e}`, true);
                         }
-                    } catch (e) {
-                        this.log(`Error occured while sending new tsMonitoring data. Error ${e}`, true);
                     }
                 }
             }
-        });
+        );
     }
 
     private async getTxrSubscribedData(origin: INodeIdOrigin) {
